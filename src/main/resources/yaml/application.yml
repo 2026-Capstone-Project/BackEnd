@@ -1,0 +1,7 @@
+spring:
+  profiles:
+    group:
+      logging-dev: dev, log
+      logging-local: local, log
+      logging-test: test, log
+    active: ${SPRING_PROFILES_ACTIVE}
