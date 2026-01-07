@@ -7,6 +7,7 @@ import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.setting.entity.Setting;
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.global.entity.SoftDeletableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,7 +21,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "member")
-public class Member extends BaseEntity {
+public class Member extends SoftDeletableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,9 +36,6 @@ public class Member extends BaseEntity {
 
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
 
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
