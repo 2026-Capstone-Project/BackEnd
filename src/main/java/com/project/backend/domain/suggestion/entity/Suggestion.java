@@ -1,6 +1,6 @@
 package com.project.backend.domain.suggestion.entity;
 
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.Status;

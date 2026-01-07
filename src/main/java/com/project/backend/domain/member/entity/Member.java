@@ -1,7 +1,7 @@
 package com.project.backend.domain.member.entity;
 
 import com.project.backend.domain.auth.entity.Auth;
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.setting.entity.Setting;

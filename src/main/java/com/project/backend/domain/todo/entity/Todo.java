@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.entity;
 
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.todo.enums.Priority;
 import jakarta.persistence.*;

@@ -1,6 +1,6 @@
 package com.project.backend.domain.setting.entity;
 
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.setting.enums.DefaultView;
 import com.project.backend.domain.setting.enums.ReminderTiming;

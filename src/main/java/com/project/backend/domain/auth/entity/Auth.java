@@ -1,7 +1,7 @@
 package com.project.backend.domain.auth.entity;
 
 import com.project.backend.domain.auth.enums.Provider;
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;

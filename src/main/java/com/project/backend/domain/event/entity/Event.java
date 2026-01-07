@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.entity;
 
-import com.project.backend.domain.common.entity.BaseEntity;
+import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.event.enums.Recurrence;
 import com.project.backend.domain.member.entity.Member;
 import jakarta.persistence.*;
