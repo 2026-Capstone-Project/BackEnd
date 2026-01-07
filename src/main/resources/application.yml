@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: classpath:/yaml/
   profiles:
     group:
       logging-dev: dev, log
