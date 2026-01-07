@@ -5,16 +5,13 @@ import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.Status;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
 @Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "suggestion")
 public class Suggestion extends BaseEntity {
 

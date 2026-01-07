@@ -5,18 +5,15 @@ import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.setting.enums.DefaultView;
 import com.project.backend.domain.setting.enums.ReminderTiming;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalTime;
 
 @Entity
 @Getter
 @Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "setting")
 public class Setting extends BaseEntity {
 

@@ -8,10 +8,7 @@ import com.project.backend.domain.setting.entity.Setting;
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.todo.entity.Todo;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,8 +17,8 @@ import java.util.List;
 @Entity
 @Getter
 @Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "member")
 public class Member extends BaseEntity {
 
