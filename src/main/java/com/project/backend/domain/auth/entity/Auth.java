@@ -22,10 +22,10 @@ public class Auth extends BaseEntity {
     @Column(name = "provider", nullable = false, length = 20)
     private Provider provider;
 
-    @Column(name = "provider_id", nullable = false, unique = true)
+    @Column(name = "provider_id", nullable = false)
     private String providerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 }
