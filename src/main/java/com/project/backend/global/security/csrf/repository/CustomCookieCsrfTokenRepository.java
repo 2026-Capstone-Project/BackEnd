@@ -13,6 +13,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.UUID;
 
+import static com.project.backend.global.cookie.CookieUtils.createCsrfCookies;
+import static com.project.backend.global.cookie.CookieUtils.deleteCsrfCookie;
+
 public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
 
     public static final String CSRF_HEADER_NAME = "X-XSRF-TOKEN";
@@ -53,28 +56,8 @@ public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
     }
 
     public void invalidateCsrfToken(HttpServletResponse response) {
-        Cookie csrfCookie = new Cookie(CSRF_COOKIE_NAME, null);
-        csrfCookie.setPath("/");
-        csrfCookie.setMaxAge(0);
-        response.addCookie(csrfCookie);
+        deleteCsrfCookie(response);
     }
 
-    private void createCsrfCookies(HttpServletResponse response, String name, CsrfToken csrfToken) {
-        Cookie csrfCookie = new Cookie(name, csrfToken.getToken());
-        // csrf 쿠키는 js가 읽어야 헤더에 넣을 수 있음
-        csrfCookie.setHttpOnly(false);
-        // HTTPS 연결에서만 쿠키 전송
-        csrfCookie.setSecure(true);
-        // '/' 경로 이하 모든 API 요청에 쿠키가 포함되도록
-        csrfCookie.setPath("/");
-        // 우리 도메인에서만 사용
-//        csrfCookie.setDomain("calio.com");
-        // -1 세션이 종료하면 쿠키 삭제
-        csrfCookie.setMaxAge(-1);
-        // CSRF 설정 -> 배포 중에는 Lax
-        csrfCookie.setAttribute("SameSite", "None");
-        // 쿠키 추가
-        response.addCookie(csrfCookie);
-    }
 
 }
