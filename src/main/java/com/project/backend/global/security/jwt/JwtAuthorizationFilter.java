@@ -20,6 +20,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+import static com.project.backend.global.cookie.CookieUtils.getTokenFromCookies;
+
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
@@ -81,26 +83,5 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
         // 인증 객체를 SecurityContextHolder에 저장
         SecurityContextHolder.getContext().setAuthentication(authToken);
-    }
-
-    private String getTokenFromCookies(HttpServletRequest request, String cookieName) {
-        log.debug("[ CookieUtils ] 쿠키 검색");
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if (cookie.getName().equals(cookieName)) {
-                    log.debug("[ CookieUtils ] {} 쿠키 존재", cookieName);
-                    return cookie.getValue();
-                }
-            }
-
-            log.debug("[ CookieUtils ] 사용 가능한 쿠키가 존재하지 않음");
-            log.debug("[ CookieUtils ] 현재 쿠키 목록 -------------------");
-            for (Cookie cookie : request.getCookies()) {
-                log.debug("[ CookieUtils ]  - {}", cookie.getName());
-                log.debug("[ CookieUtils ] ------------------------------------");
-            }
-            log.debug("[ CookieUtils ] {} 쿠키가 존재하지 않음", cookieName);
-        }
-        return null;
     }
 }
