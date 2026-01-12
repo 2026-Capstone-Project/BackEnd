@@ -35,6 +35,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-resources/**",
             "/v3/api-docs/**",
+            "/api/v1/auth/naver/**"
     };
 
     @Bean
