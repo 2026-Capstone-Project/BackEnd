@@ -126,11 +126,11 @@ public class GoogleAuthService {
 
     public void loginOrSignup(AuthResDTO.UserAuth userAuth) {
 
-        Optional<Auth> auth = authRepository.findByProviderAndProviderId(userAuth.provider(), userAuth.providerId());
-        if (auth.isEmpty()) {
-            signup(userAuth);
-        }
-        CustomUserDetails userDetails = new CustomUserDetails(auth.get().getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
+        Auth auth = authRepository
+                .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
+                .orElseGet(() -> signup(userAuth));
+
+        CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
         jwtUtil.createJwtAccessToken(userDetails);
         jwtUtil.createJwtRefreshToken(userDetails);
 
@@ -139,11 +139,12 @@ public class GoogleAuthService {
 
     //private void login();
 
-    private void signup(AuthResDTO.UserAuth userAuth) {
+    private Auth signup(AuthResDTO.UserAuth userAuth) {
 
         Member member = memberService.createMember(userAuth);
         Auth auth = AuthConverter.toAuth(userAuth, member);
         authRepository.save(auth);
+        return auth;
     }
 
     /**
