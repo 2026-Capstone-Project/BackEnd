@@ -2,12 +2,25 @@ spring:
   config:
     activate:
       on-profile: local
+
   datasource:
     url: ${LOCAL_DB_URL}
     username: ${LOCAL_DB_USERNAME}
     password: ${LOCAL_DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
+
+  data:
+    redis:
+      host: ${LOCAL_REDIS_HOST}
+      port: 6379
+
+  jwt:
+    secret: ${JWT_SECRET_KEY} # JWT 시크릿 키
+    token:
+      access-expiration-time: ${JWT_ACCESS_EXP}  # Access Token 만료 시간
+      refresh-expiration-time: ${JWT_REFRESH_EXP}  #  Refresh Token 만료 시간
