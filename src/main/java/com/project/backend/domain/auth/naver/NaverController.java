@@ -21,7 +21,7 @@ public class NaverController {
 
     private final NaverService naverService;
 
-    @GetMapping("/auth/naver/login")
+    @GetMapping("/auth/naver")
     public CustomResponse<String> redirectToNaver(
             HttpServletResponse response,
             HttpSession session
@@ -31,7 +31,7 @@ public class NaverController {
     }
 
     @GetMapping("/auth/naver/callback")
-    public CustomResponse<AuthResDTO.UserAuth> callback(
+    public CustomResponse<String> callback(
             HttpServletRequest request
     ) {
         return CustomResponse.onSuccess("네이버 소셜 인증 완료", naverService.callback(request));

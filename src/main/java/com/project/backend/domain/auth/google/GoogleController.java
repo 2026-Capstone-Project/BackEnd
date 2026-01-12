@@ -30,6 +30,6 @@ public class GoogleController {
             HttpSession session
     ) {
         googleAuthService.exchangeCode(code, state, session);
-        return CustomResponse.onSuccess("Created", "로그인하셨습니다.");
+        return CustomResponse.onSuccess("Created", "로그인 성공");
     }
 }

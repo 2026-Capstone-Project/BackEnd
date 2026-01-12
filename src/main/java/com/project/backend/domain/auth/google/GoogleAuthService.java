@@ -6,6 +6,8 @@ import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.auth.entity.Auth;
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.repository.AuthRepository;
+import com.project.backend.domain.auth.service.command.AuthCommandService;
+import com.project.backend.domain.auth.service.command.AuthCommandServiceImpl;
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.member.service.MemberService;
 import com.project.backend.domain.member.entity.Member;
@@ -35,6 +37,7 @@ import java.util.UUID;
 public class GoogleAuthService {
 
     private final ObjectMapper objectMapper;
+    private final AuthCommandService authCommandService;
     private final AuthRepository authRepository;
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
@@ -121,31 +124,9 @@ public class GoogleAuthService {
         AuthResDTO.UserAuth userAuth = AuthConverter.toUserAuth(payload, Provider.GOOGLE);
 
         // 로그인 여부 확인
-        loginOrSignup(userAuth);
+        authCommandService.loginOrSignup(userAuth);
     }
 
-    public void loginOrSignup(AuthResDTO.UserAuth userAuth) {
-
-        Auth auth = authRepository
-                .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
-                .orElseGet(() -> signup(userAuth));
-
-        CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
-        jwtUtil.createJwtAccessToken(userDetails);
-        jwtUtil.createJwtRefreshToken(userDetails);
-
-        //login()
-    }
-
-    //private void login();
-
-    private Auth signup(AuthResDTO.UserAuth userAuth) {
-
-        Member member = memberService.createMember(userAuth);
-        Auth auth = AuthConverter.toAuth(userAuth, member);
-        authRepository.save(auth);
-        return auth;
-    }
 
     /**
      * JWT 디코딩 - 사용자 식별 정보만 꺼내기 위해

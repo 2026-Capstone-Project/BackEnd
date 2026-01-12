@@ -2,9 +2,12 @@ package com.project.backend.domain.auth.naver;
 
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.auth.enums.Provider;
+import com.project.backend.domain.auth.service.command.AuthCommandService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,8 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class NaverService {
 
     @Value("${spring.security.naver.client.id}") String clientId;
@@ -24,6 +29,8 @@ public class NaverService {
     @Value("${spring.security.naver.redirect-uri}") String redirectUri;
     @Value("${spring.security.naver.token-uri}") String tokenUri;
     @Value("${spring.security.naver.user-info-uri}") String userInfoUri;
+
+    private final AuthCommandService authCommandService;
 
     // 로그인을 통해 네이버로부터 인가 코드를 발급
     public void redirectToNaver(HttpServletResponse response, HttpSession session) throws IOException {
@@ -44,7 +51,7 @@ public class NaverService {
         response.sendRedirect(redirectUrl);
     }
 
-    public AuthResDTO.UserAuth callback(HttpServletRequest request) {
+    public String callback(HttpServletRequest request) {
 
         // 콜백 응답에서 state 파라미터의 값을 가져옴
         String state = request.getParameter("state");
@@ -61,7 +68,11 @@ public class NaverService {
         String accessToken = getAccessTokenFromNaver(code, state);
 
         // 사용자 정보 return
-        return getNaverUserAuth(accessToken);
+        AuthResDTO.UserAuth userAuth = getNaverUserAuth(accessToken);
+
+        authCommandService.loginOrSignup(userAuth);
+
+        return "로그인 성공";
     }
 
     // 실제 사용자의 요청인지 검증할 state 난수 생성 후 세션에 저장
