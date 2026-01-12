@@ -100,7 +100,7 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
-                .get("provider:providerId", String.class);
+                .getSubject();
     }
 
     public String tokenIssuer(CustomUserDetails user, Instant exp) {
