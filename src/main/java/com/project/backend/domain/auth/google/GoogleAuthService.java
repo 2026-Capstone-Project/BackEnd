@@ -39,16 +39,16 @@ public class GoogleAuthService {
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
 
-    @Value("${google.client-id}")
+    @Value("${spring.google.client-id}")
     private String clientId;
 
-    @Value("${google.client-secret}")
+    @Value("${spring.google.client-secret}")
     private String clientSecret;
 
-    @Value("${google.redirect-uri}")
+    @Value("${spring.google.redirect-uri}")
     private String redirectUri;
 
-    @Value("${google.token-uri}")
+    @Value("${spring.google.token-uri}")
     private String tokenUri;
 
     public String generateAuthorizationUrl(HttpSession session) {
