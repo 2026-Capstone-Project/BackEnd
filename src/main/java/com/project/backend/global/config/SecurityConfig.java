@@ -3,6 +3,7 @@ package com.project.backend.global.config;
 import com.project.backend.global.security.exception.CustomAccessDeniedHandler;
 import com.project.backend.global.security.exception.CustomAuthenticationEntryPoint;
 import com.project.backend.global.security.csrf.repository.CustomCookieCsrfTokenRepository;
+import com.project.backend.global.security.handler.CustomLogoutHandler;
 import com.project.backend.global.security.jwt.JwtAuthorizationFilter;
 import com.project.backend.global.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class SecurityConfig {
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
+    private final CustomLogoutHandler customLogoutHandler;
 
     private final String[] allowUrl = {
             "/swagger-ui/**",
@@ -88,8 +90,14 @@ public class SecurityConfig {
 //                        )
 //                )
 
-                // TODO: 로그아웃
-//                .logout
+                // 로그아웃 설정
+                .logout(logout -> logout
+                        .logoutUrl("/api/v1/auth/logout")
+                        .addLogoutHandler(customLogoutHandler)
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                        })
+                )
 
                 // 예외 처리 핸들러 설정
                 .exceptionHandling(exceptionHandling -> exceptionHandling

@@ -28,3 +28,7 @@ spring:
     token:
       access-expiration-time: ${JWT_ACCESS_EXP}  # Access Token 만료 시간
       refresh-expiration-time: ${JWT_REFRESH_EXP}  #  Refresh Token 만료 시간
+
+  cookie:
+    secure: true  # 운영환경(HTTPS)에서는 true, 로컬 HTTP 테스트 시에는 false
+    same-site: Lax
