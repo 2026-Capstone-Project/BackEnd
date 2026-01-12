@@ -64,7 +64,7 @@ public class CookieUtils {
                 }
             }
 
-            log.debug("[ CookieUtils ] 사용 가능한 쿠키가 존재하지 않음");
+            log.warn("[ CookieUtils ] 사용 가능한 쿠키가 존재하지 않음");
             log.debug("[ CookieUtils ] 현재 쿠키 목록 -------------------");
             for (Cookie cookie : request.getCookies()) {
                 log.debug("[ CookieUtils ]  - {}", cookie.getName());
