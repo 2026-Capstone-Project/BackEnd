@@ -2,12 +2,29 @@ spring:
   config:
     activate:
       on-profile: dev
+
+  swagger:
+    id: ${SWAGGER_ID}
+    password: ${SWAGGER_PASSWORD}
+
   datasource:
     url: ${DEV_DB_URL}
     username: ${DEV_DB_USERNAME}
     password: ${DEV_DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: none
+
+  data:
+    redis:
+      host: ${DEV_REDIS_HOST}
+      port: 6379
+
+  jwt:
+    secret: ${JWT_SECRET_KEY} # JWT 시크릿 키
+    token:
+      access-expiration-time: ${JWT_ACCESS_EXP}  # Access Token 만료 시간
+      refresh-expiration-time: ${JWT_REFRESH_EXP}  #  Refresh Token 만료 시간
