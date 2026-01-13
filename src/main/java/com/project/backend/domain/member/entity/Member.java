@@ -1,7 +1,6 @@
 package com.project.backend.domain.member.entity;
 
 import com.project.backend.domain.auth.entity.Auth;
-import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.setting.entity.Setting;
@@ -11,7 +10,6 @@ import com.project.backend.global.entity.SoftDeletableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,4 +52,8 @@ public class Member extends SoftDeletableEntity {
 
     @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Setting setting;
+
+    public void updateSetting(Setting set) {
+        this.setting = set;
+    }
 }

@@ -1,6 +1,8 @@
 package com.project.backend.domain.member.service;
 
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.auth.dto.response.AuthResDTO;
+import com.project.backend.domain.member.converter.MemberConverter;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -12,6 +14,8 @@ import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.utils.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.project.backend.domain.setting.converter.SettingConverter;
+import com.project.backend.domain.setting.entity.Setting;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class MemberService {
 
     private final MemberRepository memberRepository;
@@ -32,6 +36,14 @@ public class MemberService {
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    public Member createMember(AuthResDTO.UserAuth userAuth){
+
+        Member member = MemberConverter.toMember(userAuth);
+        Setting setting = SettingConverter.toSetting(member);
+        member.updateSetting(setting);
+        return memberRepository.save(member);
+    }
 
     // 회원 탈퇴
     @Transactional
