@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -16,24 +17,28 @@ import java.io.IOException;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/")
-@Tag(name = "Naver", description = "네이버 OAuth")
-public class NaverController {
+public class NaverController implements NaverDocs {
 
     private final NaverService naverService;
 
-    @GetMapping("/auth/naver/login")
-    public CustomResponse<String> redirectToNaver(
+    @Override
+    @GetMapping("/auth/naver")
+    public void redirectToNaver(
             HttpServletResponse response,
             HttpSession session
     ) throws IOException {
         naverService.redirectToNaver(response, session);
-        return CustomResponse.onSuccess("Redirect", "리디렉션 완료");
     }
 
+    @Override
     @GetMapping("/auth/naver/callback")
-    public CustomResponse<AuthResDTO.UserAuth> callback(
-            HttpServletRequest request
+    public CustomResponse<String> callback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state,
+            HttpServletResponse response,
+            HttpSession session
     ) {
-        return CustomResponse.onSuccess("네이버 소셜 인증 완료", naverService.callback(request));
+        naverService.callback(code, state, response, session);
+        return CustomResponse.onSuccess("OK", "네이버 로그인 성공");
     }
 }

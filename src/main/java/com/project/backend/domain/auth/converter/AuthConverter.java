@@ -23,6 +23,15 @@ public class AuthConverter {
                 .build();
     }
 
+    public static AuthResDTO.UserAuth toUserAuth(AuthResDTO.NaverInfo naverInfo, Provider provider) {
+        return AuthResDTO.UserAuth.builder()
+                .provider(provider)
+                .providerId(naverInfo.response().id())
+                .email(naverInfo.response().email())
+                .name(naverInfo.response().name())
+                .build();
+    }
+
     public static Auth toAuth(AuthResDTO.UserAuth userAuth, Member member) {
 
         return Auth.builder()

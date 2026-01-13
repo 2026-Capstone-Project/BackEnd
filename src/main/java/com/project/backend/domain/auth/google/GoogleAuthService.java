@@ -3,14 +3,12 @@ package com.project.backend.domain.auth.google;
 
 import com.project.backend.domain.auth.converter.AuthConverter;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
-import com.project.backend.domain.auth.entity.Auth;
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.repository.AuthRepository;
-import com.project.backend.domain.member.enums.Role;
+import com.project.backend.domain.auth.service.command.AuthCommandService;
 import com.project.backend.domain.member.service.MemberService;
-import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.security.jwt.JwtUtil;
-import com.project.backend.global.security.userdetails.CustomUserDetails;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +23,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -35,26 +32,32 @@ import java.util.UUID;
 public class GoogleAuthService {
 
     private final ObjectMapper objectMapper;
+    private final AuthCommandService authCommandService;
     private final AuthRepository authRepository;
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
 
-    @Value("${google.client-id}")
+    @Value("${spring.security.google.client-id}")
     private String clientId;
 
-    @Value("${google.client-secret}")
+    @Value("${spring.security.google.client-secret}")
     private String clientSecret;
 
-    @Value("${google.redirect-uri}")
+    @Value("${spring.security.google.redirect-uri}")
     private String redirectUri;
 
-    @Value("${google.token-uri}")
+    @Value("${spring.security.google.token-uri}")
     private String tokenUri;
 
     public String generateAuthorizationUrl(HttpSession session) {
+
+        // Csrf 방어용 state 값 생성
         String state = UUID.randomUUID().toString();
+
+        // callback 단계에서 검증하기 위해 세션에 저장
         session.setAttribute("GOOGLE_OAUTH_STATE", state);
 
+        // google oauth2 인증 요청 url 생성
         return UriComponentsBuilder
                 .fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("client_id", clientId)
@@ -66,7 +69,7 @@ public class GoogleAuthService {
                 .toUriString();
     }
 
-    public void exchangeCode(String code, String state, HttpSession session) {
+    public void exchangeCode(String code, String state, HttpServletResponse response, HttpSession session) {
 
         // state 검증
         String savedState = (String) session.getAttribute("GOOGLE_OAUTH_STATE");
@@ -99,13 +102,16 @@ public class GoogleAuthService {
         }
 
         // id_토큰에서 사용자 정보 추출
-        extractUserInfo(token);
+        AuthResDTO.UserAuth userAuth = extractUserInfo(token);
+
+        // 로그인 여부 확인
+        authCommandService.loginOrSignup(response, userAuth);
     }
 
     /**
      * Step 3: id_token 디코딩 → 사용자 식별
      */
-    public void extractUserInfo(AuthResDTO.GoogleTokenRes tokenResponse) {
+    private AuthResDTO.UserAuth extractUserInfo(AuthResDTO.GoogleTokenRes tokenResponse) {
 
         String idToken = tokenResponse.idToken();
         if (idToken == null) {
@@ -118,33 +124,9 @@ public class GoogleAuthService {
         // 최소한의 보안 검증
         validatePayload(payload);
 
-        AuthResDTO.UserAuth userAuth = AuthConverter.toUserAuth(payload, Provider.GOOGLE);
-
-        // 로그인 여부 확인
-        loginOrSignup(userAuth);
+        return AuthConverter.toUserAuth(payload, Provider.GOOGLE);
     }
 
-    public void loginOrSignup(AuthResDTO.UserAuth userAuth) {
-
-        Optional<Auth> auth = authRepository.findByProviderAndProviderId(userAuth.provider(), userAuth.providerId());
-        if (auth.isEmpty()) {
-            signup(userAuth);
-        }
-        CustomUserDetails userDetails = new CustomUserDetails(auth.get().getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
-        jwtUtil.createJwtAccessToken(userDetails);
-        jwtUtil.createJwtRefreshToken(userDetails);
-
-        //login()
-    }
-
-    //private void login();
-
-    private void signup(AuthResDTO.UserAuth userAuth) {
-
-        Member member = memberService.createMember(userAuth);
-        Auth auth = AuthConverter.toAuth(userAuth, member);
-        authRepository.save(auth);
-    }
 
     /**
      * JWT 디코딩 - 사용자 식별 정보만 꺼내기 위해
