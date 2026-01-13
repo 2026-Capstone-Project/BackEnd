@@ -23,12 +23,11 @@ public class NaverController implements NaverDocs {
 
     @Override
     @GetMapping("/auth/naver")
-    public CustomResponse<String> redirectToNaver(
+    public void redirectToNaver(
             HttpServletResponse response,
             HttpSession session
     ) throws IOException {
         naverService.redirectToNaver(response, session);
-        return CustomResponse.onSuccess("Redirect", "리디렉션 완료");
     }
 
     @Override
@@ -40,6 +39,6 @@ public class NaverController implements NaverDocs {
             HttpSession session
     ) {
         naverService.callback(code, state, response, session);
-        return CustomResponse.onSuccess("Created", "로그인 성공");
+        return CustomResponse.onSuccess("OK", "네이버 로그인 성공");
     }
 }
