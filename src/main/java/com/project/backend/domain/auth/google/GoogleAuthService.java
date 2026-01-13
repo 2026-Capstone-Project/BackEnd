@@ -3,16 +3,11 @@ package com.project.backend.domain.auth.google;
 
 import com.project.backend.domain.auth.converter.AuthConverter;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
-import com.project.backend.domain.auth.entity.Auth;
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.repository.AuthRepository;
 import com.project.backend.domain.auth.service.command.AuthCommandService;
-import com.project.backend.domain.auth.service.command.AuthCommandServiceImpl;
-import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.member.service.MemberService;
-import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.security.jwt.JwtUtil;
-import com.project.backend.global.security.userdetails.CustomUserDetails;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +23,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
