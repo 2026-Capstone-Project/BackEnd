@@ -1,5 +1,6 @@
 package com.project.backend.domain.auth.naver;
 
+import com.project.backend.domain.auth.converter.AuthConverter;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.service.command.AuthCommandService;
@@ -51,28 +52,23 @@ public class NaverService {
         response.sendRedirect(redirectUrl);
     }
 
-    public String callback(HttpServletRequest request) {
+    public void callback(String code, String state, HttpServletResponse response, HttpSession session) {
 
-        // 콜백 응답에서 state 파라미터의 값을 가져옴
-        String state = request.getParameter("state");
         // 세션 또는 별도의 저장 공간에서 상태 토큰을 가져옴
-        String storedState = request.getSession().getAttribute("state").toString();
+        String storedState = session.getAttribute("state").toString();
 
         // 만약 다르다면 악의적 요청으로 간주 -> 예외
         if (!state.equals(storedState)) {
             throw new IllegalStateException("Invalid state");
         }
-        // code를 추출
-        String code = request.getParameter("code");
         // Naver access token 발급
         String accessToken = getAccessTokenFromNaver(code, state);
 
         // 사용자 정보 return
         AuthResDTO.UserAuth userAuth = getNaverUserAuth(accessToken);
 
-        authCommandService.loginOrSignup(userAuth);
-
-        return "로그인 성공";
+        // Login or Signup
+        authCommandService.loginOrSignup(response, userAuth);
     }
 
     // 실제 사용자의 요청인지 검증할 state 난수 생성 후 세션에 저장
@@ -125,11 +121,6 @@ public class NaverService {
             throw new IllegalStateException("네이버 유저 정보가 존재하지 않음");
         }
 
-        return AuthResDTO.UserAuth.builder()
-                .provider(Provider.NAVER)
-                .email(naverInfo.response().email())
-                .name(naverInfo.response().name())
-                .providerId(naverInfo.response().id())
-                .build();
+        return AuthConverter.toUserAuth(naverInfo, Provider.NAVER);
     }
 }

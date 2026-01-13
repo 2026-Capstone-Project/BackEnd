@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -32,8 +33,12 @@ public class NaverController {
 
     @GetMapping("/auth/naver/callback")
     public CustomResponse<String> callback(
-            HttpServletRequest request
+            @RequestParam("code") String code,
+            @RequestParam("state") String state,
+            HttpServletResponse response,
+            HttpSession session
     ) {
-        return CustomResponse.onSuccess("네이버 소셜 인증 완료", naverService.callback(request));
+        naverService.callback(code, state, response, session);
+        return CustomResponse.onSuccess("Created", "로그인 성공");
     }
 }

@@ -9,10 +9,16 @@ import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.member.service.MemberService;
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
+
+import static com.project.backend.global.cookie.CookieUtils.createJwtCookies;
 
 @Slf4j
 @Service
@@ -24,20 +30,19 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
 
-    public void loginOrSignup(AuthResDTO.UserAuth userAuth) {
+    public void loginOrSignup(HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
 
         Auth auth = authRepository
                 .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
                 .orElseGet(() -> signup(userAuth));
 
         CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
-        jwtUtil.createJwtAccessToken(userDetails);
-        jwtUtil.createJwtRefreshToken(userDetails);
+        String accessToken = jwtUtil.createJwtAccessToken(userDetails);
+        String refreshToken = jwtUtil.createJwtRefreshToken(userDetails);
 
-        //login()
+        // TODO: 쿠키 생성하기
+//        createJwtCookies(response, "access-cookie", accessToken, 1000000L);
     }
-
-    //private void login();
 
     private Auth signup(AuthResDTO.UserAuth userAuth) {
 

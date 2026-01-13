@@ -27,9 +27,10 @@ public class GoogleController {
     public CustomResponse<String> googleCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state,
+            HttpServletResponse response,
             HttpSession session
     ) {
-        googleAuthService.exchangeCode(code, state, session);
+        googleAuthService.exchangeCode(code, state, response, session);
         return CustomResponse.onSuccess("Created", "로그인 성공");
     }
 }

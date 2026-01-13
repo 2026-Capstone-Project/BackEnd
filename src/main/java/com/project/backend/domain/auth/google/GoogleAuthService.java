@@ -13,6 +13,7 @@ import com.project.backend.domain.member.service.MemberService;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +70,7 @@ public class GoogleAuthService {
                 .toUriString();
     }
 
-    public void exchangeCode(String code, String state, HttpSession session) {
+    public void exchangeCode(String code, String state, HttpServletResponse response, HttpSession session) {
 
         // state 검증
         String savedState = (String) session.getAttribute("GOOGLE_OAUTH_STATE");
@@ -102,13 +103,16 @@ public class GoogleAuthService {
         }
 
         // id_토큰에서 사용자 정보 추출
-        extractUserInfo(token);
+        AuthResDTO.UserAuth userAuth = extractUserInfo(token);
+
+        // 로그인 여부 확인
+        authCommandService.loginOrSignup(response, userAuth);
     }
 
     /**
      * Step 3: id_token 디코딩 → 사용자 식별
      */
-    public void extractUserInfo(AuthResDTO.GoogleTokenRes tokenResponse) {
+    private AuthResDTO.UserAuth extractUserInfo(AuthResDTO.GoogleTokenRes tokenResponse) {
 
         String idToken = tokenResponse.idToken();
         if (idToken == null) {
@@ -121,10 +125,7 @@ public class GoogleAuthService {
         // 최소한의 보안 검증
         validatePayload(payload);
 
-        AuthResDTO.UserAuth userAuth = AuthConverter.toUserAuth(payload, Provider.GOOGLE);
-
-        // 로그인 여부 확인
-        authCommandService.loginOrSignup(userAuth);
+        return AuthConverter.toUserAuth(payload, Provider.GOOGLE);
     }
 
 
