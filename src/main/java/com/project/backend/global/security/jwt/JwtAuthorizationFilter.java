@@ -73,7 +73,14 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         jwtUtil.validateToken(accessToken);
 
         // Access Token으로 CustomUserDetails 생성
-        CustomUserDetails user = new CustomUserDetails(jwtUtil.getId(accessToken), jwtUtil.getProviderId(accessToken), jwtUtil.getRoles(accessToken));
+        CustomUserDetails user =
+                new CustomUserDetails(
+                        jwtUtil.getId(accessToken),
+                        jwtUtil.getProvider(accessToken),
+                        jwtUtil.getProviderId(accessToken),
+                        jwtUtil.getEmail(accessToken),
+                        jwtUtil.getRoles(accessToken)
+                );
 
         // 인증 객체 생성
         UsernamePasswordAuthenticationToken authToken =
