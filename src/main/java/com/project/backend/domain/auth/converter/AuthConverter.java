@@ -32,6 +32,15 @@ public class AuthConverter {
                 .build();
     }
 
+    public static AuthResDTO.UserAuth toUserAuth(AuthResDTO.KakaoUserInfo kakaoUserInfo, Provider provider) {
+        return AuthResDTO.UserAuth.builder()
+                .provider(provider)
+                .providerId(String.valueOf(kakaoUserInfo.id()))
+                .email(kakaoUserInfo.getEmail())
+                .name(kakaoUserInfo.getNickname())
+                .build();
+    }
+
     public static Auth toAuth(AuthResDTO.UserAuth userAuth, Member member) {
 
         return Auth.builder()

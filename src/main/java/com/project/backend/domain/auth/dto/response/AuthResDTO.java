@@ -48,4 +48,45 @@ public class AuthResDTO {
             String refresh_token
     ) {
     }
+
+    public record KakaoTokenResponse(
+            @JsonProperty("access_token")
+            String accessToken,
+
+            @JsonProperty("refresh_token")
+            String refreshToken,
+
+            @JsonProperty("token_type")
+            String tokenType,
+
+            @JsonProperty("expires_in")
+            Integer expiresIn
+    ) {}
+
+    public record KakaoUserInfo(
+            Long id,
+
+            @JsonProperty("kakao_account")
+            KakaoAccount kakaoAccount
+    ) {
+        public record KakaoAccount(
+                String email,
+                Profile profile
+        ) {
+            public record Profile(
+                    String nickname
+            ) {}
+        }
+
+        public String getEmail() {
+            return kakaoAccount != null ? kakaoAccount.email() : null;
+        }
+
+        public String getNickname() {
+            if (kakaoAccount != null && kakaoAccount.profile() != null) {
+                return kakaoAccount.profile().nickname();
+            }
+            return null;
+        }
+    }
 }

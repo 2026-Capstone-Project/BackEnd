@@ -27,7 +27,7 @@ spring:
 
   cookie:
     secure: false  # 운영환경(HTTPS)에서는 true, 로컬 HTTP 테스트 시에는 false
-    same-site: None
+    same-site: Lax
 
   security:
     naver:
@@ -45,3 +45,8 @@ spring:
       client-secret: ${GOOGLE_CLIENT_SECRET}
       redirect-uri: ${GOOGLE_REDIRECT_URI}
       token-uri: ${GOOGLE_TOKEN_URI}
+
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID}
+      client-secret: ${KAKAO_CLIENT_SECRET}
+      redirect-uri: http://localhost:8080/api/v1/auth/kakao/callback
