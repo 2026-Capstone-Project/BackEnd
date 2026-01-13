@@ -33,8 +33,8 @@ public class CustomLogoutHandler implements LogoutHandler {
         log.info("로그아웃 처리 시작");
 
         // 1. 쿠키에서 토큰 추출
-        String accessToken = cookieUtil.extractFromCookie(request, "access_token");
-        String refreshToken = cookieUtil.extractFromCookie(request, "refresh_token");
+        String accessToken = cookieUtil.getTokenFromCookie(request, "access_token");
+        String refreshToken = cookieUtil.getTokenFromCookie(request, "refresh_token");
 
         // 2. Access Token 블랙리스트 등록
         if (accessToken != null) {

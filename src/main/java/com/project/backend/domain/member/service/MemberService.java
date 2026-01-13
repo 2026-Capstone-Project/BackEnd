@@ -74,7 +74,7 @@ public class MemberService {
     // 토큰 무효화 (Access Token, Refresh Token 블랙리스트 등록, Refresh Token 삭제)
     private void invalidateTokens(HttpServletRequest request, HttpServletResponse response) {
         // Access Token 블랙리스트 등록
-        String accessToken = cookieUtil.extractFromCookie(request, "access_token");
+        String accessToken = cookieUtil.getTokenFromCookie(request, "access_token");
         if (accessToken != null) {
             try {
                 long remainingTime = jwtUtil.getRemainingTime(accessToken);
@@ -88,7 +88,7 @@ public class MemberService {
         }
 
         // Refresh Token 삭제
-        String refreshToken = cookieUtil.extractFromCookie(request, "refresh_token");
+        String refreshToken = cookieUtil.getTokenFromCookie(request, "refresh_token");
         if (refreshToken != null) {
             try {
                 String email = jwtUtil.getEmail(refreshToken);

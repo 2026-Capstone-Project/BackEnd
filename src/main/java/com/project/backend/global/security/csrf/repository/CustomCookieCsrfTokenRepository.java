@@ -1,27 +1,28 @@
 package com.project.backend.global.security.csrf.repository;
 
-
-
+import com.project.backend.global.security.utils.CookieUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.DefaultCsrfToken;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.UUID;
 
-import static com.project.backend.global.cookie.CookieUtils.createCsrfCookies;
-import static com.project.backend.global.cookie.CookieUtils.deleteCsrfCookie;
-
+@Component
+@RequiredArgsConstructor
 public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
 
     public static final String CSRF_HEADER_NAME = "X-XSRF-TOKEN";
     private static final String CSRF_PARAMETER_NAME = "_csrf";
     public static final String CSRF_COOKIE_NAME = "XSRF-TOKEN";
 
+    private final CookieUtil cookieUtil;
 
     @Override
     @NonNull
@@ -32,14 +33,11 @@ public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
 
     @Override
     public void saveToken(CsrfToken csrfToken, @NonNull HttpServletRequest request, @NonNull HttpServletResponse response) {
-//        if (response == null) return;
-
         if (csrfToken == null) {
-            // 여기서 바로 삭제하지 않음 (로그아웃 시 직접 전용 메서드 호출로 삭제)
             return;
         }
 
-        createCsrfCookies(response, CSRF_COOKIE_NAME, csrfToken);
+        cookieUtil.createCsrfCookie(response, CSRF_COOKIE_NAME, csrfToken);
     }
 
     @Override
@@ -56,8 +54,6 @@ public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
     }
 
     public void invalidateCsrfToken(HttpServletResponse response) {
-        deleteCsrfCookie(response);
+        cookieUtil.deleteCsrfCookie(response);
     }
-
-
 }

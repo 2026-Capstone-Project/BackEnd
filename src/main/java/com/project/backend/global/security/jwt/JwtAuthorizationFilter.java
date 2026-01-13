@@ -3,10 +3,10 @@ package com.project.backend.global.security.jwt;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
+import com.project.backend.global.security.utils.CookieUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,15 +20,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-import static com.project.backend.global.cookie.CookieUtils.getTokenFromCookies;
-
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-
     private final RedisTemplate<String, String> redisTemplate;
+    private final CookieUtil cookieUtil;
 
     @Override
     protected void doFilterInternal(
@@ -38,8 +36,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
-            // Cookie애서 Access Token 추출
-            String accessToken = getTokenFromCookies(request, "access-token");
+            // Cookie에서 Access Token 추출
+            String accessToken = cookieUtil.getTokenFromCookie(request, "access-token");
 
             // Access Token이 없다면 다음 필터
             if (accessToken == null) {

@@ -27,7 +27,7 @@ spring:
 
   cookie:
     secure: false  # 운영환경(HTTPS)에서는 true, 로컬 HTTP 테스트 시에는 false
-    same-site: Lax
+    same-site: None
 
   security:
     naver:
