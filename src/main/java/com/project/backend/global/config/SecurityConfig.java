@@ -41,6 +41,7 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/api/v1/auth/google/**",
             "/api/v1/auth/naver/**",
+            "/api/v1/auth/kakao/**",
             "/api/v1/security/**"
     };
 

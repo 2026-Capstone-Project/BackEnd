@@ -37,7 +37,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
         try {
             // Cookie에서 Access Token 추출
-            String accessToken = cookieUtil.getTokenFromCookie(request, "access-token");
+            String accessToken = cookieUtil.getTokenFromCookie(request, "access_token");
 
             // Access Token이 없다면 다음 필터
             if (accessToken == null) {

@@ -35,9 +35,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
 
     @Value("${spring.jwt.token.access-expiration-time}")
-    long accessExpMs;
+    private long accessExpMs;
     @Value("${spring.jwt.token.refresh-expiration-time}")
-    long refreshExpMs;
+    private long refreshExpMs;
 
 
     public void loginOrSignup(HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
@@ -50,8 +50,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         String accessToken = jwtUtil.createJwtAccessToken(userDetails);
         String refreshToken = jwtUtil.createJwtRefreshToken(userDetails);
 
-        cookieUtil.createJwtCookie(response, "access-token", accessToken, accessExpMs);
-        cookieUtil.createJwtCookie(response, "refresh-token", refreshToken, refreshExpMs);
+        // 쿠키 생성하기
+        cookieUtil.createJwtCookie(response, "access_token", accessToken, accessExpMs);
+        cookieUtil.createJwtCookie(response, "refresh_token", refreshToken, refreshExpMs);
 
         // 토큰을 레디스에 등록
         redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs);
