@@ -17,11 +17,11 @@ import java.io.IOException;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/")
-@Tag(name = "Naver", description = "네이버 OAuth")
-public class NaverController {
+public class NaverController implements NaverDocs {
 
     private final NaverService naverService;
 
+    @Override
     @GetMapping("/auth/naver")
     public CustomResponse<String> redirectToNaver(
             HttpServletResponse response,
@@ -31,6 +31,7 @@ public class NaverController {
         return CustomResponse.onSuccess("Redirect", "리디렉션 완료");
     }
 
+    @Override
     @GetMapping("/auth/naver/callback")
     public CustomResponse<String> callback(
             @RequestParam("code") String code,

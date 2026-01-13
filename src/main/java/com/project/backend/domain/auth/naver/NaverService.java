@@ -3,6 +3,8 @@ package com.project.backend.domain.auth.naver;
 import com.project.backend.domain.auth.converter.AuthConverter;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.auth.enums.Provider;
+import com.project.backend.domain.auth.exception.AuthErrorCode;
+import com.project.backend.domain.auth.exception.AuthException;
 import com.project.backend.domain.auth.service.command.AuthCommandService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,11 +15,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -58,9 +62,13 @@ public class NaverService {
         String storedState = session.getAttribute("state").toString();
 
         // 만약 다르다면 악의적 요청으로 간주 -> 예외
-        if (!state.equals(storedState)) {
-            throw new IllegalStateException("Invalid state");
+        if (!Objects.equals(storedState, state)) {
+            throw new AuthException(AuthErrorCode.OAUTH_STATE_MISMATCH);
         }
+
+        // 한번 사용한 세션은 삭제
+        session.removeAttribute("state");
+
         // Naver access token 발급
         String accessToken = getAccessTokenFromNaver(code, state);
 
@@ -84,23 +92,37 @@ public class NaverService {
     // Naver Access Token 발급 메서드
     private String getAccessTokenFromNaver(String code, String state) {
 
-        AuthResDTO.NaverToken naverToken =
-                WebClient.create(tokenUri)
-                        .get()
-                        .uri(uriBuilder -> uriBuilder
-                                .queryParam("client_id", clientId)
-                                .queryParam("client_secret", clientSecret)
-                                .queryParam("grant_type", "authorization_code")
-                                .queryParam("state", state)
-                                .queryParam("code", code)
-                                .build()
-                        )
-                        .retrieve()
-                        .bodyToMono(AuthResDTO.NaverToken.class)
-                        .block();
+        AuthResDTO.NaverToken naverToken;
+        try {
+            naverToken =
+                    WebClient.create(tokenUri)
+                            .get()
+                            .uri(uriBuilder -> uriBuilder
+                                    .queryParam("client_id", clientId)
+                                    .queryParam("client_secret", clientSecret)
+                                    .queryParam("grant_type", "authorization_code")
+                                    .queryParam("state", state)
+                                    .queryParam("code", code)
+                                    .build()
+                            )
+                            .retrieve()
+                            .bodyToMono(AuthResDTO.NaverToken.class)
+                            .block();
+        } catch (WebClientRequestException e) {
+            // 네트워크 / 타임아웃
+            throw new AuthException(AuthErrorCode.NAVER_SERVER_ERROR);
+
+        } catch (AuthException e) {
+            // 위에서 던진 인증 예외
+            throw e;
+
+        } catch (Exception e) {
+            // block() 내부 예외
+            throw new AuthException(AuthErrorCode.INVALID_OAUTH_REQUEST);
+        }
 
         if (naverToken == null) {
-            throw new IllegalStateException("토큰이 존재하지 않음");
+            throw new AuthException(AuthErrorCode.NAVER_TOKEN_NOT_FOUND);
         }
 
         return naverToken.access_token();
@@ -109,16 +131,31 @@ public class NaverService {
     // Naver Access Token을 사용해 유저 정보 조회 후 반환
     private AuthResDTO.UserAuth getNaverUserAuth(String accessToken) {
 
-        AuthResDTO.NaverInfo naverInfo =
-                WebClient.create(userInfoUri)
-                        .get()
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .retrieve()
-                        .bodyToMono(AuthResDTO.NaverInfo.class)
-                        .block();
+        AuthResDTO.NaverInfo naverInfo;
+
+        try {
+             naverInfo =
+                    WebClient.create(userInfoUri)
+                            .get()
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                            .retrieve()
+                            .bodyToMono(AuthResDTO.NaverInfo.class)
+                            .block();
+        } catch (WebClientRequestException e) {
+            // 네트워크 / 타임아웃
+            throw new AuthException(AuthErrorCode.NAVER_SERVER_ERROR);
+
+        } catch (AuthException e) {
+            // 위에서 던진 인증 예외
+            throw e;
+
+        } catch (Exception e) {
+            // block() 내부 예외
+            throw new AuthException(AuthErrorCode.INVALID_OAUTH_REQUEST);
+        }
 
         if (naverInfo == null || naverInfo.response() == null) {
-            throw new IllegalStateException("네이버 유저 정보가 존재하지 않음");
+            throw new AuthException(AuthErrorCode.NAVER_USER_INFO_NOT_FOUND);
         }
 
         return AuthConverter.toUserAuth(naverInfo, Provider.NAVER);
