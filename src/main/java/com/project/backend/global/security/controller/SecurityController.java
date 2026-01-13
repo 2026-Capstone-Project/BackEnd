@@ -19,13 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/security")
-public class SecurityController {
+public class SecurityController implements SecurityDocs {
 
     private final CookieUtil cookieUtil;
     private final SecurityService securityService;
     private final JwtUtil jwtUtil;
 
-    @Operation(summary = "엑세스 쿠키 재발급", description = "엑세스 쿠키가 만료되어 없어졌고, 리프레시 쿠키가 있다면 엑세스 쿠키를 만들어준다.")
+    @Override
     @PostMapping("/reissue-cookie")
     public CustomResponse<String> reissueCookie(
             HttpServletRequest request,
@@ -41,7 +41,7 @@ public class SecurityController {
         return CustomResponse.onSuccess("OK", "엑세스 쿠키가 재발급 되었습니다.");
     }
 
-    @Operation(summary = "CSRF 토큰 발급", description = "CSRF 토큰을 쿠키로 발급합니다")
+    @Override
     @GetMapping("/csrf")
     public CustomResponse<String> csrf(
             HttpServletRequest request,
