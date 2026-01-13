@@ -56,9 +56,14 @@ public class GoogleAuthService {
     private String tokenUri;
 
     public String generateAuthorizationUrl(HttpSession session) {
+
+        // Csrf 방어용 state 값 생성
         String state = UUID.randomUUID().toString();
+
+        // callback 단계에서 검증하기 위해 세션에 저장
         session.setAttribute("GOOGLE_OAUTH_STATE", state);
 
+        // google oauth2 인증 요청 url 생성
         return UriComponentsBuilder
                 .fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("client_id", clientId)
