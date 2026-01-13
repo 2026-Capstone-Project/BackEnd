@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class AuthCommandServiceImpl implements AuthCommandService {
 
-    @Value("${spring.jwt.access-expiration-time}")
+    @Value("${spring.jwt.token.access-expiration-time}")
     private long accessExpMs;
 
-    @Value("${spring.jwt.refresh-expiration-time}")
+    @Value("${spring.jwt.token.refresh-expiration-time}")
     private long refreshExpMs;
 
     private final AuthRepository authRepository;
