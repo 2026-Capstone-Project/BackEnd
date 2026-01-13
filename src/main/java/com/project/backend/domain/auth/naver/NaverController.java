@@ -41,4 +41,9 @@ public class NaverController implements NaverDocs {
         naverService.callback(code, state, response, session);
         return CustomResponse.onSuccess("OK", "네이버 로그인 성공");
     }
+
+    @GetMapping("/auth-test")
+    public CustomResponse<String> test() {
+        return CustomResponse.onSuccess("test", "test");
+    }
 }
