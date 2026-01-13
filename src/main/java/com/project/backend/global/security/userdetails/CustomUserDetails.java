@@ -18,11 +18,20 @@ public class CustomUserDetails implements UserDetails {
     @Getter
     private final Long id;
     private final String username;
+    @Getter
+    private final Provider provider;
+    @Getter
+    private final String providerId;
+    @Getter
+    private final String email;
     private final Role role;
 
-    public CustomUserDetails(Long id, String providerId , Role role) {
+    public CustomUserDetails(Long id, Provider provider, String providerId, String email, Role role) {
         this.id = id;
-        this.username = providerId;
+        this.username = provider + "_" + providerId;
+        this.provider = provider;
+        this.providerId = providerId;
+        this.email = email;
         this.role = role;
     }
 
