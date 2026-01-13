@@ -23,6 +23,16 @@ public enum AuthErrorCode implements BaseErrorCode {
     KAKAO_INVALID_STATE(HttpStatus.BAD_REQUEST, "KAKAO_001", "유효하지 않은 요청입니다."),
     KAKAO_TOKEN_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "KAKAO_002", "카카오 소셜 로그인 토큰 발급에 실패했습니다."),
     KAKAO_USER_INFO_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "KAKAO_003", "카카오 소셜 로그인 사용자 정보 조회에 실패했습니다."),
+
+    // GOOGLE
+    GOOGLE_TOKEN_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "GOOGLE_001", "구글 소셜 로그인 토큰 발급에 실패했습니다."),
+    GOOGLE_ID_TOKEN_DECODE_FAILED(HttpStatus.BAD_REQUEST, "GOOGLE_002", "구글 ID 토큰 디코딩에 실패했습니다."),
+    GOOGLE_ISS_VALIDATION_FAILED(HttpStatus.UNAUTHORIZED, "GOOGLE_003", "구글 토큰 발급자(iss) 검증에 실패했습니다."),
+    GOOGLE_AUD_VALIDATION_FAILED(HttpStatus.UNAUTHORIZED, "GOOGLE_004", "구글 토큰 대상자(aud) 검증에 실패했습니다."),
+    GOOGLE_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "GOOGLE_005", "구글 토큰이 만료되었습니다."),
+
+    // 공통 - OAuth 통합
+    UNSUPPORTED_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH402", "지원하지 않는 OAuth Provider입니다."),
     ;
 
     private final HttpStatus httpStatus;

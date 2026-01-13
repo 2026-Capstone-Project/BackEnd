@@ -3,7 +3,7 @@ package com.project.backend.domain.auth.converter;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.auth.entity.Auth;
 import com.project.backend.domain.auth.enums.Provider;
-import com.project.backend.domain.auth.google.GoogleIdTokenPayload;
+import com.project.backend.domain.auth.dto.GoogleIdTokenPayload;
 import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
