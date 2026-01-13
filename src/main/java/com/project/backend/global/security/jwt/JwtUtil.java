@@ -1,5 +1,6 @@
 package com.project.backend.global.security.jwt;
 
+import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import io.jsonwebtoken.*;
@@ -66,6 +67,14 @@ public class JwtUtil {
                 .get("email", String.class);
     }
 
+    public String getSubject(String token) throws SignatureException {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
 
     // 토큰 남은 만료시간 (초)
     public long getRemainingTime(String token) {
@@ -90,7 +99,7 @@ public class JwtUtil {
     public void addToBlacklist(String token, long remainingTimeSeconds) {
         if (remainingTimeSeconds > 0) {
             redisTemplate.opsForValue().set(
-                    "blacklist:" + token,
+                    getJti(token) + ":blacklist",
                     "logout",
                     remainingTimeSeconds,
                     TimeUnit.SECONDS
@@ -121,7 +130,18 @@ public class JwtUtil {
                 .get("jti", String.class);
     }
 
-    // 토큰에서 provider:providerId를 추출
+    public Provider getProvider(String token) throws SignatureException {
+
+        String providerStr = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("provider", String.class);
+        return Provider.valueOf(providerStr);
+    }
+
+    // 토큰에서 providerId를 추출
     public String getProviderId(String token) throws SignatureException {
 
         return Jwts.parser()
@@ -129,7 +149,7 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
-                .getSubject();
+                .get("providerId", String.class);
     }
 
     public String tokenIssuer(CustomUserDetails user, Instant exp) {
@@ -148,6 +168,9 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", user.getId());
         claims.put("role", authorities);
+        claims.put("email", user.getEmail());
+        claims.put("providerId", user.getProviderId());
+        claims.put("provider", user.getProvider());
 
         return Jwts.builder()
                 .header()
@@ -182,6 +205,23 @@ public class JwtUtil {
         );
 
         return refreshToken;
+    }
+
+    // 제공된 리프레시 토큰을 기반으로 access token을 다시 발급
+    public String reissueToken(String refreshToken) throws SignatureException {
+        // refreshToken 에서 user 정보를 가져와서 새로운 토큰을 발급 (발급 시간, 유효 시간(reset)만 새로 적용)
+        // 재발급시에는 비밀번호를 넣지 않아 비밀번호 노출 억제
+        CustomUserDetails userDetails = new CustomUserDetails(
+                getId(refreshToken),
+                getProvider(refreshToken),
+                getProviderId(refreshToken),
+                getEmail(refreshToken),
+                getRoles(refreshToken)
+        );
+        log.info("[ JwtUtil ] 새로운 토큰을 재발급");
+
+        // 재발급
+        return createJwtAccessToken(userDetails);
     }
 
     public void validateToken(String token) {

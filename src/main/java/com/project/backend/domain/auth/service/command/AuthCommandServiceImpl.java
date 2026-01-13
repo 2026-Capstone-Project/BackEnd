@@ -7,18 +7,19 @@ import com.project.backend.domain.auth.repository.AuthRepository;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.domain.member.service.MemberService;
+import com.project.backend.global.security.csrf.repository.CustomCookieCsrfTokenRepository;
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import com.project.backend.global.security.utils.CookieUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -26,16 +27,18 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class AuthCommandServiceImpl implements AuthCommandService {
 
-    @Value("${spring.jwt.token.access-expiration-time}")
-    private long accessExpMs;
-
-    @Value("${spring.jwt.token.refresh-expiration-time}")
-    private long refreshExpMs;
-
     private final AuthRepository authRepository;
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
+
+    @Value("${spring.jwt.token.access-expiration-time}")
+    long accessExpMs;
+    @Value("${spring.jwt.token.refresh-expiration-time}")
+    long refreshExpMs;
+
 
     public void loginOrSignup(HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
 
@@ -43,13 +46,21 @@ public class AuthCommandServiceImpl implements AuthCommandService {
                 .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
                 .orElseGet(() -> signup(userAuth));
 
-        CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.providerId(), Role.ROLE_USER);
+        CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.provider(), userAuth.providerId(), userAuth.email(), Role.ROLE_USER);
         String accessToken = jwtUtil.createJwtAccessToken(userDetails);
         String refreshToken = jwtUtil.createJwtRefreshToken(userDetails);
 
         // 쿠키 생성하기
         cookieUtil.createJwtCookie(response, "access_token", accessToken, accessExpMs);
         cookieUtil.createJwtCookie(response, "refresh_token", refreshToken, refreshExpMs);
+
+        // 토큰을 레디스에 등록
+        redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs);
+
+        // TODO : 로그인시 csrf 초기화
+        // 로그인 시 새로운 csrf 토큰 발급
+//        CsrfToken csrfToken = customCookieCsrfTokenRepository.generateToken(request);
+//        customCookieCsrfTokenRepository.saveToken(csrfToken, request, response);
     }
 
     private Auth signup(AuthResDTO.UserAuth userAuth) {
