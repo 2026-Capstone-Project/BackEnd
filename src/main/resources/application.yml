@@ -1,0 +1,13 @@
+spring:
+  config:
+    import:
+      - classpath:yaml/application-local.yml
+      - classpath:yaml/application-dev.yml
+      - classpath:yaml/application-test.yml
+      - classpath:yaml/application-log.yml
+  profiles:
+    group:
+      logging-dev: dev, log
+      logging-local: local, log
+      logging-test: test, log
+    active: ${SPRING_PROFILES_ACTIVE}

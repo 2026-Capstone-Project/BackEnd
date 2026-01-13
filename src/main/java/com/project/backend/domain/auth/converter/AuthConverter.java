@@ -1,0 +1,52 @@
+package com.project.backend.domain.auth.converter;
+
+import com.project.backend.domain.auth.dto.response.AuthResDTO;
+import com.project.backend.domain.auth.entity.Auth;
+import com.project.backend.domain.auth.enums.Provider;
+import com.project.backend.domain.auth.dto.GoogleIdTokenPayload;
+import com.project.backend.domain.member.entity.Member;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
+
+@Component
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public class AuthConverter {
+
+    public static AuthResDTO.UserAuth toUserAuth(GoogleIdTokenPayload payload, Provider provider) {
+
+        return AuthResDTO.UserAuth.builder()
+                .provider(provider)
+                .providerId(payload.getSub())
+                .email(payload.getEmail())
+                .name(payload.getName())
+                .build();
+    }
+
+    public static AuthResDTO.UserAuth toUserAuth(AuthResDTO.NaverInfo naverInfo, Provider provider) {
+        return AuthResDTO.UserAuth.builder()
+                .provider(provider)
+                .providerId(naverInfo.response().id())
+                .email(naverInfo.response().email())
+                .name(naverInfo.response().name())
+                .build();
+    }
+
+    public static AuthResDTO.UserAuth toUserAuth(AuthResDTO.KakaoUserInfo kakaoUserInfo, Provider provider) {
+        return AuthResDTO.UserAuth.builder()
+                .provider(provider)
+                .providerId(String.valueOf(kakaoUserInfo.id()))
+                .email(kakaoUserInfo.getEmail())
+                .name(kakaoUserInfo.getNickname())
+                .build();
+    }
+
+    public static Auth toAuth(AuthResDTO.UserAuth userAuth, Member member) {
+
+        return Auth.builder()
+                .provider(userAuth.provider())
+                .providerId(userAuth.providerId())
+                .member(member)
+                .build();
+    }
+}

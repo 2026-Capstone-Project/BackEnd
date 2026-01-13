@@ -4,11 +4,15 @@ import com.project.backend.global.apiPayload.exception.CustomException;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.apiPayload.code.BaseErrorCode;
 import com.project.backend.global.apiPayload.code.GeneralErrorCode;
+import com.project.backend.global.security.exception.SecurityErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -144,6 +148,31 @@ public class GlobalExceptionHandler {
         log.warn("[ ConstraintViolationException ]: Constraint violations detected");
 
         return ResponseEntity.status(constraintErrorCode.getHttpStatus()).body(errorResponse);
+    }
+
+    // AccessDeniedException 핸들러
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<CustomResponse<String>> handleAuthorizationDenied(AccessDeniedException ex) {
+        log.warn("[ AccessDeniedException ]: {}", ex.getMessage());
+        BaseErrorCode errorCode;
+        String code;
+        String message;
+
+        if (ex instanceof AuthorizationDeniedException) {
+            code = SecurityErrorCode.ROLE_ACCESS_DENIED.getCode();
+            message = SecurityErrorCode.ROLE_ACCESS_DENIED.getMessage();
+        } else {
+            code = "AccessDeniedException";
+            message = ex.getMessage();
+        }
+        CustomResponse<String> errorResponse = CustomResponse.onFailure(
+                code,
+                message,
+                null
+        );
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(errorResponse);
     }
 
     //애플리케이션에서 발생하는 커스텀 예외를 처리

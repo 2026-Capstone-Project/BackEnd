@@ -16,19 +16,29 @@ public class SwaggerConfig {
     public OpenAPI swagger() {
         Info info = new Info().title("2026 Capstone Project").description("2026 Capstone Project API").version("0.0.1");
 
-        String securityScheme = "JWT TOKEN";
-        SecurityRequirement securityRequirement = new SecurityRequirement().addList(securityScheme);
+        String csrfSchemeName = "X-XSRF-TOKEN";
+        String csrfCookieName = "XSRF-TOKEN";
+        // API 요청헤더에 인증정보 포함
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList(csrfSchemeName).addList(csrfCookieName);
 
+        // SecuritySchemes 등록
         Components components = new Components()
-                .addSecuritySchemes(securityScheme, new SecurityScheme()
-                        .name(securityScheme)
-                        .type(SecurityScheme.Type.HTTP)
-                        .scheme("Bearer")
-                        .bearerFormat("JWT"));
+                .addSecuritySchemes(csrfSchemeName, new SecurityScheme()
+                        .name(csrfSchemeName)
+                        .type(SecurityScheme.Type.APIKEY) // csrf token은 api key 방식
+                        .in(SecurityScheme.In.HEADER) // header에 위치
+                        .description("csrf token을 헤더에 입력하세요"));
+
+        components.addSecuritySchemes(csrfCookieName,
+                new SecurityScheme()
+                        .name(csrfCookieName)
+                        .type(SecurityScheme.Type.APIKEY)
+                        .in(SecurityScheme.In.COOKIE)
+                        .description("csrf token 쿠키 입력"));
 
         return new OpenAPI()
-                .info(info)
                 .addServersItem(new Server().url("/"))
+                .info(info)
                 .addSecurityItem(securityRequirement)
                 .components(components);
     }
