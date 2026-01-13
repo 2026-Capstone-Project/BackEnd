@@ -1,4 +1,4 @@
-package com.project.backend.domain.auth.google;
+package com.project.backend.domain.auth.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

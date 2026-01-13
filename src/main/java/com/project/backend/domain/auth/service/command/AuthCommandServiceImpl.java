@@ -11,6 +11,7 @@ import com.project.backend.global.security.csrf.repository.CustomCookieCsrfToken
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import com.project.backend.global.security.utils.CookieUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private long refreshExpMs;
 
 
-    public void loginOrSignup(HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
+    public void loginOrSignup(HttpServletRequest request, HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
 
         Auth auth = authRepository
                 .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
@@ -57,10 +58,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         // 토큰을 레디스에 등록
         redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs);
 
-        // TODO : 로그인시 csrf 초기화
         // 로그인 시 새로운 csrf 토큰 발급
-//        CsrfToken csrfToken = customCookieCsrfTokenRepository.generateToken(request);
-//        customCookieCsrfTokenRepository.saveToken(csrfToken, request, response);
+        CsrfToken csrfToken = customCookieCsrfTokenRepository.generateToken(request);
+        customCookieCsrfTokenRepository.saveToken(csrfToken, request, response);
     }
 
     private Auth signup(AuthResDTO.UserAuth userAuth) {
