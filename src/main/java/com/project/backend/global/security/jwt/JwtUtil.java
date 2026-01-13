@@ -2,10 +2,7 @@ package com.project.backend.global.security.jwt;
 
 import com.project.backend.domain.member.enums.Role;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -58,16 +55,48 @@ public class JwtUtil {
     }
 
 
-//    // 토큰에서 Email을 추출
-//    public String getEmail(String token) throws SignatureException {
-//
-//        return Jwts.parser()
-//                .verifyWith(secretKey)
-//                .build()
-//                .parseSignedClaims(token)
-//                .getPayload()
-//                .get("email", String.class);
-//    }
+    // 토큰에서 Email을 추출
+    public String getEmail(String token) throws SignatureException {
+
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("email", String.class);
+    }
+
+
+    // 토큰 남은 만료시간 (초)
+    public long getRemainingTime(String token) {
+        try {
+            Date expiration = parseToken(token).getExpiration();
+            long remainingMs = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remainingMs / 1000);
+        } catch (ExpiredJwtException e) {
+            return 0;
+        }
+    }
+
+    // 토큰 파싱 (Claims 추출)
+    private Claims parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public void addToBlacklist(String token, long remainingTimeSeconds) {
+        if (remainingTimeSeconds > 0) {
+            redisTemplate.opsForValue().set(
+                    "blacklist:" + token,
+                    "logout",
+                    remainingTimeSeconds,
+                    TimeUnit.SECONDS
+            );
+        }
+    }
 
     // 토큰에서 Role을 추출
     public Role getRoles(String token) throws SignatureException {

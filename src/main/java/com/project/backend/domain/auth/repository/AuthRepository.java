@@ -11,6 +11,12 @@ import java.util.Optional;
 
 @Repository
 public interface AuthRepository extends JpaRepository<Auth, Long> {
+
+    @Query("SELECT a FROM Auth a JOIN FETCH a.member WHERE a.provider = :provider AND a.providerId = :providerId")
+    Optional<Auth> findByProviderAndProviderIdWithMember(@Param("provider") Provider provider, @Param("providerId") String providerId);
+
+    void deleteByMemberId(Long memberId);
+
     @Query("""
          SELECT a
          FROM Auth a

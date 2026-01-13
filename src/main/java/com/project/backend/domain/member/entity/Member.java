@@ -35,7 +35,7 @@ public class Member extends SoftDeletableEntity {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "member", fetch = FetchType.LAZY)
     private Auth auth;
 
     @Builder.Default

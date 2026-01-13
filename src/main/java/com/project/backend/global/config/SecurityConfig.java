@@ -3,8 +3,10 @@ package com.project.backend.global.config;
 import com.project.backend.global.security.exception.CustomAccessDeniedHandler;
 import com.project.backend.global.security.exception.CustomAuthenticationEntryPoint;
 import com.project.backend.global.security.csrf.repository.CustomCookieCsrfTokenRepository;
+import com.project.backend.global.security.handler.CustomLogoutHandler;
 import com.project.backend.global.security.jwt.JwtAuthorizationFilter;
 import com.project.backend.global.security.jwt.JwtUtil;
+import com.project.backend.global.security.utils.CookieUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +19,6 @@ import org.springframework.security.config.annotation.web.configurers.HttpBasicC
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Slf4j
 @Configuration
@@ -30,6 +31,8 @@ public class SecurityConfig {
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
+    private final CustomLogoutHandler customLogoutHandler;
+    private final CookieUtil cookieUtil;
 
     private final String[] allowUrl = {
             "/swagger-ui/**",
@@ -41,14 +44,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-
-        // 로그인 필터 객체 생성
-        // ~~~~~~~~~~
-
-        // 로그인 엔드 포인트
-        // ~~~~~~~~~~~~~
-
-
 
         http
                 // TODO: CorsConfig
@@ -62,10 +57,7 @@ public class SecurityConfig {
                 )
 
                 // JWT 인증 필터 등록
-                .addFilterBefore(new JwtAuthorizationFilter(jwtUtil, redisUtils), UsernamePasswordAuthenticationFilter.class)
-
-                // TODO: 로그인 필터
-//                .addFilterAt(loginFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthorizationFilter(jwtUtil, redisUtils, cookieUtil), UsernamePasswordAuthenticationFilter.class)
 
                 // SPRING SECURITY 기본 로그인 폼 비활성화 -> REST API 기반 JWT 사용
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -76,8 +68,7 @@ public class SecurityConfig {
                 // JSESSIONID 비활성화
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // CSRF 설정 (JWT를 헤더에 넣으면 필요 없는데 쿠키는 해야함)
-                // CSRF: 쿠키<->헤더 일치(Double Submit Cookie)
+                // CSRF 설정 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
                 // 일단 비활성화
 //                .csrf(csrf -> csrf
@@ -90,8 +81,14 @@ public class SecurityConfig {
 //                        )
 //                )
 
-                // TODO: 로그아웃
-//                .logout
+                // 로그아웃 설정
+                .logout(logout -> logout
+                        .logoutUrl("/api/v1/auth/logout")
+                        .addLogoutHandler(customLogoutHandler)
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                        })
+                )
 
                 // 예외 처리 핸들러 설정
                 .exceptionHandling(exceptionHandling -> exceptionHandling
