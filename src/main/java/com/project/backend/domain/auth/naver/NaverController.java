@@ -17,20 +17,20 @@ import java.io.IOException;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/")
-@Tag(name = "Naver", description = "네이버 OAuth")
-public class NaverController {
+public class NaverController implements NaverDocs {
 
     private final NaverService naverService;
 
+    @Override
     @GetMapping("/auth/naver")
-    public CustomResponse<String> redirectToNaver(
+    public void redirectToNaver(
             HttpServletResponse response,
             HttpSession session
     ) throws IOException {
         naverService.redirectToNaver(response, session);
-        return CustomResponse.onSuccess("Redirect", "리디렉션 완료");
     }
 
+    @Override
     @GetMapping("/auth/naver/callback")
     public CustomResponse<String> callback(
             @RequestParam("code") String code,
@@ -39,6 +39,6 @@ public class NaverController {
             HttpSession session
     ) {
         naverService.callback(code, state, response, session);
-        return CustomResponse.onSuccess("Created", "로그인 성공");
+        return CustomResponse.onSuccess("OK", "네이버 로그인 성공");
     }
 }
