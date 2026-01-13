@@ -35,9 +35,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
 
     @Value("${spring.jwt.token.access-expiration-time}")
-    long accessExpMs;
+    private long accessExpMs;
     @Value("${spring.jwt.token.refresh-expiration-time}")
-    long refreshExpMs;
+    private long refreshExpMs;
 
 
     public void loginOrSignup(HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
