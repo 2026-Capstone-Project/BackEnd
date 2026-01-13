@@ -99,7 +99,7 @@ public class JwtUtil {
     public void addToBlacklist(String token, long remainingTimeSeconds) {
         if (remainingTimeSeconds > 0) {
             redisTemplate.opsForValue().set(
-                    "blacklist:" + token,
+                    getJti(token) + ":blacklist",
                     "logout",
                     remainingTimeSeconds,
                     TimeUnit.SECONDS
