@@ -18,7 +18,7 @@ import java.io.IOException;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/oauth")
+@RequestMapping("/api/v1/auth")
 public class OAuthController implements OAuthDocs {
 
     private final OAuthService oAuthService;
