@@ -4,26 +4,29 @@ import com.project.backend.global.apiPayload.CustomResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 
 @RestController
+@RequestMapping("/api/v1/auth/google")
 @RequiredArgsConstructor
-public class GoogleController {
+public class GoogleController implements GoogleDocs{
 
     private final GoogleAuthService googleAuthService;
 
-    @GetMapping("/api/v1/auth/google")
+    @Override
+    @GetMapping("")
     public void redirectToGoogle(HttpServletResponse response, HttpSession session) throws IOException {
         String url = googleAuthService.generateAuthorizationUrl(session);
         response.sendRedirect(url);
     }
 
-    @GetMapping("/api/v1/auth/google/callback")
+    @Override
+    @GetMapping("/callback")
     public CustomResponse<String> googleCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state,
