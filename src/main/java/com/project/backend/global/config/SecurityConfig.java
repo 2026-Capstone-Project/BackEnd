@@ -9,6 +9,7 @@ import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.utils.CookieUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,6 +21,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Slf4j
 @Configuration
@@ -34,6 +36,7 @@ public class SecurityConfig {
     private final CustomCookieCsrfTokenRepository customCookieCsrfTokenRepository;
     private final CustomLogoutHandler customLogoutHandler;
     private final CookieUtil cookieUtil;
+    private final @Qualifier("customCorsConfigurationSource") CorsConfigurationSource corsConfigurationSource;
 
     private final String[] allowUrl = {
             "/swagger-ui/**",
@@ -46,7 +49,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
 
         http
-                // TODO: CorsConfig
+                // CORS CONFIG
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
                 // 접근 설정
                 .authorizeHttpRequests(req -> req
