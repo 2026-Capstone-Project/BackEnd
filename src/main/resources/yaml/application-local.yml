@@ -43,8 +43,8 @@ spring:
     google:
       client-id: ${GOOGLE_CLIENT_ID}
       client-secret: ${GOOGLE_CLIENT_SECRET}
-      redirect-uri: ${GOOGLE_REDIRECT_URI}
-      token-uri: ${GOOGLE_TOKEN_URI}
+      redirect-uri: http://localhost:8080/api/v1/auth/google/callback
+      token-uri: https://oauth2.googleapis.com/token
 
     kakao:
       client-id: ${KAKAO_CLIENT_ID}
