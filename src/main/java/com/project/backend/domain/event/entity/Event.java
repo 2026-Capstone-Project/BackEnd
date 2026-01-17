@@ -39,6 +39,9 @@ public class Event extends BaseEntity {
     @Column(name = "recurrence", nullable = false, length = 10)
     private Recurrence recurrence;
 
+    @Column(name = "recurrence_group_id")
+    private String recurrenceGroupId;
+
     @Column(name = "is_all_day", nullable = false)
     private Boolean isAllDay;
 
