@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -43,6 +44,7 @@ public class NlpReqDTO {
             RecurrenceRule recurrenceRule
     ) {}
 
+    @Builder
     public record RecurrenceRule(
             RecurrenceFrequency frequency,
             List<String> daysOfWeek,

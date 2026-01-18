@@ -32,6 +32,7 @@ public class NlpResDTO {
         }
     }
 
+    @Builder
     public record ParsedItem(
             ItemType type,
             String title,
