@@ -28,4 +28,12 @@ public class NlpController implements NlpDocs{
         NlpResDTO.ParseRes resDTO = nlpService.parse(reqDTO, customUserDetails.getId());
         return CustomResponse.onSuccess("파싱 성공", resDTO);
     }
+
+    @Override
+    @PostMapping("/confirm")
+    public CustomResponse<NlpResDTO.ConfirmRes> confirm(@RequestBody @Valid NlpReqDTO.ConfirmReq reqDTO,
+                                                        @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        NlpResDTO.ConfirmRes resDTO = nlpService.confirm(reqDTO, customUserDetails.getId());
+        return CustomResponse.onSuccess("저장 성공", resDTO);
+    }
 }

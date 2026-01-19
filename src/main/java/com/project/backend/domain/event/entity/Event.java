@@ -48,4 +48,22 @@ public class Event extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    public static Event createFromNaturalLanguage(
+            Member member,
+            String title,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            String recurrenceGroupId
+    ) {
+        return Event.builder()
+                .member(member)
+                .title(title)
+                .startTime(startTime)
+                .endTime(endTime)
+                .recurrence(Recurrence.NONE)
+                .isAllDay(false)
+                .recurrenceGroupId(recurrenceGroupId)
+                .build();
+    }
 }

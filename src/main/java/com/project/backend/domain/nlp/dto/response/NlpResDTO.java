@@ -58,6 +58,7 @@ public class NlpResDTO {
             ItemType type
     ) {}
 
+    @Builder
     public record ConfirmRes(
             int totalCount,
             int successCount,

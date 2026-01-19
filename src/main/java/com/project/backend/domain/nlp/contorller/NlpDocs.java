@@ -97,114 +97,114 @@ public interface NlpDocs {
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails customUserDetails
     );
 
-//    @Operation(
-//            summary = "파싱 결과 확정 및 저장",
-//            description = """
-//                사용자가 확인/수정한 파싱 결과를 일정(Event) 또는 할 일(Todo)로 저장합니다.
-//
-//                **처리 흐름:**
-//                1. 파싱 결과 검증
-//                2. 반복 일정인 경우 RecurrenceGroup 생성
-//                3. Event 또는 Todo 엔티티 저장
-//                4. 저장 결과 반환
-//
-//                **반복 설정 옵션:**
-//                - frequency: DAILY, WEEKLY, MONTHLY, YEARLY
-//                - interval: 반복 간격 (매 N일/주/월/년)
-//                - daysOfWeek: 요일 선택 (WEEKLY일 때)
-//                - monthlyType: DAY_OF_MONTH(매월 N일) / DAY_OF_WEEK(매월 N번째 X요일)
-//                - endType: NEVER / END_BY_DATE / END_BY_COUNT
-//                """
-//    )
-//    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-//            description = "파싱 결과 확정 요청",
-//            required = true,
-//            content = @Content(
-//                    schema = @Schema(implementation = NlpReqDTO.ConfirmReq.class),
-//                    examples = {
-//                            @ExampleObject(
-//                                    name = "단일 일정 저장",
-//                                    value = """
-//                                        {
-//                                            "items": [
-//                                                {
-//                                                    "itemId": "550e8400-e29b-41d4-a716-446655440000",
-//                                                    "type": "EVENT",
-//                                                    "title": "팀 미팅",
-//                                                    "date": "2026-01-21",
-//                                                    "startTime": "15:00",
-//                                                    "endTime": "16:00",
-//                                                    "isAllDay": false,
-//                                                    "isRecurring": false
-//                                                }
-//                                            ]
-//                                        }
-//                                        """
-//                            ),
-//                            @ExampleObject(
-//                                    name = "반복 일정 저장",
-//                                    value = """
-//                                        {
-//                                            "items": [
-//                                                {
-//                                                    "itemId": "550e8400-e29b-41d4-a716-446655440001",
-//                                                    "type": "EVENT",
-//                                                    "title": "헬스장",
-//                                                    "date": "2026-01-20",
-//                                                    "startTime": "19:00",
-//                                                    "endTime": "20:30",
-//                                                    "isAllDay": false,
-//                                                    "isRecurring": true,
-//                                                    "recurrenceRule": {
-//                                                        "frequency": "WEEKLY",
-//                                                        "interval": 1,
-//                                                        "daysOfWeek": ["MON", "WED", "FRI"],
-//                                                        "endType": "END_BY_DATE",
-//                                                        "endDate": "2026-04-20"
-//                                                    }
-//                                                }
-//                                            ]
-//                                        }
-//                                        """
-//                            ),
-//                            @ExampleObject(
-//                                    name = "할 일 저장",
-//                                    value = """
-//                                        {
-//                                            "items": [
-//                                                {
-//                                                    "itemId": "550e8400-e29b-41d4-a716-446655440002",
-//                                                    "type": "TODO",
-//                                                    "title": "보고서 제출",
-//                                                    "date": "2026-01-24",
-//                                                    "startTime": "23:59",
-//                                                    "isAllDay": false,
-//                                                    "isRecurring": false
-//                                                }
-//                                            ]
-//                                        }
-//                                        """
-//                            )
-//                    }
-//            )
-//    )
-//    @ApiResponses({
-//            @ApiResponse(
-//                    responseCode = "200",
-//                    description = "저장 성공",
-//                    content = @Content(schema = @Schema(implementation = NlpResDTO.ConfirmRes.class))
-//            ),
-//            @ApiResponse(
-//                    responseCode = "400",
-//                    description = "잘못된 요청 (필수 필드 누락, 잘못된 타입 등)"
-//            ),
-//            @ApiResponse(
-//                    responseCode = "404",
-//                    description = "회원을 찾을 수 없음"
-//            )
-//    })
-//    CustomResponse<NlpResDTO.ConfirmRes> confirm(
-//            @Valid @RequestBody NlpReqDTO.ConfirmReq reqDTO,
-//            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails customUserDetails
-//    );
+    @Operation(
+            summary = "파싱 결과 확정 및 저장",
+            description = """
+                사용자가 확인/수정한 파싱 결과를 일정(Event) 또는 할 일(Todo)로 저장합니다.
+
+                **처리 흐름:**
+                1. 파싱 결과 검증
+                2. 반복 일정인 경우 RecurrenceGroup 생성
+                3. Event 또는 Todo 엔티티 저장
+                4. 저장 결과 반환
+
+                **반복 설정 옵션:**
+                - frequency: DAILY, WEEKLY, MONTHLY, YEARLY
+                - interval: 반복 간격 (매 N일/주/월/년)
+                - daysOfWeek: 요일 선택 (WEEKLY일 때)
+                - monthlyType: DAY_OF_MONTH(매월 N일) / DAY_OF_WEEK(매월 N번째 X요일)
+                - endType: NEVER / END_BY_DATE / END_BY_COUNT
+                """
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "파싱 결과 확정 요청",
+            required = true,
+            content = @Content(
+                    schema = @Schema(implementation = NlpReqDTO.ConfirmReq.class),
+                    examples = {
+                            @ExampleObject(
+                                    name = "단일 일정 저장",
+                                    value = """
+                                        {
+                                            "items": [
+                                                {
+                                                    "itemId": "550e8400-e29b-41d4-a716-446655440000",
+                                                    "type": "EVENT",
+                                                    "title": "팀 미팅",
+                                                    "date": "2026-01-21",
+                                                    "startTime": "15:00",
+                                                    "endTime": "16:00",
+                                                    "isAllDay": false,
+                                                    "isRecurring": false
+                                                }
+                                            ]
+                                        }
+                                        """
+                            ),
+                            @ExampleObject(
+                                    name = "반복 일정 저장",
+                                    value = """
+                                        {
+                                            "items": [
+                                                {
+                                                    "itemId": "550e8400-e29b-41d4-a716-446655440001",
+                                                    "type": "EVENT",
+                                                    "title": "헬스장",
+                                                    "date": "2026-01-20",
+                                                    "startTime": "19:00",
+                                                    "endTime": "20:30",
+                                                    "isAllDay": false,
+                                                    "isRecurring": true,
+                                                    "recurrenceRule": {
+                                                        "frequency": "WEEKLY",
+                                                        "interval": 1,
+                                                        "daysOfWeek": ["MON", "WED", "FRI"],
+                                                        "endType": "END_BY_DATE",
+                                                        "endDate": "2026-04-20"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                        """
+                            ),
+                            @ExampleObject(
+                                    name = "할 일 저장",
+                                    value = """
+                                        {
+                                            "items": [
+                                                {
+                                                    "itemId": "550e8400-e29b-41d4-a716-446655440002",
+                                                    "type": "TODO",
+                                                    "title": "보고서 제출",
+                                                    "date": "2026-01-24",
+                                                    "startTime": "23:59",
+                                                    "isAllDay": false,
+                                                    "isRecurring": false
+                                                }
+                                            ]
+                                        }
+                                        """
+                            )
+                    }
+            )
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = NlpResDTO.ConfirmRes.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청 (필수 필드 누락, 잘못된 타입 등)"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "회원을 찾을 수 없음"
+            )
+    })
+    CustomResponse<NlpResDTO.ConfirmRes> confirm(
+            @Valid @RequestBody NlpReqDTO.ConfirmReq reqDTO,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails customUserDetails
+    );
 }
