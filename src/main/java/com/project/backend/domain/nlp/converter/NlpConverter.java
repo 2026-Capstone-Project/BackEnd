@@ -29,13 +29,16 @@ public class NlpConverter {
     }
 
     public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO llmResDTO, String itemId) {
+        LocalTime startTime = parseTime(llmResDTO.startTime());
+        LocalTime endTime = resolveEndTime(startTime, parseTime(llmResDTO.endTime()));
+
         return NlpResDTO.ParsedItem.builder()
                 .itemId(itemId)
                 .type(parseItemType(llmResDTO.type()))
                 .title(llmResDTO.title())
                 .date(parseDate(llmResDTO.date()))
-                .startTime(parseTime(llmResDTO.startTime()))
-                .endTime(parseTime(llmResDTO.endTime()))
+                .startTime(startTime)
+                .endTime(endTime)
                 .durationMinutes(llmResDTO.durationMinutes())
                 .isAllDay(Boolean.TRUE.equals(llmResDTO.isAllDay()))
                 .hasDeadline(Boolean.TRUE.equals(llmResDTO.hasDeadline()))
@@ -51,13 +54,16 @@ public class NlpConverter {
     }
 
     public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO.LlmParsedItem item, String itemId) {
+        LocalTime startTime = parseTime(item.startTime());
+        LocalTime endTime = resolveEndTime(startTime, parseTime(item.endTime()));
+
         return NlpResDTO.ParsedItem.builder()
                 .itemId(itemId)
                 .type(parseItemType(item.type()))
                 .title(item.title())
                 .date(parseDate(item.date()))
-                .startTime(parseTime(item.startTime()))
-                .endTime(parseTime(item.endTime()))
+                .startTime(startTime)
+                .endTime(endTime)
                 .durationMinutes(item.durationMinutes())
                 .isAllDay(Boolean.TRUE.equals(item.isAllDay()))
                 .hasDeadline(Boolean.TRUE.equals(item.hasDeadline()))
@@ -106,6 +112,16 @@ public class NlpConverter {
         } catch (DateTimeParseException e) {
             return null;
         }
+    }
+
+    private static LocalTime resolveEndTime(LocalTime startTime, LocalTime endTime) {
+        if (endTime != null) {
+            return endTime;
+        }
+        if (startTime != null) {
+            return startTime.plusHours(1);
+        }
+        return null;
     }
 
     private static NlpReqDTO.RecurrenceRule toRecurrenceRule(LlmResDTO.LlmRecurrenceRule llmRule) {
