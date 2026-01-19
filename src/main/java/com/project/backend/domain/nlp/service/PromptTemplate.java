@@ -8,8 +8,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Locale;
 
 @Slf4j
@@ -41,7 +43,35 @@ public class PromptTemplate {
 
         return systemPromptTemplate
                 .replace("{current_date}", baseDate.toString())
-                .replace("{day_of_week}", dayOfWeek);
+                .replace("{day_of_week}", dayOfWeek)
+                .replace("{week_dates}", buildWeekDatesTable(baseDate))
+                .replace("{next_week_dates}", buildNextWeekDatesTable(baseDate));
+    }
+
+    private String buildWeekDatesTable(LocalDate baseDate) {
+        LocalDate monday = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < 7; i++) {
+            LocalDate date = monday.plusDays(i);
+            String koreanDay = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN);
+            sb.append(String.format("- %s: %s%n", koreanDay, date));
+        }
+
+        return sb.toString().trim();
+    }
+
+    private String buildNextWeekDatesTable(LocalDate baseDate) {
+        LocalDate nextMonday = baseDate.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < 7; i++) {
+            LocalDate date = nextMonday.plusDays(i);
+            String koreanDay = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN);
+            sb.append(String.format("- %s: %s%n", koreanDay, date));
+        }
+
+        return sb.toString().trim();
     }
 
     public String getUserPrompt(String userInput) {
