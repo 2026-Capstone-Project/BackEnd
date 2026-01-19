@@ -34,10 +34,14 @@ public class NlpResDTO {
 
     @Builder
     public record ParsedItem(
+            String itemId,
             ItemType type,
             String title,
             LocalDate date,
-            LocalTime time,
+            LocalTime startTime,
+            LocalTime endTime,
+            Integer durationMinutes,
+            boolean isAllDay,
             boolean hasDeadline,
 
             boolean isRecurring,

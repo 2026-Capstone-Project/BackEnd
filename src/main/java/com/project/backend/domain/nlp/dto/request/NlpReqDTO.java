@@ -1,11 +1,11 @@
 package com.project.backend.domain.nlp.dto.request;
 
+import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.enums.ItemType;
-import com.project.backend.domain.nlp.enums.RecurrenceFrequency;
+import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 
 import java.time.LocalDate;
@@ -39,20 +39,51 @@ public class NlpReqDTO {
 
             LocalTime time,
 
+            LocalTime startTime,
+
+            LocalTime endTime,
+
+            Integer durationMinutes,
+
+            boolean isAllDay,
+
             boolean isRecurring,
 
             RecurrenceRule recurrenceRule
-    ) {}
+    ) {
+        public LocalTime getStartTimeOrDefault() {
+            return startTime != null ? startTime : time;
+        }
+    }
 
     @Builder
     public record RecurrenceRule(
+            @NotNull(message = "반복 주기는 필수입니다")
             RecurrenceFrequency frequency,
-            List<String> daysOfWeek,
+
+            @Min(value = 1, message = "반복 간격은 1 이상이어야 합니다")
+            @Max(value = 99, message = "반복 간격은 99 이하여야 합니다")
             Integer interval,
-            LocalDate endDate
+
+            // WEEKLY: 반복 요일
+            List<String> daysOfWeek,
+
+            // MONTHLY: 반복 타입
+            MonthlyType monthlyType,
+            Integer dayOfMonth,
+            Integer weekOfMonth,
+            String dayOfWeekInMonth,
+
+            // YEARLY: 반복 월
+            Integer monthOfYear,
+
+            // 종료 조건
+            RecurrenceEndType endType,
+            LocalDate endDate,
+            Integer occurrenceCount
     ) {
         public int getIntervalOrDefault() {
-            return interval != null ? interval:1;
+            return interval != null ? interval : 1;
         }
     }
 }

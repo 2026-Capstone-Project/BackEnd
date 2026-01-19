@@ -1,10 +1,12 @@
 package com.project.backend.domain.nlp.converter;
 
+import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.dto.request.NlpReqDTO;
 import com.project.backend.domain.nlp.dto.response.LlmResDTO;
 import com.project.backend.domain.nlp.dto.response.NlpResDTO;
 import com.project.backend.domain.nlp.enums.ItemType;
-import com.project.backend.domain.nlp.enums.RecurrenceFrequency;
+import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -13,16 +15,29 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class NlpConverter {
 
     public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO llmResDTO) {
+        return toParsedItem(llmResDTO, UUID.randomUUID().toString());
+    }
+
+    public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO.LlmParsedItem item) {
+        return toParsedItem(item, UUID.randomUUID().toString());
+    }
+
+    public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO llmResDTO, String itemId) {
         return NlpResDTO.ParsedItem.builder()
+                .itemId(itemId)
                 .type(parseItemType(llmResDTO.type()))
                 .title(llmResDTO.title())
                 .date(parseDate(llmResDTO.date()))
-                .time(parseTime(llmResDTO.time()))
+                .startTime(parseTime(llmResDTO.startTime()))
+                .endTime(parseTime(llmResDTO.endTime()))
+                .durationMinutes(llmResDTO.durationMinutes())
+                .isAllDay(Boolean.TRUE.equals(llmResDTO.isAllDay()))
                 .hasDeadline(Boolean.TRUE.equals(llmResDTO.hasDeadline()))
                 .isRecurring(Boolean.TRUE.equals(llmResDTO.isRecurring()))
                 .recurrenceRule(toRecurrenceRule(llmResDTO.recurrenceRule()))
@@ -31,16 +46,20 @@ public class NlpConverter {
                 .options(toAmbiguousOptions(llmResDTO.options()))
                 .needsAdditionalInfo(Boolean.TRUE.equals(llmResDTO.needsAdditionalInfo()))
                 .additionalInfoType(llmResDTO.additionalInfoType())
-                .confidence(llmResDTO.confidence() !=null ? llmResDTO.confidence() : 0.0)
+                .confidence(llmResDTO.confidence() != null ? llmResDTO.confidence() : 0.0)
                 .build();
     }
 
-    public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO.LlmParsedItem item) {
+    public static NlpResDTO.ParsedItem toParsedItem(LlmResDTO.LlmParsedItem item, String itemId) {
         return NlpResDTO.ParsedItem.builder()
+                .itemId(itemId)
                 .type(parseItemType(item.type()))
                 .title(item.title())
                 .date(parseDate(item.date()))
-                .time(parseTime(item.time()))
+                .startTime(parseTime(item.startTime()))
+                .endTime(parseTime(item.endTime()))
+                .durationMinutes(item.durationMinutes())
+                .isAllDay(Boolean.TRUE.equals(item.isAllDay()))
                 .hasDeadline(Boolean.TRUE.equals(item.hasDeadline()))
                 .isRecurring(Boolean.TRUE.equals(item.isRecurring()))
                 .recurrenceRule(toRecurrenceRule(item.recurrenceRule()))
@@ -49,7 +68,7 @@ public class NlpConverter {
                 .options(toAmbiguousOptions(item.options()))
                 .needsAdditionalInfo(Boolean.TRUE.equals(item.needsAdditionalInfo()))
                 .additionalInfoType(item.additionalInfoType())
-                .confidence(item.confidence() !=null ? item.confidence() : 0.0)
+                .confidence(item.confidence() != null ? item.confidence() : 0.0)
                 .build();
     }
 
@@ -96,9 +115,16 @@ public class NlpConverter {
 
         return NlpReqDTO.RecurrenceRule.builder()
                 .frequency(parseFrequency(llmRule.frequency()))
-                .daysOfWeek(llmRule.daysOfWeek())
                 .interval(llmRule.interval())
+                .daysOfWeek(llmRule.daysOfWeek())
+                .monthlyType(MonthlyType.DAY_OF_MONTH)
+                .dayOfMonth(null)
+                .weekOfMonth(null)
+                .dayOfWeekInMonth(null)
+                .monthOfYear(null)
+                .endType(llmRule.endDate() != null ? RecurrenceEndType.END_BY_DATE : RecurrenceEndType.NEVER)
                 .endDate(parseDate(llmRule.endDate()))
+                .occurrenceCount(null)
                 .build();
     }
 

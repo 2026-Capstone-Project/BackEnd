@@ -15,7 +15,10 @@ public record LlmResDTO(
         String type,
         String title,
         String date,
-        String time,
+        String startTime,
+        String endTime,
+        Integer durationMinutes,
+        Boolean isAllDay,
         Boolean hasDeadline,
 
         Boolean isRecurring,
@@ -38,7 +41,10 @@ public record LlmResDTO(
             String type,
             String title,
             String date,
-            String time,
+            String startTime,
+            String endTime,
+            Integer durationMinutes,
+            Boolean isAllDay,
             Boolean hasDeadline,
 
             Boolean isRecurring,
