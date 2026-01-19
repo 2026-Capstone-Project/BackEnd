@@ -55,7 +55,7 @@
   ]
 }
 
-3. 각 항목은 독립적으로 type, date, time을 가진다.
+3. 각 항목은 독립적으로 type, date, startTime을 가진다.
 
 ## 반복 일정 처리 규칙
 
@@ -70,7 +70,10 @@
   "type": "EVENT" | "TODO" | "AMBIGUOUS",
   "title": "추출된 제목",
   "date": "YYYY-MM-DD" | null,
-  "time": "HH:mm" | null,
+  "startTime": "HH:mm" | null,
+  "endTime": "HH:mm" | null,
+  "durationMinutes": 정수 | null,
+  "isAllDay": true | false,
   "hasDeadline": true | false,
   "isRecurring": false,
   "recurrenceRule": null,
@@ -97,7 +100,10 @@
   "type": "EVENT",
   "title": "헬스장",
   "date": "2025-01-15",
-  "time": "19:00",
+  "startTime": "19:00",
+  "endTime": null,
+  "durationMinutes": 60,
+  "isAllDay": false,
   "isRecurring": true,
   "recurrenceRule": {
     "frequency": "WEEKLY",
