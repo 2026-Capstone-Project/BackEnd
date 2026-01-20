@@ -68,8 +68,7 @@ public class NlpReqDTO {
             @NotNull(message = "반복 주기는 필수입니다")
             RecurrenceFrequency frequency,
 
-            @Min(value = 1, message = "반복 간격은 1 이상이어야 합니다")
-            @Max(value = 99, message = "반복 간격은 99 이하여야 합니다")
+            // interval 필드는 향후 확장을 위해 유지하되, 현재는 무시됨 (항상 1 사용)
             Integer interval,
 
             // WEEKLY: 반복 요일
@@ -89,8 +88,12 @@ public class NlpReqDTO {
             LocalDate endDate,
             Integer occurrenceCount
     ) {
+        /**
+         * 현재 기획에서는 interval 기능(격주, 2일마다 등)을 지원하지 않음.
+         * 향후 확장을 위해 필드는 유지하되, 항상 1을 반환.
+         */
         public int getIntervalOrDefault() {
-            return interval != null ? interval : 1;
+            return 1;
         }
     }
 }
