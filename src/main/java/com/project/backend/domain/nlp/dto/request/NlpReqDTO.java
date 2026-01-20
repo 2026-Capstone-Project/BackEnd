@@ -77,7 +77,7 @@ public class NlpReqDTO {
 
             // MONTHLY: 반복 타입
             MonthlyType monthlyType,
-            Integer dayOfMonth,
+            List<Integer> daysOfMonth,
             Integer weekOfMonth,
             String dayOfWeekInMonth,
 

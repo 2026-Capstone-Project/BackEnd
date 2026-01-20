@@ -38,8 +38,8 @@ public class RecurrenceGroup extends BaseEntity {
     @Column(name = "monthly_type", length = 20)
     private MonthlyType monthlyType;
 
-    @Column(name = "day_of_month")
-    private Integer dayOfMonth;
+    @Column(name = "days_of_month", length = 100)
+    private String daysOfMonth;
 
     @Column(name = "week_of_month")
     private Integer weekOfMonth;
@@ -75,7 +75,7 @@ public class RecurrenceGroup extends BaseEntity {
             Integer intervalValue,
             String daysOfWeek,
             MonthlyType monthlyType,
-            Integer dayOfMonth,
+            String daysOfMonth,
             Integer weekOfMonth,
             String dayOfWeekInMonth,
             Integer monthOfYear,
@@ -90,7 +90,7 @@ public class RecurrenceGroup extends BaseEntity {
                 .intervalValue(intervalValue != null ? intervalValue : 1)
                 .daysOfWeek(daysOfWeek)
                 .monthlyType(monthlyType)
-                .dayOfMonth(dayOfMonth)
+                .daysOfMonth(daysOfMonth)
                 .weekOfMonth(weekOfMonth)
                 .dayOfWeekInMonth(dayOfWeekInMonth)
                 .monthOfYear(monthOfYear)

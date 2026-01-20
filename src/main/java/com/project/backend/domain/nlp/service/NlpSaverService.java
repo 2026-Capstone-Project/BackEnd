@@ -112,7 +112,7 @@ public class NlpSaverService {
                 rule.getIntervalOrDefault(),
                 serializeDaysOfWeek(rule.daysOfWeek()),
                 rule.monthlyType(),
-                rule.dayOfMonth(),
+                serializeDaysOfMonth(rule.daysOfMonth()),
                 rule.weekOfMonth(),
                 rule.dayOfWeekInMonth(),
                 rule.monthOfYear(),
@@ -131,6 +131,18 @@ public class NlpSaverService {
             return objectMapper.writeValueAsString(daysOfWeek);
         } catch (JsonProcessingException e) {
             log.error("daysOfWeek 직렬화 실패", e);
+            return null;
+        }
+    }
+
+    private String serializeDaysOfMonth(List<Integer> daysOfMonth) {
+        if (daysOfMonth == null || daysOfMonth.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(daysOfMonth);
+        } catch (JsonProcessingException e) {
+            log.error("daysOfMonth 직렬화 실패", e);
             return null;
         }
     }

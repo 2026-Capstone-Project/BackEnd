@@ -134,7 +134,7 @@ public class NlpConverter {
                 .interval(llmRule.interval())
                 .daysOfWeek(llmRule.daysOfWeek())
                 .monthlyType(MonthlyType.DAY_OF_MONTH)
-                .dayOfMonth(null)
+                .daysOfMonth(null)
                 .weekOfMonth(null)
                 .dayOfWeekInMonth(null)
                 .monthOfYear(null)

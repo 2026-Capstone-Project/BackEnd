@@ -142,24 +142,39 @@ public class RecurrenceCalculator {
     // ==================== MONTHLY ====================
 
     private LocalDate getNextMonthly(LocalDate current, LocalDate startDate, NlpReqDTO.RecurrenceRule rule) {
-        LocalDate nextMonth = current.plusMonths(rule.getIntervalOrDefault());
-
         MonthlyType monthlyType = rule.monthlyType() != null
                 ? rule.monthlyType()
                 : MonthlyType.DAY_OF_MONTH;
 
         return switch (monthlyType) {
-            case DAY_OF_MONTH -> getNextMonthlyByDayOfMonth(nextMonth, rule, startDate);
-            case DAY_OF_WEEK -> getNextMonthlyByDayOfWeek(nextMonth, rule, startDate);
+            case DAY_OF_MONTH -> getNextMonthlyByDayOfMonth(current, rule, startDate);
+            case DAY_OF_WEEK -> getNextMonthlyByDayOfWeek(current.plusMonths(rule.getIntervalOrDefault()), rule, startDate);
         };
     }
 
-    private LocalDate getNextMonthlyByDayOfMonth(LocalDate baseMonth, NlpReqDTO.RecurrenceRule rule, LocalDate startDate) {
-        int targetDay = rule.dayOfMonth() != null ? rule.dayOfMonth() : startDate.getDayOfMonth();
-        int lastDayOfMonth = baseMonth.lengthOfMonth();
-        int actualDay = Math.min(targetDay, lastDayOfMonth);
+    private LocalDate getNextMonthlyByDayOfMonth(LocalDate current, NlpReqDTO.RecurrenceRule rule, LocalDate startDate) {
+        List<Integer> targetDays = rule.daysOfMonth() != null && !rule.daysOfMonth().isEmpty()
+                ? rule.daysOfMonth().stream().sorted().toList()
+                : List.of(startDate.getDayOfMonth());
 
-        return baseMonth.withDayOfMonth(actualDay);
+        int currentDay = current.getDayOfMonth();
+
+        // 현재 월에서 다음 대상 날짜 찾기
+        for (Integer targetDay : targetDays) {
+            if (targetDay > currentDay) {
+                int lastDayOfMonth = current.lengthOfMonth();
+                int actualDay = Math.min(targetDay, lastDayOfMonth);
+                return current.withDayOfMonth(actualDay);
+            }
+        }
+
+        // 현재 월에 더 이상 대상 날짜가 없으면 다음 interval 월의 첫 번째 대상 날짜로 이동
+        LocalDate nextMonth = current.plusMonths(rule.getIntervalOrDefault()).withDayOfMonth(1);
+        int firstTargetDay = targetDays.get(0);
+        int lastDayOfNextMonth = nextMonth.lengthOfMonth();
+        int actualDay = Math.min(firstTargetDay, lastDayOfNextMonth);
+
+        return nextMonth.withDayOfMonth(actualDay);
     }
 
     private LocalDate getNextMonthlyByDayOfWeek(LocalDate baseMonth, NlpReqDTO.RecurrenceRule rule, LocalDate startDate) {
@@ -191,9 +206,10 @@ public class RecurrenceCalculator {
             nextYear = nextYear.withMonth(rule.monthOfYear());
         }
 
-        if (rule.dayOfMonth() != null) {
+        if (rule.daysOfMonth() != null && !rule.daysOfMonth().isEmpty()) {
+            int targetDay = rule.daysOfMonth().get(0);
             int lastDayOfMonth = nextYear.lengthOfMonth();
-            int actualDay = Math.min(rule.dayOfMonth(), lastDayOfMonth);
+            int actualDay = Math.min(targetDay, lastDayOfMonth);
             nextYear = nextYear.withDayOfMonth(actualDay);
         }
 
