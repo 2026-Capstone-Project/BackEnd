@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.entity;
 
+import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
@@ -39,6 +40,11 @@ public class Event extends BaseEntity {
     @Column(name = "recurrence_frequency", nullable = false, length = 10)
     private RecurrenceFrequency recurrenceFrequency;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", nullable = false, length = 10)
+    @Builder.Default
+    private EventColor color = EventColor.BLUE;
+
     @Column(name = "is_all_day", nullable = false)
     private Boolean isAllDay;
 
@@ -58,7 +64,8 @@ public class Event extends BaseEntity {
             String title,
             LocalDateTime startTime,
             LocalDateTime endTime,
-            RecurrenceGroup recurrenceGroup
+            RecurrenceGroup recurrenceGroup,
+            EventColor color
     ) {
         return Event.builder()
                 .member(member)
@@ -66,6 +73,7 @@ public class Event extends BaseEntity {
                 .startTime(startTime)
                 .endTime(endTime)
                 .recurrenceFrequency(RecurrenceFrequency.NONE)
+                .color(color != null ? color : EventColor.BLUE)
                 .isAllDay(false)
                 .recurrenceGroup(recurrenceGroup)
                 .build();
@@ -77,7 +85,8 @@ public class Event extends BaseEntity {
             LocalDateTime startTime,
             LocalDateTime endTime,
             Integer durationMinutes,
-            boolean isAllDay
+            boolean isAllDay,
+            EventColor color
     ) {
         return Event.builder()
                 .member(member)
@@ -87,6 +96,7 @@ public class Event extends BaseEntity {
                 .durationMinutes(durationMinutes)
                 .isAllDay(isAllDay)
                 .recurrenceFrequency(RecurrenceFrequency.NONE)
+                .color(color != null ? color : EventColor.BLUE)
                 .recurrenceGroup(null)
                 .build();
     }
@@ -99,7 +109,8 @@ public class Event extends BaseEntity {
             Integer durationMinutes,
             boolean isAllDay,
             RecurrenceFrequency recurrenceFrequency,
-            RecurrenceGroup recurrenceGroup
+            RecurrenceGroup recurrenceGroup,
+            EventColor color
     ) {
         return Event.builder()
                 .member(member)
@@ -109,6 +120,7 @@ public class Event extends BaseEntity {
                 .durationMinutes(durationMinutes)
                 .isAllDay(isAllDay)
                 .recurrenceFrequency(recurrenceFrequency)
+                .color(color != null ? color : EventColor.BLUE)
                 .recurrenceGroup(recurrenceGroup)
                 .build();
     }

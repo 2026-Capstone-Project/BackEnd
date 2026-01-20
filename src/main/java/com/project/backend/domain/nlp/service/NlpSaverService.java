@@ -60,7 +60,8 @@ public class NlpSaverService {
                 timeRange.startTime(),
                 timeRange.endTime(),
                 item.durationMinutes(),
-                item.isAllDay()
+                item.isAllDay(),
+                item.getColorOrDefault()
         );
 
         eventRepository.save(event);
@@ -92,7 +93,8 @@ public class NlpSaverService {
                     item.durationMinutes(),
                     item.isAllDay(),
                     recurrenceFrequency,
-                    group
+                    group,
+                    item.getColorOrDefault()
             );
 
             eventRepository.save(event);

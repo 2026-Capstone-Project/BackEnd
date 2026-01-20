@@ -1,5 +1,6 @@
 package com.project.backend.domain.nlp.dto.request;
 
+import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.enums.ItemType;
@@ -49,10 +50,16 @@ public class NlpReqDTO {
 
             boolean isRecurring,
 
-            RecurrenceRule recurrenceRule
+            RecurrenceRule recurrenceRule,
+
+            EventColor color
     ) {
         public LocalTime getStartTimeOrDefault() {
             return startTime != null ? startTime : time;
+        }
+
+        public EventColor getColorOrDefault() {
+            return color != null ? color : EventColor.BLUE;
         }
     }
 
