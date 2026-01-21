@@ -1,7 +1,8 @@
 package com.project.backend.domain.event.entity;
 
+import com.project.backend.domain.event.enums.EventColor;
+import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.global.entity.BaseEntity;
-import com.project.backend.domain.event.enums.Recurrence;
 import com.project.backend.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,13 +37,95 @@ public class Event extends BaseEntity {
     private String location;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "recurrence", nullable = false, length = 10)
-    private Recurrence recurrence;
+    @Column(name = "recurrence_frequency", nullable = false, length = 10)
+    private RecurrenceFrequency recurrenceFrequency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", nullable = false, length = 10)
+    @Builder.Default
+    private EventColor color = EventColor.BLUE;
 
     @Column(name = "is_all_day", nullable = false)
     private Boolean isAllDay;
 
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurrence_group_id")
+    private RecurrenceGroup recurrenceGroup;
+
+    public static Event createFromNaturalLanguage(
+            Member member,
+            String title,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            RecurrenceGroup recurrenceGroup,
+            EventColor color
+    ) {
+        return Event.builder()
+                .member(member)
+                .title(title)
+                .startTime(startTime)
+                .endTime(endTime)
+                .recurrenceFrequency(RecurrenceFrequency.NONE)
+                .color(color != null ? color : EventColor.BLUE)
+                .isAllDay(false)
+                .recurrenceGroup(recurrenceGroup)
+                .build();
+    }
+
+    public static Event createSingle(
+            Member member,
+            String title,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Integer durationMinutes,
+            boolean isAllDay,
+            EventColor color
+    ) {
+        return Event.builder()
+                .member(member)
+                .title(title)
+                .startTime(startTime)
+                .endTime(endTime)
+                .durationMinutes(durationMinutes)
+                .isAllDay(isAllDay)
+                .recurrenceFrequency(RecurrenceFrequency.NONE)
+                .color(color != null ? color : EventColor.BLUE)
+                .recurrenceGroup(null)
+                .build();
+    }
+
+    public static Event createRecurring(
+            Member member,
+            String title,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Integer durationMinutes,
+            boolean isAllDay,
+            RecurrenceFrequency recurrenceFrequency,
+            RecurrenceGroup recurrenceGroup,
+            EventColor color
+    ) {
+        return Event.builder()
+                .member(member)
+                .title(title)
+                .startTime(startTime)
+                .endTime(endTime)
+                .durationMinutes(durationMinutes)
+                .isAllDay(isAllDay)
+                .recurrenceFrequency(recurrenceFrequency)
+                .color(color != null ? color : EventColor.BLUE)
+                .recurrenceGroup(recurrenceGroup)
+                .build();
+    }
+
+    public boolean isRecurring() {
+        return recurrenceGroup != null;
+    }
 }

@@ -50,3 +50,9 @@ spring:
       client-id: ${KAKAO_CLIENT_ID}
       client-secret: ${KAKAO_CLIENT_SECRET}
       redirect-uri: http://localhost:8080/api/v1/auth/kakao/callback
+
+  llm:
+    provider: openai
+    api-key: ${LLM_API_KEY}
+    model: gpt-4o-mini
+    timeout: 30s
