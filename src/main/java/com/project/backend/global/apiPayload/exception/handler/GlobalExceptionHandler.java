@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import tools.jackson.databind.exc.InvalidFormatException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -175,6 +177,22 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
+    // JSON 오류 (일단 ENUM만 활성화)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<CustomResponse<String>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.warn("[ HttpMessageNotReadableException ]: {}", ex.getMessage());
+
+        BaseErrorCode errorCode = getBaseErrorCode(ex);
+        CustomResponse<String> errorResponse = CustomResponse.onFailure(
+                errorCode.getCode(),
+                errorCode.getMessage(),
+                null
+        );
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(errorResponse);
+    }
+
     //애플리케이션에서 발생하는 커스텀 예외를 처리
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<CustomResponse<Void>> handleCustomException(CustomException ex, HttpServletRequest request) {
@@ -200,5 +218,43 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(errorResponse);
+    }
+
+    private static BaseErrorCode getBaseErrorCode(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getCause();
+        BaseErrorCode errorCode;
+//        // 1) JSON 문법 자체가 잘못됨 (콤마/따옴표 등)
+//        if (cause instanceof JsonParseException) {
+//            errorCode = GeneralErrorCode.INVALID_JSON_SYNTAX;
+//        }
+        // 2) 타입/형식이 맞지 않음 (ex: string → int)
+        if (cause instanceof InvalidFormatException e) {
+            Class<?> targetType = e.getTargetType();
+            if (targetType.isEnum()) {
+                errorCode = GeneralErrorCode.INVALID_ENUM;
+            }
+//            else if (targetType.equals(LocalTime.class)) {
+//                errorCode = GeneralErrorCode.INVALID_LOCAL_TIME;
+//            }
+//            else if (targetType.equals(LocalDate.class)) {
+//                errorCode = GeneralErrorCode.INVALID_LOCAL_DATE;
+//            }
+//            // 숫자 필드 잘못된 형식
+//            else if (targetType.equals(Integer.class)) {
+//                errorCode = GeneralErrorCode.INVALID_INTEGER;
+//            }
+            else {
+                errorCode = GeneralErrorCode.INVALID_FIELD_FORMAT;
+            }
+        }
+//        // 3) 필수 필드 누락 등 바인딩 실패
+//        else if (cause instanceof MismatchedInputException) {
+//            errorCode = GeneralErrorCode.INVALID_INPUT;
+//        }
+        // 그 외 일반 케이스
+        else {
+            errorCode = GeneralErrorCode.BAD_REQUEST_BODY;
+        }
+        return errorCode;
     }
 }
