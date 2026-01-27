@@ -27,7 +27,7 @@ public class Setting extends BaseEntity {
 
     @Builder.Default
     @Column(name = "briefing_time")
-    private LocalTime briefingTime = LocalTime.of(8, 0);
+    private LocalTime dailyBriefingTime = LocalTime.of(8, 0);
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -48,7 +48,11 @@ public class Setting extends BaseEntity {
     private Member member;
 
     // toggle 메서드
-    public void toggleDailyBriefing(){
+    public void toggleDailyBriefing() {
         this.isDailyBriefing = !this.isDailyBriefing;
+    }
+
+    public void updateDailyBriefingTime(LocalTime newDailyBriefingTime) {
+        this.dailyBriefingTime = newDailyBriefingTime;
     }
 }

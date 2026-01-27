@@ -22,4 +22,10 @@ public class SettingConverter {
                 .dailyBriefingEnabled(setting.getIsDailyBriefing())
                 .build();
     }
+
+    public static SettingResDTO.DailyBriefingTimeRes toDailyBriefingTimeRes(Setting setting){
+        return SettingResDTO.DailyBriefingTimeRes.builder()
+                .dailyBriefingTime(setting.getDailyBriefingTime())
+                .build();
+    }
 }

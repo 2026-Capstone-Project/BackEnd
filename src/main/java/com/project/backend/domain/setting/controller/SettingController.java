@@ -1,13 +1,16 @@
 package com.project.backend.domain.setting.controller;
 
 import com.project.backend.domain.setting.controller.docs.SettingDocs;
+import com.project.backend.domain.setting.dto.request.SettingReqDTO;
 import com.project.backend.domain.setting.dto.response.SettingResDTO;
 import com.project.backend.domain.setting.service.command.SettingCommandService;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +27,16 @@ public class SettingController implements SettingDocs {
     ) {
         SettingResDTO.DailyBriefingRes resDTO = settingCommandService.toggleDailyBriefing(customUserDetails.getId());
         return CustomResponse.onSuccess("오늘의 브리핑 설정 변경 완료", resDTO);
+    }
+
+    @PostMapping("/daily-briefing/time")
+    public CustomResponse<SettingResDTO.DailyBriefingTimeRes> updateDailyBriefingTime(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @Valid @RequestBody SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
+    ) {
+        SettingResDTO.DailyBriefingTimeRes resDTO =
+                settingCommandService.updateDailyBriefingTime(customUserDetails.getId(), reqDTO);
+
+        return CustomResponse.onSuccess("오늘의 브리핑 시간 변경 완료", resDTO);
     }
 }
