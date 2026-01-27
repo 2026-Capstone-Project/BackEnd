@@ -30,7 +30,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
         setting.toggleDailyBriefing();
 
-        return SettingConverter.toDailyBriefingRes(setting);
+        return SettingConverter.toToggleDailyBriefingRes(setting);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
         setting.updateDailyBriefingTime(dailyBriefingTime);
 
-        return SettingConverter.toDailyBriefingTimeRes(setting);
+        return SettingConverter.toUpdateDailyBriefingTimeRes(setting);
     }
 
     @Override
