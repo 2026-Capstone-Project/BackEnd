@@ -4,15 +4,13 @@ import com.project.backend.domain.setting.controller.docs.SettingDocs;
 import com.project.backend.domain.setting.dto.request.SettingReqDTO;
 import com.project.backend.domain.setting.dto.response.SettingResDTO;
 import com.project.backend.domain.setting.service.command.SettingCommandService;
+import com.project.backend.domain.setting.service.query.SettingQueryService;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/settings")
@@ -20,6 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class SettingController implements SettingDocs {
 
     private final SettingCommandService settingCommandService;
+    private final SettingQueryService settingQueryService;
+
+    @GetMapping()
+    public CustomResponse<SettingResDTO.AllSettingsRes> getSettings(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        SettingResDTO.AllSettingsRes resDTO =
+                settingQueryService.getSettings(customUserDetails.getId());
+        return CustomResponse.onSuccess("모든 설정 조회 완료", resDTO);
+    }
 
     @PostMapping("/daily-briefing")
     public CustomResponse<SettingResDTO.ToggleDailyBriefingRes> toggleDailyBriefing(

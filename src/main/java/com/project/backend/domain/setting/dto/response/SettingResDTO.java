@@ -11,6 +11,21 @@ import java.time.LocalTime;
 public class SettingResDTO {
 
     @Builder
+    public record AllSettingsRes(
+            boolean dailyBriefingEnabled,
+
+            @JsonFormat(pattern = "HH:mm")
+            LocalTime dailyBriefingTime,
+
+            ReminderTiming reminderTiming,
+
+            boolean suggestionEnabled,
+
+            DefaultView defaultView
+    ) {
+    }
+
+    @Builder
     public record ToggleDailyBriefingRes(
             boolean dailyBriefingEnabled
     ) {

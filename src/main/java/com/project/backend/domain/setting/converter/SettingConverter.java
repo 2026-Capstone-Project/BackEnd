@@ -17,6 +17,16 @@ public class SettingConverter {
                 .build();
     }
 
+    public static SettingResDTO.AllSettingsRes toAllSettingsRes(Setting setting){
+        return SettingResDTO.AllSettingsRes.builder()
+                .dailyBriefingEnabled(setting.getDailyBriefing())
+                .dailyBriefingTime(setting.getDailyBriefingTime())
+                .reminderTiming(setting.getReminderTiming())
+                .suggestionEnabled(setting.getSuggestion())
+                .defaultView(setting.getDefaultView())
+                .build();
+    }
+
     public static SettingResDTO.ToggleDailyBriefingRes toToggleDailyBriefingRes(Setting setting){
         return SettingResDTO.ToggleDailyBriefingRes.builder()
                 .dailyBriefingEnabled(setting.getDailyBriefing())
