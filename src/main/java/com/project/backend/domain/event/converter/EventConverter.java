@@ -41,4 +41,19 @@ public class EventConverter {
                 .build();
     }
 
+    public static EventResDTO.DetailRes toDetailRes(Event event) {
+        return EventResDTO.DetailRes.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .content(event.getContent())
+                .start(event.getStartTime())
+                .end(event.getEndTime())
+                .location(event.getLocation())
+                .isAllDay(event.getIsAllDay())
+                .color(event.getColor())
+                .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
+                .build();
+    }
+
+
 }

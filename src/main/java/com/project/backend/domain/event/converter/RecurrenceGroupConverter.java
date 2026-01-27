@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.converter;
 
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
+import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.format.TextStyle;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,24 @@ public class RecurrenceGroupConverter {
                 .occurrenceCount(req.occurrenceCount())
                 .createdCount(1)
                 .member(member)
+                .build();
+    }
+
+    public static RecurrenceGroupResDTO.DetailRes toDetailRes(RecurrenceGroup recurrenceGroup) {
+        return RecurrenceGroupResDTO.DetailRes.builder()
+                .id(recurrenceGroup.getId())
+                .frequency(recurrenceGroup.getFrequency())
+                .isCustom(recurrenceGroup.getIsCustom())
+                .interval(recurrenceGroup.getIntervalValue())
+                .daysOfWeek(getDayOfWeeks(recurrenceGroup.getDaysOfWeek()))
+                .monthlyType(recurrenceGroup.getMonthlyType())
+                .daysOfMonth(getDaysOfMonth(recurrenceGroup.getDaysOfMonth()))
+                .weekOfMonth(recurrenceGroup.getWeekOfMonth())
+                .dayOfWeekInMonth(getDayOfWeeksInMonth(recurrenceGroup.getDayOfWeekInMonth()))
+                .monthOfYear(recurrenceGroup.getMonthOfYear())
+                .endType(recurrenceGroup.getEndType())
+                .occurrenceCount(recurrenceGroup.getOccurrenceCount())
+                .endDate(recurrenceGroup.getEndDate())
                 .build();
     }
 
@@ -132,4 +152,26 @@ public class RecurrenceGroupConverter {
                 || req.monthOfYear() != null;
     }
 
+    private static List<String> getDayOfWeeks(String daysOfWeek) {
+        if (daysOfWeek == null) {
+            return List.of();
+        }
+        return List.of(daysOfWeek.split(","));
+    }
+
+    private static List<Integer> getDaysOfMonth(String daysOfMonth) {
+        if (daysOfMonth == null) {
+            return List.of();
+        }
+        return List.of(daysOfMonth.split(",")).stream()
+                .map(Integer::parseInt)
+                .toList();
+    }
+
+    private static List<String> getDayOfWeeksInMonth(String dayOfWeekInMonth) {
+        if (dayOfWeekInMonth == null) {
+            return List.of();
+        }
+        return List.of(dayOfWeekInMonth.split(","));
+    }
 }

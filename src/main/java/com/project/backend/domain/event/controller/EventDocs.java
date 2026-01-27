@@ -2,9 +2,11 @@ package com.project.backend.domain.event.controller;
 
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
+import com.project.backend.domain.event.dto.response.swagger.EventDetailRes;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "일정(Event) API", description = "일정 생성 API")
@@ -325,5 +328,53 @@ public interface EventDocs {
     CustomResponse<EventResDTO.CreateRes> createEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody EventReqDTO.CreateReq createReq
+    );
+
+    @Operation(
+            summary = "일정 상세 조회",
+            description = """
+                캘린더에서 선택한 단일 일정의 상세 정보를 조회합니다.
+
+                - 단일 일정인 경우
+                  → recurrenceGroup 필드는 null로 반환됩니다.
+
+                - 반복 일정인 경우
+                  → 반복 규칙 원본 정보(recurrenceGroup)를 함께 반환합니다.
+
+                해당 API는 일정 수정/삭제 화면에서 사용됩니다.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "일정 상세 조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = EventDetailRes.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "일정을 찾을 수 없음",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "EVENT404",
+                                      "message": "일정을 찾을 수 없습니다"
+                                    }
+                                    """
+                            )
+                    )
+            )
+    })
+    CustomResponse<EventResDTO.DetailRes> getEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @Parameter(
+                    description = "조회할 일정 ID",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable Long eventId
     );
 }
