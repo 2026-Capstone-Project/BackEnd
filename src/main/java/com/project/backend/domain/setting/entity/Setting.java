@@ -22,8 +22,8 @@ public class Setting extends BaseEntity {
     private Long id;
 
     @Builder.Default
-    @Column(name = "is_daily_briefing", nullable = false)
-    private Boolean isDailyBriefing = true;
+    @Column(name = "daily_briefing", nullable = false)
+    private Boolean dailyBriefing = true;
 
     @Builder.Default
     @Column(name = "briefing_time")
@@ -49,7 +49,7 @@ public class Setting extends BaseEntity {
 
     // update 메서드
     public void toggleDailyBriefing() {
-        this.isDailyBriefing = !this.isDailyBriefing;
+        this.dailyBriefing = !this.dailyBriefing;
     }
 
     public void updateDailyBriefingTime(LocalTime newDailyBriefingTime) {

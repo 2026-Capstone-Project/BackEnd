@@ -19,7 +19,7 @@ public class SettingConverter {
 
     public static SettingResDTO.ToggleDailyBriefingRes toToggleDailyBriefingRes(Setting setting){
         return SettingResDTO.ToggleDailyBriefingRes.builder()
-                .dailyBriefingEnabled(setting.getIsDailyBriefing())
+                .dailyBriefingEnabled(setting.getDailyBriefing())
                 .build();
     }
 
