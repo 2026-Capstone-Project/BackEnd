@@ -10,13 +10,13 @@ import java.time.LocalTime;
 public class SettingResDTO {
 
     @Builder
-    public record DailyBriefingRes(
+    public record ToggleDailyBriefingRes(
             boolean dailyBriefingEnabled
     ) {
     }
 
     @Builder
-    public record DailyBriefingTimeRes(
+    public record UpdateDailyBriefingTimeRes(
             @JsonFormat(pattern = "HH:mm")
             LocalTime dailyBriefingTime
     ) {

@@ -23,7 +23,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
     private final SettingRepository settingRepository;
 
     @Override
-    public SettingResDTO.DailyBriefingRes toggleDailyBriefing(Long memberId) {
+    public SettingResDTO.ToggleDailyBriefingRes toggleDailyBriefing(Long memberId) {
 
         Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
@@ -34,7 +34,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
     }
 
     @Override
-    public SettingResDTO.DailyBriefingTimeRes updateDailyBriefingTime(
+    public SettingResDTO.UpdateDailyBriefingTimeRes updateDailyBriefingTime(
             Long memberId,
             SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
     ) {

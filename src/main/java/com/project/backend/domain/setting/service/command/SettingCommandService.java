@@ -5,9 +5,9 @@ import com.project.backend.domain.setting.dto.response.SettingResDTO;
 
 public interface SettingCommandService {
 
-    SettingResDTO.DailyBriefingRes toggleDailyBriefing(Long memberId);
+    SettingResDTO.ToggleDailyBriefingRes toggleDailyBriefing(Long memberId);
 
-    SettingResDTO.DailyBriefingTimeRes updateDailyBriefingTime(
+    SettingResDTO.UpdateDailyBriefingTimeRes updateDailyBriefingTime(
             Long memberId,
             SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
     );

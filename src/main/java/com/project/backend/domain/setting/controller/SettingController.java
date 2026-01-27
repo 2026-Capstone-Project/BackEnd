@@ -22,19 +22,19 @@ public class SettingController implements SettingDocs {
     private final SettingCommandService settingCommandService;
 
     @PostMapping("/daily-briefing")
-    public CustomResponse<SettingResDTO.DailyBriefingRes> toggleDailyBriefing(
+    public CustomResponse<SettingResDTO.ToggleDailyBriefingRes> toggleDailyBriefing(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        SettingResDTO.DailyBriefingRes resDTO = settingCommandService.toggleDailyBriefing(customUserDetails.getId());
+        SettingResDTO.ToggleDailyBriefingRes resDTO = settingCommandService.toggleDailyBriefing(customUserDetails.getId());
         return CustomResponse.onSuccess("오늘의 브리핑 설정 변경 완료", resDTO);
     }
 
     @PostMapping("/daily-briefing/time")
-    public CustomResponse<SettingResDTO.DailyBriefingTimeRes> updateDailyBriefingTime(
+    public CustomResponse<SettingResDTO.UpdateDailyBriefingTimeRes> updateDailyBriefingTime(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
     ) {
-        SettingResDTO.DailyBriefingTimeRes resDTO =
+        SettingResDTO.UpdateDailyBriefingTimeRes resDTO =
                 settingCommandService.updateDailyBriefingTime(customUserDetails.getId(), reqDTO);
 
         return CustomResponse.onSuccess("오늘의 브리핑 시간 변경 완료", resDTO);

@@ -17,14 +17,14 @@ public class SettingConverter {
                 .build();
     }
 
-    public static SettingResDTO.DailyBriefingRes toDailyBriefingRes(Setting setting){
-        return SettingResDTO.DailyBriefingRes.builder()
+    public static SettingResDTO.ToggleDailyBriefingRes toDailyBriefingRes(Setting setting){
+        return SettingResDTO.ToggleDailyBriefingRes.builder()
                 .dailyBriefingEnabled(setting.getIsDailyBriefing())
                 .build();
     }
 
-    public static SettingResDTO.DailyBriefingTimeRes toDailyBriefingTimeRes(Setting setting){
-        return SettingResDTO.DailyBriefingTimeRes.builder()
+    public static SettingResDTO.UpdateDailyBriefingTimeRes toDailyBriefingTimeRes(Setting setting){
+        return SettingResDTO.UpdateDailyBriefingTimeRes.builder()
                 .dailyBriefingTime(setting.getDailyBriefingTime())
                 .build();
     }
