@@ -28,4 +28,10 @@ public class SettingConverter {
                 .dailyBriefingTime(setting.getDailyBriefingTime())
                 .build();
     }
+
+    public static SettingResDTO.UpdateReminderTimingRes toUpdateReminderTimingRes(Setting setting){
+        return SettingResDTO.UpdateReminderTimingRes.builder()
+                .reminderTiming(setting.getReminderTiming())
+                .build();
+    }
 }

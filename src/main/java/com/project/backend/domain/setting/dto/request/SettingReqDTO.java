@@ -1,5 +1,6 @@
 package com.project.backend.domain.setting.dto.request;
 
+import com.project.backend.domain.setting.enums.ReminderTiming;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -12,6 +13,11 @@ public class SettingReqDTO {
                     message = "HH:MM 형식, 00:00 ~ 23:00 범위의 정시"
             )
             String dailyBriefingTime
+    ) {
+    }
+
+    public record UpdateReminderTimingReq(
+            ReminderTiming reminderTiming
     ) {
     }
 }

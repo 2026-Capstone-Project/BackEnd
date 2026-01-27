@@ -48,4 +48,18 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
         return SettingConverter.toDailyBriefingTimeRes(setting);
     }
+
+    @Override
+    public SettingResDTO.UpdateReminderTimingRes updateReminderTiming(
+            Long memberId,
+            SettingReqDTO.UpdateReminderTimingReq reqDTO
+    ) {
+
+        Setting setting = settingRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
+
+        setting.updateReminderTiming(reqDTO.reminderTiming());
+
+        return SettingConverter.toUpdateReminderTimingRes(setting);
+    }
 }

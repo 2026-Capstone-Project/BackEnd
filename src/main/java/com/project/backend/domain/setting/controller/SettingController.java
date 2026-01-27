@@ -39,4 +39,15 @@ public class SettingController implements SettingDocs {
 
         return CustomResponse.onSuccess("오늘의 브리핑 시간 변경 완료", resDTO);
     }
+
+    @PostMapping("/reminder/timing")
+    public CustomResponse<SettingResDTO.UpdateReminderTimingRes> updateReminderTiming(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody SettingReqDTO.UpdateReminderTimingReq reqDTO
+    ) {
+        SettingResDTO.UpdateReminderTimingRes resDTO =
+                settingCommandService.updateReminderTiming(customUserDetails.getId(), reqDTO);
+
+        return CustomResponse.onSuccess("리마인더 타이밍 변경 완료", resDTO);
+    }
 }

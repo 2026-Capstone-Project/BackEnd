@@ -11,4 +11,9 @@ public interface SettingCommandService {
             Long memberId,
             SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
     );
+
+    SettingResDTO.UpdateReminderTimingRes updateReminderTiming(
+            Long memberId,
+            SettingReqDTO.UpdateReminderTimingReq reqDTO
+    );
 }

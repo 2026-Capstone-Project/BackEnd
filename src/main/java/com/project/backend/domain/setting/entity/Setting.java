@@ -47,12 +47,16 @@ public class Setting extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false, unique = true)
     private Member member;
 
-    // toggle 메서드
+    // update 메서드
     public void toggleDailyBriefing() {
         this.isDailyBriefing = !this.isDailyBriefing;
     }
 
     public void updateDailyBriefingTime(LocalTime newDailyBriefingTime) {
         this.dailyBriefingTime = newDailyBriefingTime;
+    }
+
+    public void updateReminderTiming(ReminderTiming newReminderTiming) {
+        this.reminderTiming = newReminderTiming;
     }
 }
