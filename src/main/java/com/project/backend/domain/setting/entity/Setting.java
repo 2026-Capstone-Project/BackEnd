@@ -59,4 +59,8 @@ public class Setting extends BaseEntity {
     public void updateReminderTiming(ReminderTiming newReminderTiming) {
         this.reminderTiming = newReminderTiming;
     }
+
+    public void toggleSuggestion() {
+        this.suggestion = !this.suggestion;
+    }
 }

@@ -34,4 +34,10 @@ public class SettingConverter {
                 .reminderTiming(setting.getReminderTiming())
                 .build();
     }
+
+    public static SettingResDTO.ToggleSuggestionRes toToggleSuggestionRes(Setting setting){
+        return SettingResDTO.ToggleSuggestionRes.builder()
+                .suggestionEnabled(setting.getSuggestion())
+                .build();
+    }
 }

@@ -62,4 +62,15 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
         return SettingConverter.toUpdateReminderTimingRes(setting);
     }
+
+    @Override
+    public SettingResDTO.ToggleSuggestionRes toggleSuggestion(Long memberId) {
+
+        Setting setting = settingRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
+
+        setting.toggleSuggestion();
+
+        return SettingConverter.toToggleSuggestionRes(setting);
+    }
 }

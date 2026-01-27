@@ -27,4 +27,10 @@ public class SettingResDTO {
             ReminderTiming reminderTiming
     ) {
     }
+
+    @Builder
+    public record ToggleSuggestionRes(
+            boolean suggestionEnabled
+    ) {
+    }
 }

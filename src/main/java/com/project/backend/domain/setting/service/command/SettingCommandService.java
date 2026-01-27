@@ -16,4 +16,6 @@ public interface SettingCommandService {
             Long memberId,
             SettingReqDTO.UpdateReminderTimingReq reqDTO
     );
+
+    SettingResDTO.ToggleSuggestionRes toggleSuggestion(Long memberId);
 }
