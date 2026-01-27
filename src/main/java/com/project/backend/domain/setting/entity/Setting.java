@@ -63,4 +63,8 @@ public class Setting extends BaseEntity {
     public void toggleSuggestion() {
         this.suggestion = !this.suggestion;
     }
+
+    public void updateDefaultView(DefaultView newDefaultView) {
+        this.defaultView = newDefaultView;
+    }
 }

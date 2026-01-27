@@ -1,6 +1,7 @@
 package com.project.backend.domain.setting.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.project.backend.domain.setting.enums.DefaultView;
 import com.project.backend.domain.setting.enums.ReminderTiming;
 import lombok.Builder;
 
@@ -31,6 +32,12 @@ public class SettingResDTO {
     @Builder
     public record ToggleSuggestionRes(
             boolean suggestionEnabled
+    ) {
+    }
+
+    @Builder
+    public record UpdateDefaultViewRes(
+            DefaultView defaultView
     ) {
     }
 }

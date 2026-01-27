@@ -1,5 +1,6 @@
 package com.project.backend.domain.setting.dto.request;
 
+import com.project.backend.domain.setting.enums.DefaultView;
 import com.project.backend.domain.setting.enums.ReminderTiming;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -18,6 +19,11 @@ public class SettingReqDTO {
 
     public record UpdateReminderTimingReq(
             ReminderTiming reminderTiming
+    ) {
+    }
+
+    public record UpdateDefaultViewReq(
+            DefaultView defaultView
     ) {
     }
 }

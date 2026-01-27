@@ -18,4 +18,9 @@ public interface SettingCommandService {
     );
 
     SettingResDTO.ToggleSuggestionRes toggleSuggestion(Long memberId);
+
+    SettingResDTO.UpdateDefaultViewRes updateDefaultView(
+            Long memberId,
+            SettingReqDTO.UpdateDefaultViewReq reqDTO
+    );
 }

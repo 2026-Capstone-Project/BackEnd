@@ -59,4 +59,14 @@ public class SettingController implements SettingDocs {
                 settingCommandService.toggleSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("선제적 제안 설정 변경 완료", resDTO);
     }
+
+    @PostMapping("/default-view")
+    public CustomResponse<SettingResDTO.UpdateDefaultViewRes> updateDefaultView(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody SettingReqDTO.UpdateDefaultViewReq reqDTO
+    ) {
+        SettingResDTO.UpdateDefaultViewRes resDTO =
+                settingCommandService.updateDefaultView(customUserDetails.getId(), reqDTO);
+        return CustomResponse.onSuccess("기본 뷰 변경 완료", resDTO);
+    }
 }

@@ -73,4 +73,18 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
         return SettingConverter.toToggleSuggestionRes(setting);
     }
+
+    @Override
+    public SettingResDTO.UpdateDefaultViewRes updateDefaultView(
+            Long memberId,
+            SettingReqDTO.UpdateDefaultViewReq reqDTO
+    ) {
+
+        Setting setting = settingRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
+
+        setting.updateDefaultView(reqDTO.defaultView());
+
+        return SettingConverter.toUpdateDefaultViewRes(setting);
+    }
 }

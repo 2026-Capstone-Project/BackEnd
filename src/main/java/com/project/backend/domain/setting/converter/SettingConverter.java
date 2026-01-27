@@ -40,4 +40,10 @@ public class SettingConverter {
                 .suggestionEnabled(setting.getSuggestion())
                 .build();
     }
+
+    public static SettingResDTO.UpdateDefaultViewRes toUpdateDefaultViewRes(Setting setting){
+        return SettingResDTO.UpdateDefaultViewRes.builder()
+                .defaultView(setting.getDefaultView())
+                .build();
+    }
 }
