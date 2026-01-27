@@ -46,4 +46,9 @@ public class Setting extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false, unique = true)
     private Member member;
+
+    // toggle 메서드
+    public void toggleDailyBriefing(){
+        this.isDailyBriefing = !this.isDailyBriefing;
+    }
 }
