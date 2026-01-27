@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Pattern;
 
 public class SettingReqDTO {
 
+    // ------------------ update ------------------
+    // 데일리 브리핑 시간 변경
     public record UpdateDailyBriefingTimeReq(
             @NotBlank
             @Pattern(
@@ -17,11 +19,13 @@ public class SettingReqDTO {
     ) {
     }
 
+    // 리마인더 시간 변경
     public record UpdateReminderTimingReq(
             ReminderTiming reminderTiming
     ) {
     }
 
+    // 월간 뷰 종류 변경
     public record UpdateDefaultViewReq(
             DefaultView defaultView
     ) {

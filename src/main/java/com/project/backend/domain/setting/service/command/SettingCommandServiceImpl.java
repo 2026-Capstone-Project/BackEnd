@@ -22,6 +22,8 @@ public class SettingCommandServiceImpl implements SettingCommandService {
 
     private final SettingRepository settingRepository;
 
+    // ------------------ toggle ------------------
+    // 데일리 브리핑 토글
     @Override
     public SettingResDTO.ToggleDailyBriefingRes toggleDailyBriefing(Long memberId) {
 
@@ -33,6 +35,20 @@ public class SettingCommandServiceImpl implements SettingCommandService {
         return SettingConverter.toToggleDailyBriefingRes(setting);
     }
 
+    // 선제적 제안 토글
+    @Override
+    public SettingResDTO.ToggleSuggestionRes toggleSuggestion(Long memberId) {
+
+        Setting setting = settingRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
+
+        setting.toggleSuggestion();
+
+        return SettingConverter.toToggleSuggestionRes(setting);
+    }
+
+    // ------------------ update ------------------
+    // 데일리 브리핑 시간 변경
     @Override
     public SettingResDTO.UpdateDailyBriefingTimeRes updateDailyBriefingTime(
             Long memberId,
@@ -49,6 +65,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
         return SettingConverter.toUpdateDailyBriefingTimeRes(setting);
     }
 
+    // 리마인더 시간 변경
     @Override
     public SettingResDTO.UpdateReminderTimingRes updateReminderTiming(
             Long memberId,
@@ -63,17 +80,7 @@ public class SettingCommandServiceImpl implements SettingCommandService {
         return SettingConverter.toUpdateReminderTimingRes(setting);
     }
 
-    @Override
-    public SettingResDTO.ToggleSuggestionRes toggleSuggestion(Long memberId) {
-
-        Setting setting = settingRepository.findByMemberId(memberId)
-                .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
-
-        setting.toggleSuggestion();
-
-        return SettingConverter.toToggleSuggestionRes(setting);
-    }
-
+    // 월간 뷰 종류 변경
     @Override
     public SettingResDTO.UpdateDefaultViewRes updateDefaultView(
             Long memberId,

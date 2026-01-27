@@ -10,6 +10,7 @@ import java.time.LocalTime;
 
 public class SettingResDTO {
 
+    // 전체 설정 조회
     @Builder
     public record AllSettingsRes(
             boolean dailyBriefingEnabled,
@@ -25,12 +26,23 @@ public class SettingResDTO {
     ) {
     }
 
+    // ------------------ toggle ------------------
+    // 데일리 브리핑 토글
     @Builder
     public record ToggleDailyBriefingRes(
             boolean dailyBriefingEnabled
     ) {
     }
 
+    // 선제적 제안 토글
+    @Builder
+    public record ToggleSuggestionRes(
+            boolean suggestionEnabled
+    ) {
+    }
+
+    // ------------------ update ------------------
+    // 데일리 브리핑 시간 변경
     @Builder
     public record UpdateDailyBriefingTimeRes(
             @JsonFormat(pattern = "HH:mm")
@@ -38,18 +50,14 @@ public class SettingResDTO {
     ) {
     }
 
+    // 리마인더 시간 변경
     @Builder
     public record UpdateReminderTimingRes(
             ReminderTiming reminderTiming
     ) {
     }
 
-    @Builder
-    public record ToggleSuggestionRes(
-            boolean suggestionEnabled
-    ) {
-    }
-
+    // 월간 뷰 종류 변경
     @Builder
     public record UpdateDefaultViewRes(
             DefaultView defaultView

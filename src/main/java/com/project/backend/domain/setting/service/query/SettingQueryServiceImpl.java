@@ -19,6 +19,7 @@ public class SettingQueryServiceImpl implements SettingQueryService {
 
     private final SettingRepository settingRepository;
 
+    // 전체 설정 조회
     @Override
     public SettingResDTO.AllSettingsRes getSettings(Long memberId) {
 
