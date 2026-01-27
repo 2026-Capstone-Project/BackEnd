@@ -29,7 +29,7 @@ public class SettingController implements SettingDocs {
         return CustomResponse.onSuccess("모든 설정 조회 완료", resDTO);
     }
 
-    @PostMapping("/daily-briefing")
+    @PatchMapping("/daily-briefing")
     public CustomResponse<SettingResDTO.ToggleDailyBriefingRes> toggleDailyBriefing(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
@@ -37,7 +37,7 @@ public class SettingController implements SettingDocs {
         return CustomResponse.onSuccess("오늘의 브리핑 설정 변경 완료", resDTO);
     }
 
-    @PostMapping("/daily-briefing/time")
+    @PatchMapping("/daily-briefing/time")
     public CustomResponse<SettingResDTO.UpdateDailyBriefingTimeRes> updateDailyBriefingTime(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody SettingReqDTO.UpdateDailyBriefingTimeReq reqDTO
@@ -48,7 +48,7 @@ public class SettingController implements SettingDocs {
         return CustomResponse.onSuccess("오늘의 브리핑 시간 변경 완료", resDTO);
     }
 
-    @PostMapping("/reminder/timing")
+    @PatchMapping("/reminder/timing")
     public CustomResponse<SettingResDTO.UpdateReminderTimingRes> updateReminderTiming(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody SettingReqDTO.UpdateReminderTimingReq reqDTO
@@ -59,7 +59,7 @@ public class SettingController implements SettingDocs {
         return CustomResponse.onSuccess("리마인더 타이밍 변경 완료", resDTO);
     }
 
-    @PostMapping("/suggestion")
+    @PatchMapping("/suggestion")
     public CustomResponse<SettingResDTO.ToggleSuggestionRes> toggleSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
@@ -68,7 +68,7 @@ public class SettingController implements SettingDocs {
         return CustomResponse.onSuccess("선제적 제안 설정 변경 완료", resDTO);
     }
 
-    @PostMapping("/default-view")
+    @PatchMapping("/default-view")
     public CustomResponse<SettingResDTO.UpdateDefaultViewRes> updateDefaultView(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody SettingReqDTO.UpdateDefaultViewReq reqDTO
