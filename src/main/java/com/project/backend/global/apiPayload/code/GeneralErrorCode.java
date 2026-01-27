@@ -20,6 +20,7 @@ public enum GeneralErrorCode implements BaseErrorCode{
 
     // 유효성 검사
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "VALID400_0", "잘못된 파라미터 입니다."),
+    DTO_VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "VALID400_1", "잘못된 DTO 필드입니다."),
 
 //    INVALID_JSON_SYNTAX(HttpStatus.BAD_REQUEST, "VALID400_1", "요청 본문의 JSON 문법이 잘못됨 / e : JsonParseException"),
     INVALID_FIELD_FORMAT(HttpStatus.BAD_REQUEST, "VALID400_2","필드 값의 형식이 올바르지 않음 / e : InvalidFormatException"),

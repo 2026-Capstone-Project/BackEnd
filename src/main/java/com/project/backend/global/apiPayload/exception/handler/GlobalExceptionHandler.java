@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
-        BaseErrorCode validationErrorCode = GeneralErrorCode.VALIDATION_FAILED; // BaseErrorCode로 통일
+        BaseErrorCode validationErrorCode = GeneralErrorCode.DTO_VALIDATION_FAILED; // BaseErrorCode로 통일
         CustomResponse<Map<String, String>> errorResponse = CustomResponse.onFailure(
                 validationErrorCode.getCode(),
                 validationErrorCode.getMessage(),

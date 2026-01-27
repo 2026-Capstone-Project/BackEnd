@@ -21,6 +21,7 @@ public class SettingController implements SettingDocs {
     private final SettingQueryService settingQueryService;
 
     // 전체 설정 조회
+    @Override
     @GetMapping()
     public CustomResponse<SettingResDTO.AllSettingsRes> getSettings(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -32,6 +33,7 @@ public class SettingController implements SettingDocs {
 
     // ------------------ toggle ------------------
     // 데일리 브리핑 토글
+    @Override
     @PatchMapping("/daily-briefing")
     public CustomResponse<SettingResDTO.ToggleDailyBriefingRes> toggleDailyBriefing(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -41,6 +43,7 @@ public class SettingController implements SettingDocs {
     }
 
     // 선제적 제안 토글
+    @Override
     @PatchMapping("/suggestion")
     public CustomResponse<SettingResDTO.ToggleSuggestionRes> toggleSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -52,6 +55,7 @@ public class SettingController implements SettingDocs {
 
     // ------------------ update ------------------
     // 데일리 브리핑 시간 변경
+    @Override
     @PatchMapping("/daily-briefing/time")
     public CustomResponse<SettingResDTO.UpdateDailyBriefingTimeRes> updateDailyBriefingTime(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -64,6 +68,7 @@ public class SettingController implements SettingDocs {
     }
 
     // 리마인더 시간 변경
+    @Override
     @PatchMapping("/reminder/timing")
     public CustomResponse<SettingResDTO.UpdateReminderTimingRes> updateReminderTiming(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -76,6 +81,7 @@ public class SettingController implements SettingDocs {
     }
 
     // 월간 뷰 종류 변경
+    @Override
     @PatchMapping("/default-view")
     public CustomResponse<SettingResDTO.UpdateDefaultViewRes> updateDefaultView(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
