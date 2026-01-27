@@ -14,6 +14,7 @@ import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class RecurrenceGroupConverter {
@@ -163,7 +164,7 @@ public class RecurrenceGroupConverter {
         if (daysOfMonth == null) {
             return List.of();
         }
-        return List.of(daysOfMonth.split(",")).stream()
+        return Stream.of(daysOfMonth.split(","))
                 .map(Integer::parseInt)
                 .toList();
     }
