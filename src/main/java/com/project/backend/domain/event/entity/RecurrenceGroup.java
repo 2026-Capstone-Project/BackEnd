@@ -47,9 +47,11 @@ public class RecurrenceGroup extends BaseEntity {
     @Column(name = "day_of_week_in_month", length = 10)
     private String dayOfWeekInMonth;
 
-    // YEARLY: 반복 월
     @Column(name = "month_of_year")
     private Integer monthOfYear;
+
+    @Column(name = "is_custom")
+    private Boolean isCustom;
 
     // 종료 조건
     @Enumerated(EnumType.STRING)
