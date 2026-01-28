@@ -23,7 +23,7 @@ public class SettingQueryServiceImpl implements SettingQueryService {
     @Override
     public SettingResDTO.AllSettingsRes getSettings(Long memberId) {
 
-        Setting setting = settingRepository.findById(memberId)
+        Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
         return SettingConverter.toAllSettingsRes(setting);
