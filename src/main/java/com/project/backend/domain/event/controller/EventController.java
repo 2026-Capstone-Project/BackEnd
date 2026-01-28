@@ -28,7 +28,7 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("OK", resDTO);
     }
 
-    @GetMapping("{eventId}")
+    @GetMapping("/{eventId}")
     @Override
     public CustomResponse<EventResDTO.DetailRes> getEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
