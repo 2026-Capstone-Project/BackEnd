@@ -314,16 +314,167 @@ public interface EventDocs {
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "잘못된 요청 (필수 필드 누락, 반복 규칙 오류 등)"
+                    description = "시간필드 값을 설정하지 않았습니다",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_TIME",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "EVENT400_1",
+                          "message": "시간을 설정하지 않았습니다"
+                        }
+                        """
+                            )
+                    )
             ),
             @ApiResponse(
-                    responseCode = "401",
-                    description = "인증 실패"
+                    responseCode = "400",
+                    description = "end가 start 보다 더 이전 시간일 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_TIME_RANGE",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "EVENT400_2",
+                          "message": "시간 설정이 잘못되었습니다"
+                        }
+                        """
+                            )
+                    )
             ),
             @ApiResponse(
-                    responseCode = "404",
-                    description = "회원을 찾을 수 없음"
+                    responseCode = "400",
+                    description = "설정한 반복 타입과 관련 없는 필드에 값이 들어간경우\n" +
+                            "EX) WEEKLY 설정인데 monthOfYear 필드에 값이 있는 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_FREQUENCY_CONDITION",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_15",
+                          "message": "FREQUENCY 타입에 따른 불필요한 필드값이 채워져 있습니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "설정한 종료 타입과 관련 없는 필드에 값이 들어간경우\n" +
+                            "EX) END_BY_COUNT 설정인데 endDate 필드에 값이 있는 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_END_CONDITION",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_1",
+                          "message": "EndType 타입에 따른 불필요한 필드값이 채워져 있습니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "EndType이 END_BY_DATE인데, endDate 필드에 값이 없는 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "END_DATE_REQUIRED",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_2",
+                          "message": "종료 날짜가 설정되지 않았습니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "EndType이 END_BY_COUNT인데, occurrenceCount 필드에 값이 없는 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "END_COUNT_REQUIRED",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_3",
+                          "message": "종료 카운트가 설정되지 않았습니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "NEVER, END_BY_DATE, END_BY_COUNT 이외의 값이 EndType 값으로 들어간 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_END_TYPE",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_4",
+                          "message": "잘못된 종료타입입니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "DAY_OF_MONTH, DAY_OF_WEEK 이외의 값이 MonthlyType 값으로 들어간 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_MONTHLY_TYPE",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_11",
+                          "message": "잘못된 월간 타입입니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "endDate 의 값이 생성하려는 일정의 start 값보다 이전인 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_END_DATE_RANGE",
+                                    value = """
+                        {
+                          "isSuccess": false,
+                          "code": "RG400_13",
+                          "message": "종료 날짜가 일정 시작 날짜보다 빠릅니다"
+                        }
+                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "MON, TUE, WEN, THU, FRI, SAT, SUN 이외의 값이 dayOfWeek 값으로 들어간 경",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "INVALID_DAY_OF_WEEK",
+                                    value = """
+                        {
+                          "isSuc우ess": false,
+                          "code": "RG400_14",
+                          "message": "잘못된 요일입니다"
+                        }
+                        """
+                            )
+                    )
             )
+
     })
     CustomResponse<EventResDTO.CreateRes> createEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -360,7 +511,7 @@ public interface EventDocs {
                                     value = """
                                     {
                                       "isSuccess": false,
-                                      "code": "EVENT404",
+                                      "code": "EVENT404_3",
                                       "message": "일정을 찾을 수 없습니다"
                                     }
                                     """

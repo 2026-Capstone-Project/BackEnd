@@ -55,24 +55,24 @@ public class RecurrenceGroupValidator {
             case NONE, DAILY -> {
                 if (req.daysOfWeek() != null || req.daysOfMonth() != null
                         || req.weekOfMonth() != null || req.dayOfWeekInMonth() != null || req.monthlyType() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_END_CONDITION);
+                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
             }
             case WEEKLY -> {
                 if (req.daysOfMonth() != null || req.weekOfMonth() != null
                         || req.dayOfWeekInMonth() != null || req.monthlyType() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_END_CONDITION);
+                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
             }
             case MONTHLY -> {
                 if ( req.daysOfWeek() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_END_CONDITION);
+                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
             }
             case YEARLY -> {
                 if (req.daysOfWeek() != null || req.weekOfMonth() != null
                         || req.dayOfWeekInMonth() != null || req.monthlyType() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_END_CONDITION);
+                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
             }
             default -> throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_MONTHLY_TYPE);

@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum RecurrenceGroupErrorCode implements BaseErrorCode {
 
-    INVALID_END_CONDITION(HttpStatus.BAD_REQUEST, "RG400_1", "ENUM 타입에 따른 불필요한 필드값이 채워져 있습니다."),
+    INVALID_END_CONDITION(HttpStatus.BAD_REQUEST, "RG400_1", "EndType 타입에 따른 불필요한 필드값이 채워져 있습니다."),
     END_DATE_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_2", "종료 날짜가 설정되지 않았습니다."),
     END_COUNT_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_3", "종료 카운트가 설정되지 않았습니다."),
     INVALID_END_TYPE(HttpStatus.BAD_REQUEST, "RG400_4", "잘못된 종료타입입니다."),
@@ -23,6 +23,8 @@ public enum RecurrenceGroupErrorCode implements BaseErrorCode {
     MONTH_OF_YEAR_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_12", "매년 반복 월이 설정되지 않았습니다."),
     INVALID_END_DATE_RANGE(HttpStatus.BAD_REQUEST, "RG400_13", "종료 날짜가 일정 시작 날짜보다 빠릅니다."),
     INVALID_DAY_OF_WEEK(HttpStatus.BAD_REQUEST, "RG400_14", "잘못된 요일입니다."),
+    INVALID_FREQUENCY_CONDITION(HttpStatus.BAD_REQUEST, "RG400_15", "FREQUENCY 타입에 따른 불필요한 필드값이 채워져 있습니다."),
+
 
 
     ;
