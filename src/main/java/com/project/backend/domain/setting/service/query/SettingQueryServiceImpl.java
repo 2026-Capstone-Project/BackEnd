@@ -6,15 +6,15 @@ import com.project.backend.domain.setting.entity.Setting;
 import com.project.backend.domain.setting.exception.SettingErrorCode;
 import com.project.backend.domain.setting.exception.SettingException;
 import com.project.backend.domain.setting.repository.SettingRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class SettingQueryServiceImpl implements SettingQueryService {
 
     private final SettingRepository settingRepository;
