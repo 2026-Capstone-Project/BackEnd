@@ -95,6 +95,7 @@ public class RecurrenceGroup extends BaseEntity {
                 .daysOfMonth(daysOfMonth)
                 .weekOfMonth(weekOfMonth)
                 .dayOfWeekInMonth(dayOfWeekInMonth)
+                .monthOfYear(monthOfYear)
                 .endType(endType != null ? endType : RecurrenceEndType.NEVER)
                 .endDate(endDate)
                 .occurrenceCount(occurrenceCount)
