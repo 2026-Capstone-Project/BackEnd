@@ -21,6 +21,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
+
 
 @Slf4j
 @Service
@@ -56,7 +58,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         cookieUtil.createJwtCookie(response, "refresh_token", refreshToken, refreshExpMs);
 
         // 토큰을 레디스에 등록
-        redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs);
+        redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs, TimeUnit.MILLISECONDS);
 
         // 로그인 시 새로운 csrf 토큰 발급
         CsrfToken csrfToken = customCookieCsrfTokenRepository.generateToken(request);
