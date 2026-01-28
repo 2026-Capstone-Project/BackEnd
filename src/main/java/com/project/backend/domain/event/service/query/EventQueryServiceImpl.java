@@ -19,7 +19,7 @@ public class EventQueryServiceImpl implements EventQueryService {
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, Long memberId) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         return EventConverter.toDetailRes(event);

@@ -9,12 +9,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Modifying
     @Query("DELETE FROM Event e WHERE e.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
+
+    Optional<Event> findByMemberIdAndId(Long memberId, Long eventId);
 
     List<Event> findByMemberIdAndStartTimeBetween(Long memberId, LocalDateTime start, LocalDateTime end);
 
