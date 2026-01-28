@@ -70,29 +70,21 @@ public class SecurityConfig {
                 // HTTP BASIC 인증 비활성화 -> JWT은 사용하지 않음
                 .httpBasic(HttpBasicConfigurer::disable)
 
-//                // JSESSIONID 비활성화
-//                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//
-//                // CSRF 설정 비활성화
-////                .csrf(AbstractHttpConfigurer::disable)
-//                // 일단 비활성화
-//                .csrf(csrf -> csrf
-//                        .csrfTokenRepository(customCookieCsrfTokenRepository)
-//                        // 로그인/회원가입/문서 등 최소 범위만 예외. 이후 프론트가 헤더 붙이면 예외 줄여도 됨.
-//                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-//                        .ignoringRequestMatchers(
-//                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**",
-//                                "/actuator/**"
-//                        )
-//                )
-                // ✅ 완전 Stateless
-                .sessionManagement(sm ->
-                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                // JSESSIONID 비활성화
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // CSRF 설정 비활성화
+//                .csrf(AbstractHttpConfigurer::disable)
+                // 일단 비활성화
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(customCookieCsrfTokenRepository)
+                        // 로그인/회원가입/문서 등 최소 범위만 예외. 이후 프론트가 헤더 붙이면 예외 줄여도 됨.
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers(
+                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**",
+                                "/actuator/**"
+                        )
                 )
-
-                // ✅ CSRF 완전 비활성화
-                .csrf(AbstractHttpConfigurer::disable)
-
 
                 // 로그아웃 설정
                 .logout(logout -> logout
