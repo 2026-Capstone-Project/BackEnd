@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/api/v1/events")
 @RequiredArgsConstructor
@@ -36,5 +38,16 @@ public class EventController implements EventDocs {
     ){
         EventResDTO.DetailRes resDTO = eventQueryService.getEventDetail(eventId, customUserDetails.getId());
         return CustomResponse.onSuccess("OK", resDTO);
+    }
+
+    @GetMapping()
+    public CustomResponse<EventResDTO.EventsListRes> getEvents(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
+    ) {
+        EventResDTO.EventsListRes resDTO =
+                eventQueryService.getEvents(customUserDetails.getId(), startDate, endDate);
+        return CustomResponse.onSuccess("전체 이벤트 조회 완료", resDTO);
     }
 }

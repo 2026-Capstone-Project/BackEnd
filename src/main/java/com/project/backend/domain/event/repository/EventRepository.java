@@ -24,4 +24,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByRecurrenceGroup(RecurrenceGroup recurrenceGroup);
 
     void deleteByRecurrenceGroup(RecurrenceGroup recurrenceGroup);
+
+    @Query("SELECT e " +
+            "FROM Event e " +
+            "WHERE e.member.id = :memberId " +
+            "AND e.startTime <= :endRange " +
+            "AND e.endTime >= :startRange ")
+    List<Event> findByMemberIdAndOverlappingRange(
+            @Param("memberId") Long memberId,
+            @Param("startRange") LocalDateTime startRange,
+            @Param("endRange") LocalDateTime endRange);
 }

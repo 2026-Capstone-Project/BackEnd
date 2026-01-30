@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class EventCommandServiceImpl implements EventCommandService{
+public class EventCommandServiceImpl implements EventCommandService {
 
     private final MemberRepository memberRepository;
     private final EventRepository eventRepository;
@@ -48,7 +48,12 @@ public class EventCommandServiceImpl implements EventCommandService{
             recurrenceGroupRepository.save(recurrenceGroup);
         }
 
+        // TODO : 임시 조치이므로 리펙토링
         Event event = EventConverter.toEvent(req, member, recurrenceGroup);
+        if (recurrenceGroup != null) {
+            recurrenceGroup.setEvent(event);
+            recurrenceGroupRepository.save(recurrenceGroup);
+        }
         eventRepository.save(event);
 
         return EventConverter.toCreateRes(event);

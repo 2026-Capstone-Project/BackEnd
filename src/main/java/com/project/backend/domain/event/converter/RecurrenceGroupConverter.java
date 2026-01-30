@@ -35,6 +35,7 @@ public class RecurrenceGroupConverter {
                 .occurrenceCount(req.occurrenceCount())
                 .createdCount(1)
                 .member(member)
+                .event(null)
                 .build();
     }
 

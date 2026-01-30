@@ -71,6 +71,10 @@ public class RecurrenceGroup extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
+
     public static RecurrenceGroup create(
             Member member,
             RecurrenceFrequency frequency,
@@ -101,5 +105,9 @@ public class RecurrenceGroup extends BaseEntity {
                 .occurrenceCount(occurrenceCount)
                 .createdCount(createdCount)
                 .build();
+    }
+
+    public void setEvent(Event event) {
+        this.event = event;
     }
 }
