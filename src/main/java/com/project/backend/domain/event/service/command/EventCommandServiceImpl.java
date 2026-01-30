@@ -122,6 +122,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
             eventRepository.delete(event);
+            return;
         }
 
         // 반복 그룹을 가진 일정일 경우
