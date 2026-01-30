@@ -575,7 +575,8 @@ public interface EventDocs {
             )
             @RequestParam LocalDate endDate
     );
-  
+
+    @Operation(
             summary = "일정 수정",
             description = """
                 선택한 일정을 수정합니다. (PATCH)
