@@ -18,6 +18,7 @@ public class EventResDTO {
     @Builder
     public record DetailRes(
             Long id,
+            boolean calculated,
             String title,
             String content,
             LocalDateTime start,

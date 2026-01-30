@@ -3,6 +3,7 @@ package com.project.backend.domain.event.converter;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
@@ -83,6 +84,7 @@ public class EventConverter {
         }
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .calculated(true)
                 .title(event.getTitle())
                 .content(event.getContent())
                 .start(occurrenceStartTime)
@@ -98,6 +100,7 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(Event event) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .calculated(false)
                 .title(event.getTitle())
                 .content(event.getContent())
                 .start(event.getStartTime())
@@ -116,6 +119,7 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime start, LocalDateTime end) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .calculated(true)
                 .title(event.getTitle())
                 .content(event.getContent())
                 .start(start)
@@ -127,6 +131,23 @@ public class EventConverter {
                 .build();
     }
 
+    // TODO : 오버 로딩 임시조치
+    public static EventResDTO.DetailRes toDetailRes(RecurrenceException ex, Event event) {
+        return EventResDTO.DetailRes.builder()
+                .id(event.getId())
+                .calculated(true)
+                .title(ex.getTitle() != null ? ex.getTitle() : event.getTitle())
+                .content(ex.getContent() != null ? ex.getContent() : event.getContent())
+                .start(ex.getStartTime() != null ? ex.getStartTime() : event.getStartTime())
+                .end(ex.getEndTime() != null ? ex.getEndTime() : event.getEndTime())
+                .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
+                .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
+                .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .recurrenceGroup(
+                        RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
+                )
+                .build();
+    }
 
     public static EventResDTO.EventsListRes toEventsListRes(List<EventResDTO.DetailRes> details) {
         return EventResDTO.EventsListRes.builder()

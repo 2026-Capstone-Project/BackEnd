@@ -3,12 +3,14 @@ package com.project.backend.domain.event.service.query;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
@@ -27,6 +29,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ import java.util.Map;
 public class EventQueryServiceImpl implements EventQueryService {
 
     private final EventRepository eventRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
 
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
@@ -46,6 +52,24 @@ public class EventQueryServiceImpl implements EventQueryService {
         Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        // 익셉션 테이블 생성
+        List<RecurrenceException> recurrenceExceptions =
+                recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+        log.info(recurrenceExceptions.toString());
+
+        // 테이블이 있는 경우
+        for (RecurrenceException ex : recurrenceExceptions) {
+            // 타입이 스킵인데, 익셉션 데이트와 요청 시간이 같은 경우
+            if (ex.getExceptionType() == SKIP && time.toLocalDate().isEqual(ex.getExceptionDate())) {
+                // 보여주면 안되는 객체
+                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+            // 타입이 오버라이드인데, 시간이 변경 시간과 같은 경우
+            } else if (ex.getExceptionType() == OVERRIDE && time.isEqual(ex.getStartTime())) {
+                // 잘 찾았으니 리턴
+                return EventConverter.toDetailRes(ex, event);
+            }
+        }
+
         // 찾고자 하는 것이 부모 이벤트인 경우
         if (event.getStartTime().isEqual(time)) {
             log.debug("부모 이벤트 발견");
@@ -54,8 +78,6 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         // 생성기에 최초로 들어갈 기준 시간
         LocalDateTime current = event.getStartTime();
-        // 끝 시간을 결정하기 위한 범위 계산
-        Duration duration = Duration.between(event.getStartTime(), event.getEndTime());
 
         // 생성기 & 종료 조건 생성
         Generator generator = generatorFactory.getGenerator(event.getRecurrenceGroup());
@@ -71,7 +93,7 @@ public class EventQueryServiceImpl implements EventQueryService {
 
             // 이벤트를 찾은 경우
             if (current.equals(time)) {
-                return EventConverter.toDetailRes(event, current, current.plus(duration));
+                return EventConverter.toDetailRes(event, current);
             }
             // 검색하고자 했던 시간을 넘어선 경우
             if (current.isAfter(time)) {
@@ -137,6 +159,10 @@ public class EventQueryServiceImpl implements EventQueryService {
             // 반복 패턴에 맞는 정지 조건 전략 주입
             EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
 
+            // 익셉션 테이블 찾기
+            List<RecurrenceException> recurrenceExceptions =
+                    recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+
             // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
             if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {
                 expandedEvents.add(EventConverter.toDetailRes(event));
@@ -159,6 +185,17 @@ public class EventQueryServiceImpl implements EventQueryService {
 //                if (endCondition.shouldContinue(current, count, event.getRecurrenceGroup())) {
 //                    break;
 //                }
+                // 익셉션 테이블이 있는 경우
+                for (RecurrenceException ex : recurrenceExceptions) {
+                    // 타입이 스킵인데, 익셉션 데이트와 요청 시간이 같은 경우
+                    if (ex.getExceptionType() == SKIP && current.toLocalDate().isEqual(ex.getExceptionDate())) {
+                        // 다음 시간으로 넘김
+                        current = generator.next(current, event.getRecurrenceGroup());
+                    } else if (ex.getExceptionType() == OVERRIDE && current.toLocalDate().isEqual(ex.getExceptionDate())) {
+                        // 잘 찾았으니 리턴값에 추가
+                        expandedEvents.add(EventConverter.toDetailRes(ex, event));
+                    }
+                }
 
                 // startRange 이전 → 생성은 하지만 결과에는 미포함
                 if (current.plus(duration).isBefore(startRange)) {
