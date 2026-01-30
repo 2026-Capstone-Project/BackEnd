@@ -3,6 +3,7 @@ package com.project.backend.domain.event.service.query;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;

@@ -8,7 +8,5 @@ import java.time.LocalDateTime;
 public interface EventQueryService {
     EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId);
 
-    EventResDTO.DetailRes getEventDetail(Long eventId, Long memberId);
-
     EventResDTO.EventsListRes getEvents(Long memberId, LocalDate startDate, LocalDate endDate);
 }

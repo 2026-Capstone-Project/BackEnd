@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Tag(name = "일정(Event) API", description = "일정 생성 API")
 public interface EventDocs {
