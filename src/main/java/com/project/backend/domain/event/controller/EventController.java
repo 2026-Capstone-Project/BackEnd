@@ -51,4 +51,15 @@ public class EventController implements EventDocs {
                 eventQueryService.getEvents(customUserDetails.getId(), startDate, endDate);
         return CustomResponse.onSuccess("전체 이벤트 조회 완료", resDTO);
     }
+ 
+    @PatchMapping("/{eventId}")
+    public CustomResponse<EventResDTO.DetailRes> updateEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId,
+            @RequestBody EventReqDTO.UpdateReq req
+    ){
+        eventCommandService.updateEvent(req, eventId, customUserDetails.getId());
+        return CustomResponse.onSuccess("수정 완료", null);
+    }
+
 }

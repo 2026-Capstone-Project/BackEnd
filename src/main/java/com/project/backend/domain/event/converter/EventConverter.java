@@ -10,30 +10,60 @@ import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.time.Duration;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventConverter {
 
-    public static Event toEvent(EventReqDTO.CreateReq req, Member member, RecurrenceGroup recurrenceGroup) {
-        EventColor color = req.color() != null ? req.color() : EventColor.BLUE;
-        Boolean isAllDay = req.isAllDay() != null ? req.isAllDay() : false;
+    public static Event toEvent(EventSpec spec, Member member, RecurrenceGroup recurrenceGroup) {
+        EventColor color = spec.color() != null ? spec.color() : EventColor.BLUE;
+        Boolean isAllDay = spec.isAllDay() != null ? spec.isAllDay() : false;
         RecurrenceFrequency rG = recurrenceGroup != null ? recurrenceGroup.getFrequency() : RecurrenceFrequency.NONE;
+        Integer durationMinutes =
+                (spec.startTime() != null && spec.endTime() != null)
+                        ? (int) Duration.between(spec.startTime(), spec.endTime()).toMinutes()
+                        : null;
 
         return Event.builder()
+                .title(spec.title())
+                .content(spec.content())
+                .startTime(spec.startTime())
+                .endTime(spec.endTime())
+                .location(spec.location())
+                .recurrenceFrequency(rG)
+                .color(color)
+                .isAllDay(isAllDay)
+                .durationMinutes(durationMinutes)
+                .member(member)
+                .recurrenceGroup(recurrenceGroup)
+                .build();
+    }
+
+    public static EventSpec from(EventReqDTO.CreateReq req) {
+        return EventSpec.builder()
                 .title(req.title())
                 .content(req.content())
                 .startTime(req.startTime())
                 .endTime(req.endTime())
                 .location(req.location())
-                .recurrenceFrequency(rG)
-                .color(color)
-                .isAllDay(isAllDay)
-                .durationMinutes(null)
-                .member(member)
-                .recurrenceGroup(recurrenceGroup)
+                .color(req.color())
+                .isAllDay(req.isAllDay())
+                .build();
+    }
+
+    public static EventSpec from(EventReqDTO.UpdateReq req, Event event, LocalDateTime start, LocalDateTime end) {
+        return EventSpec.builder()
+                .title(req.title() != null ? req.title() : event.getTitle())
+                .content(req.content() != null ? req.content() : event.getContent())
+                .startTime(start)
+                .endTime(end)
+                .location(req.location() != null ? req.location() : event.getLocation())
+                .color(req.color() != null ? req.color() : event.getColor())
+                .isAllDay(req.isAllDay() != null ? req.isAllDay() : event.getIsAllDay())
                 .build();
     }
 
@@ -77,12 +107,10 @@ public class EventConverter {
                 .build();
     }
 
+
     public static EventResDTO.EventsListRes toEventsListRes(List<EventResDTO.DetailRes> details) {
         return EventResDTO.EventsListRes.builder()
                 .details(details)
                 .build();
     }
-
-
-
 }
