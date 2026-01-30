@@ -10,10 +10,8 @@ import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-
-import java.time.LocalDateTime;
-import java.util.List;
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -71,6 +69,27 @@ public class EventConverter {
         return EventResDTO.CreateRes.builder()
                 .id(event.getId())
                 .createdAt(event.getCreatedAt())
+                .build();
+    }
+
+    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime occurrenceStartTime) {
+        LocalDateTime end;
+        if (event.getDurationMinutes() != null) {
+            end = occurrenceStartTime.plusMinutes(event.getDurationMinutes());
+        } else {
+            end = occurrenceStartTime.plusMinutes(
+                    event.getEndTime().toLocalTime().getMinute() - occurrenceStartTime.toLocalTime().getMinute());
+        }
+        return EventResDTO.DetailRes.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .content(event.getContent())
+                .start(occurrenceStartTime)
+                .end(end)
+                .location(event.getLocation())
+                .isAllDay(event.getIsAllDay())
+                .color(event.getColor())
+                .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
                 .build();
     }
 

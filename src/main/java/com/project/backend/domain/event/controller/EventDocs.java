@@ -487,15 +487,22 @@ public interface EventDocs {
     @Operation(
             summary = "일정 상세 조회",
             description = """
-                캘린더에서 선택한 단일 일정의 상세 정보를 조회합니다.
-
+                캘린더에서 선택한 일정(단일 또는 반복)의 상세 정보를 조회합니다.
+               
+                ### 요청 파라미터
+                - eventId (PathVariable)
+                  - 일정의 원본 ID
+                - occurrenceDate (Query Parameter)
+                  - 캘린더에서 사용자가 선택한 실제 발생 날짜
+                  - 캘린더 조회 API 응답의 startTime 기준 날짜를 전달합니다.
+    
+                ### 응답 규칙
                 - 단일 일정인 경우
                   → recurrenceGroup 필드는 null로 반환됩니다.
-
                 - 반복 일정인 경우
                   → 반복 규칙 원본 정보(recurrenceGroup)를 함께 반환합니다.
-
-                해당 API는 일정 수정/삭제 화면에서 사용됩니다.
+    
+                해당 API는 일정 수정 / 삭제 화면에서 사용됩니다.
                 """
     )
     @ApiResponses({
@@ -512,12 +519,12 @@ public interface EventDocs {
                     content = @Content(
                             examples = @ExampleObject(
                                     value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "EVENT404_3",
-                                      "message": "일정을 찾을 수 없습니다"
-                                    }
-                                    """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "EVENT404_3",
+                                          "message": "일정을 찾을 수 없습니다"
+                                        }
+                                        """
                             )
                     )
             )
@@ -529,7 +536,13 @@ public interface EventDocs {
                     example = "1",
                     required = true
             )
-            @PathVariable Long eventId
+            @PathVariable Long eventId,
+            @Parameter(
+                    description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DD)",
+                    example = "2026-02-06T14:00:00",
+                    required = true
+            )
+            @RequestParam LocalDateTime occurrenceDate
     );
 
     @Operation(

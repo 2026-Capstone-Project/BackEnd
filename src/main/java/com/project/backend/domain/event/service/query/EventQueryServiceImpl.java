@@ -3,7 +3,6 @@ package com.project.backend.domain.event.service.query;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
-import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
@@ -16,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -40,11 +41,11 @@ public class EventQueryServiceImpl implements EventQueryService {
 
 
     @Override
-    public EventResDTO.DetailRes getEventDetail(Long eventId, Long memberId) {
+    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId) {
         Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        return EventConverter.toDetailRes(event);
+        return EventConverter.toDetailRes(event, time);
     }
 
     @Override
