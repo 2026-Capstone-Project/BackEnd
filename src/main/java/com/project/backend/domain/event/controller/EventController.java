@@ -41,6 +41,7 @@ public class EventController implements EventDocs {
     }
 
     @GetMapping()
+    @Override
     public CustomResponse<EventResDTO.EventsListRes> getEvents(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam LocalDate startDate,
