@@ -24,10 +24,7 @@ import java.time.LocalDateTime;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
 import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
@@ -144,6 +141,11 @@ public class EventQueryServiceImpl implements EventQueryService {
         // 최상위 이벤트 확장
         List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
 
+        // 시작 날짜 기준으로 정렬
+        eventsListRes.sort(
+                Comparator.comparing(EventResDTO.DetailRes::start)
+        );
+
         return EventConverter.toEventsListRes(eventsListRes);
     }
 
@@ -160,9 +162,11 @@ public class EventQueryServiceImpl implements EventQueryService {
             EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
 
             // 익셉션 테이블 찾기
-            List<RecurrenceException> recurrenceExceptions =
-                    recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
-
+            List<RecurrenceException> recurrenceExceptions = new ArrayList<>();
+            if (event.getRecurrenceGroup() != null) {
+                recurrenceExceptions =
+                        recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+            }
             // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
             if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {
                 expandedEvents.add(EventConverter.toDetailRes(event));
@@ -204,6 +208,11 @@ public class EventQueryServiceImpl implements EventQueryService {
                 }
                 // endRange 초과 → 종료
                 if (current.isAfter(endRange)) {
+                    break;
+                }
+                LocalDate endDate = event.getRecurrenceGroup().getEndDate();
+                // 패턴의 종료 시간이 정해진 경우에 현재 시간이 종료 시간을 넘어선 경우 → 종료
+                if (endDate != null && current.toLocalDate().isAfter(endDate)) {
                     break;
                 }
                 // 모든 탈출 조건을 통과한 객체는 DTO로 변환
