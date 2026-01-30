@@ -528,4 +528,448 @@ public interface EventDocs {
             )
             @PathVariable Long eventId
     );
+
+    @Operation(
+            summary = "일정 수정",
+            description = """
+                선택한 일정을 수정합니다. (PATCH)
+        
+                이 API는 **부분 수정(PATCH)** 방식으로 동작하며,
+                전달된 필드만 변경되고 나머지 필드는 유지됩니다.
+        
+                ---
+                ## 공통 규칙
+        
+                - eventId는 **항상 필수**입니다.
+                - 전달되지 않은 필드는 기존 값이 유지됩니다.
+                - PATCH 요청이므로 값 비교가 아닌 **필드 존재 여부**로 변경 여부를 판단합니다.
+                - 변경 의도가 없는 경우에도 기존 일정 정보를 그대로 반환합니다.
+        
+                ---
+              
+                - occurrenceDate는 **캘린더 화면에서 사용자가 선택한 실제 발생 일정의 날짜**입니다.
+                - 반복 일정의 경우:
+                  - occurrenceDate는 반복 규칙에 의해 **실제로 발생하는 날짜여야 합니다**.
+                  - 반복 규칙에 존재하지 않는 날짜를 전달하면 오류가 발생합니다.
+                    (예: 매달 15일 반복인데 14일 전달)
+        
+                - 단일 일정의 경우:
+                  - occurrenceDate는 전달하지 않습니다.
+        
+                ---
+                ## 반복 간격(intervalValue) 규칙
+                
+                - intervalValue는 간격(n일,n월,n년 마다)을 의미합니다.
+                - 반복 규칙을 **변경하지 않는 경우**:
+                  - intervalValue를 전달하지 않아도 됩니다.
+                  - 기존 반복 그룹의 intervalValue가 유지됩니다.
+                
+                - 반복 규칙을 **변경하는 경우** (frequency 변경 또는 단일 일정에서 반복그룹(recurrenceGroup)을 생성):
+                  - intervalValue을 1로 설정한다면 기본값이므로 전달하지 않아도 됩니다.
+                
+                ### frequency 별 intervalValue 허용 범위
+                - DAILY   : 1 ~ 364
+                - WEEKLY  : 1 (고정)
+                - MONTHLY : 1 ~ 11
+                - YEARLY  : 1 ~ 99
+                
+                ---
+                ## 단일 일정 수정 (반복 없음)
+        
+                - recurrenceUpdateScope, recurrenceGroup을 전달하지 않습니다.
+                - 전달된 필드만 단일 일정에 적용됩니다.
+        
+                ---
+                ## 반복 일정 수정
+        
+                반복 일정인 경우 **recurrenceUpdateScope는 필수**입니다.
+        
+                ### 수정 범위 (recurrenceUpdateScope)
+        
+                #### THIS_EVENT
+                - 선택한 occurrenceDate의 일정만 수정합니다.
+                - 기존 반복 그룹에는 예외(RecurrenceException)가 추가됩니다.
+                - 해당 일정은 반복 규칙에서 분리되지 않습니다.
+        
+                #### THIS_AND_FOLLOWING_EVENTS
+                - 선택한 occurrenceDate과 이후의 일정들을 수정합니다.
+                - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
+                - 이후 일정들은 새로운 반복 그룹으로 재생성됩니다.
+        
+                #### ALL_EVENTS
+                - 반복 일정 전체를 수정합니다.
+                - 기존 반복 그룹과 실제 일정은 제거됩니다.
+                - 새로운 반복 규칙으로 전체 일정이 재생성되고, 수정한 일정이 새 일정으로 생성됩니다.
+        
+                ---
+                ## 시간(startTime / endTime) 처리 규칙
+        
+                - startTime 또는 endTime이 전달되면 해당 값으로 수정됩니다.
+                - 시간 필드가 전달되지 않은 경우:
+                  - occurrenceDate + 기존 일정의 시간 규칙으로 start/end가 재계산됩니다.
+                - endTime이 전달되지 않은 경우:
+                  - startTime + durationMinutes 기준으로 계산됩니다.
+                - startTime,occurrenceDate 혹은 endTime,occurrenceDate 가 전달되지 않은 경우:
+                  - eventId에 해당하는 db에 저장된 최초 일정의 startTime과 endTime을 사용합니다.
+        
+                ---
+                ## 반복 규칙 수정 (recurrenceGroup)
+        
+                - 반복 규칙을 수정하는 경우에만 recurrenceGroup을 포함합니다.
+                - recurrenceGroup 내부 필드 역시 **변경할 항목만 전달**합니다.
+        
+                ---
+                ## 유효성 규칙
+        
+                - 반복이 없는 일정에 recurrenceUpdateScope, occurrenceDate를 지정하면 오류가 발생합니다.
+                - 반복 일정인데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
+                - recurrenceGroup을 전달했는데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
+                - recurrenceGroup 필드가 frequency와 맞지 않으면 오류가 발생합니다.
+                """
+    )
+
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "일정 수정 요청 (PATCH)",
+            required = true,
+            content = @Content(
+                    schema = @Schema(implementation = EventReqDTO.UpdateReq.class),
+                    examples = {
+                            // 1. 변경 없는 일정 수정
+                            @ExampleObject(
+                                    name = "변경 사항 없음",
+                                    description = """
+                                        변경 사항 없이 저장 버튼만 누른 경우.
+                                        PATCH 요청이므로 body는 비어 있습니다.
+                                        """,
+                                    value = """
+                                        {
+                                        }
+                                        """
+                            ),
+
+
+                            // 2-1. 반복 없는 일정 수정 (단일 일정)
+                            @ExampleObject(
+                                    name = "단일 일정 수정",
+                                    description = """
+                                        반복이 없는 단일 일정 수정.
+                                        occurrenceDate는 전달하지 않습니다.
+                                        """,
+                                    value = """
+                                        {
+                                          "title": "팀 회의 (변경)",
+                                          "location": "회의실 B"
+                                        }
+                                        """
+                            ),
+                            // 2-2. 반복 없는 일정에 반복 그룹 추가하는 수정 (단일일정 -> 반복 일정)
+                            @ExampleObject(
+                                    name = "단일 일정 - 반복 일정으로 변경",
+                                    description = """
+                                    반복이 없는 단일 일정을 반복 일정으로 변경합니다.
+                            
+                                    상황:
+                                    - 반드시 반복이 없는 단일 일정(event)을 대상으로 해야 합니다.
+                                    - 기존에 반복 그룹이 있는 일정에는 사용할 수 없습니다.
+                                    - recurrenceGroup을 전달하므로 intervalValue는 필수입니다.
+                                    """,
+                                    value = """
+                                        {
+                                          "recurrenceGroup": {
+                                            "frequency": "WEEKLY",
+                                            "daysOfWeek": ["MON", "WED"],
+                                            "endType": "NEVER"
+                                          }
+                                        }
+                                        """
+                            ),
+                            // 3-1. 반복 일정 - 이 일정만 수정 (시간 변경)
+                            @ExampleObject(
+                                    name = "반복 일정 - 이 일정만 수정 (시간 변경)",
+                                    description = """
+                                        반복 일정 중 선택한 계산된 회차의 시간만 수정합니다.
+                                        실제 eventId를 가진 일정을 수정하는 것이 아니라면 occurrenceDate는 필수입니다.
+                                        """,
+                                    value = """
+                                        {
+                                          "occurrenceDate": "2026-02-01",
+                                          "startTime": "2026-02-06T14:00:00",
+                                          "endTime": "2026-02-06T15:00:00",
+                                          "recurrenceUpdateScope": "THIS_EVENT"
+                                        }
+                                        """
+                            ),
+                             // 3-2. 반복 일정 - 이 일정만 수정 (제목 변경)
+                            @ExampleObject(
+                                    name = "반복 일정 - 이 일정만 수정 (제목 변경)",
+                                    description = """
+                                        반복 일정 중 선택한 계산된 회차의 제목만 수정합니다.
+                                        실제 eventId를 가진 일정을 수정하는 것이 아니라면 occurrenceDate는 필수입니다.
+                                        """,
+                                    value = """
+                                        {
+                                          "occurrenceDate": "2026-02-10",
+                                          "title": "특별 회의",
+                                          "recurrenceUpdateScope": "THIS_EVENT"
+                                        }
+                                        """
+                            ),
+                             // 4. 반복 일정 - 이 일정 + 이후 일정 수정 1
+                            @ExampleObject(
+                                    name = "반복 일정 - 이 일정 + 이후 수정",
+                                    description = """
+                                    선택한 회차와 그 이후 일정들의 반복 규칙을 수정합니다.
+                                    """,
+                                    value = """
+                                        {
+                                          "occurrenceDate": "2026-02-06",
+                                          "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
+                                          "recurrenceGroup": {
+                                            "frequency": "WEEKLY",
+                                            "daysOfWeek": ["THU"],
+                                            "endType": "NEVER"
+                                          }
+                                        }
+                                        """
+                            ),
+                            // 5. 반복 일정 - 이 일정 + 이후 일정 수정 2
+                            @ExampleObject(
+                                    name = "반복 일정 - 이 일정 + 이후 수정 (intervalValue 포함)",
+                                    description = """
+                                    선택한 회차와 그 이후 일정들의 반복 규칙을 수정합니다.
+                            
+                                    상황:
+                                    - 반복 타입이 WEEKLY가 아닌 다른 타입을 가진 일정을 대상으로 반복 객체를 수정하는 상황입니다.
+                                    """,
+                                    value = """
+                                        {
+                                          "occurrenceDate": "2026-02-06",
+                                          "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
+                                          "recurrenceGroup": {
+                                            "frequency": "WEEKLY",
+                                            "daysOfWeek": ["MON", "THU"],
+                                            "endType": "NEVER"
+                                          }
+                                        }
+                                        """
+                            ),
+
+                            // 6. 반복 일정 - 전체 수정 1
+                            @ExampleObject(
+                                    name = "반복 일정 - 전체 수정",
+                                    description = """
+                                    반복 일정 전체의 반복 규칙을 수정합니다.
+                                    """,
+                                    value = """
+                                        {
+                                          "recurrenceUpdateScope": "ALL_EVENTS",
+                                          "recurrenceGroup": {
+                                            "frequency": "MONTHLY",
+                                            "monthlyType": "DAY_OF_WEEK",
+                                            "weekOfMonth": 2,
+                                            "dayOfWeekInMonth": ["TUE"],
+                                            "endType": "NEVER"
+                                          }
+                                        }
+                                        """
+                            ),
+                            // 7. 반복 일정 - 전체 수정 2
+                            @ExampleObject(
+                                    name = "반복 일정 - 전체 수정 (intervalValue 포함)",
+                                    description = """
+                                    반복 일정 전체의 반복 규칙을 수정합니다.
+                            
+                                    상황:
+                                    - 반복 타입이 YEARLY가 아닌 같은 타입을 가진 일정을 대상으로 반복 객체를 수정하는 상황입니다.
+                                    """,
+                                    value = """
+                                        {
+                                          "recurrenceUpdateScope": "ALL_EVENTS",
+                                          "recurrenceGroup": {
+                                            "frequency": "YEARLY",
+                                            "intervalValue": 2
+                                          }
+                                        }
+                                        """
+                            )
+
+                    }
+            )
+    )
+    @ApiResponses({
+
+            // =======================
+            // 200 OK
+            // =======================
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "일정 수정 성공",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "SUCCESS",
+                                    summary = "일정 수정 성공",
+                                    value = """
+                            {
+                              "isSuccess": true,
+                              "code": "200",
+                              "message": "수정 완료",
+                              "result": null
+                            }
+                            """
+                            )
+                    )
+            ),
+
+            // =======================
+            // 400 BAD REQUEST
+            // =======================
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "일정 수정 요청이 유효성 규칙을 위반한 경우",
+                    content = @Content(
+                            examples = {
+                                    // EVENT
+                                    @ExampleObject(
+                                            name = "EVENT400_3",
+                                            summary = "반복이 없는 일정인데 수정 범위가 지정된 경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "EVENT400_3",
+                                      "message": "반복이 없는 일정입니다."
+                                    }
+                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "EVENT400_4",
+                                            summary = "반복이 없는데 occurrenceDate가 전달된 경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "EVENT400_4",
+                                      "message": "반복이 없는 일정입니다."
+                                    }
+                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "EVENT400_5",
+                                            summary = "반복 일정인데 occurrenceDate가 전달되지 않은 경우\n" +
+                                                    "즉,사용자가 선택한 일정이 계산되지 않은 실제 일정일 경우(DB에 저장된 원본 일정)" +
+                                                    " 반복 방식 변경시 RecurrenceUpdateScope은 모든 이벤트에 적용만 가능하다\n" +
+                                                    "계산된 일정이 아닌, 실제 일정을 수정할때는 occurrenceDate에 값이 없다," +
+                                                    "occurrenceDate에 필드는 계산된 일정의 startDate를 띄우기 때문이다.\n" +
+                                                    "즉, 실제 일정을 수정 시, RecurrenceUpdateScope이 모든 이벤트에 대한 경우가 " +
+                                                    "아니라면, 이 요청은 반복은 존재하지만 occurrenceDate가 없는 잘못된 요청이다. ",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "EVENT400_5",
+                                      "message": "OCCURRENCE_DATE가 없습니다."
+                                    }
+                                    """
+                                    ),
+
+                                    // RECURRENCE GROUP
+
+                                    @ExampleObject(
+                                            name = "RG400_8",
+                                            summary = "매달 반복 주가 설정되지 않은 경우\n" +
+                                                    "- frequency : MONTHLY, monthlyType : DAY_OF_WEEK인데" +
+                                                    "weekOfMonth 필드가 Null 인경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "RG400_8",
+                                      "message": "매달 반복 주가 설정되지 않았습니다."
+                                    }
+                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_9",
+                                            summary = "그 달의 n번째 주 요일이 설정되지 않은 경우\n" +
+                                                    "- frequency : MONTHLY, monthlyType : DAY_OF_WEEK인데" +
+                                                    "dayOfWeekInMonth 필드가 Null 인경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "RG400_9",
+                                      "message": "그 달의 n번째주 요일이 설정되지 않았습니다."
+                                    }
+                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_15",
+                                            summary = "반복 타입에 맞지 않는 필드가 함께 전달된 경우\n" +
+                                                    "- frequency : YEARLY인데 dayOfWeek에 값이 있는 경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "RG400_15",
+                                      "message": "FREQUENCY 타입에 따른 불필요한 필드값이 채워져 있습니다."
+                                    }
+                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_17",
+                                            summary = "반복 간격 값 범위가 올바르지 않은 경우\n" +
+                                                    "반복 타입에 따른 intervalValue 범위를 벗어난 경우",
+                                            value = """
+                                    {
+                                      "isSuccess": false,
+                                      "code": "RG400_17",
+                                      "message": "간격 값 범위가 올바르지 않습니다."
+                                    }
+                                    """
+                                    )
+                            }
+                    )
+            ),
+
+            // =======================
+            // 404 NOT FOUND
+            // =======================
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "일정을 찾을 수 없는 경우",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "EVENT404_1",
+                                    summary = "일정 ID가 존재하지 않음",
+                                    value = """
+                            {
+                              "isSuccess": false,
+                              "code": "EVENT404_1",
+                              "message": "일정을 찾을 수 없습니다"
+                            }
+                            """
+                            )
+                    )
+            )
+    })
+    CustomResponse<EventResDTO.DetailRes> updateEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+
+            @Parameter(
+                    description = "수정할 일정 ID",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable Long eventId,
+
+            @RequestBody
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "일정 수정 요청 정보",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = EventReqDTO.UpdateReq.class)
+                    )
+            )
+            EventReqDTO.UpdateReq req
+    );
+
 }

@@ -128,4 +128,27 @@ public class Event extends BaseEntity {
     public boolean isRecurring() {
         return recurrenceGroup != null;
     }
+
+    public void update(
+            String title,
+            String content,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            String location,
+            EventColor color,
+            Boolean isAllDay
+    ) {
+        if (title != null) this.title = title;
+        if (content != null) this.content = content;
+        if (startTime != null) this.startTime = startTime;
+        if (endTime != null) this.endTime = endTime;
+        if (location != null) this.location = location;
+        if (color != null) this.color = color;
+        if (isAllDay != null) this.isAllDay = isAllDay;
+    }
+
+    public void updateRecurrenceGroup(RecurrenceGroup recurrenceGroup) {
+        this.recurrenceGroup = recurrenceGroup;
+        this.recurrenceFrequency = recurrenceGroup.getFrequency();
+    }
 }
