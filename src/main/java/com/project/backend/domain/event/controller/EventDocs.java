@@ -529,8 +529,8 @@ public interface EventDocs {
             )
             @PathVariable Long eventId,
             @Parameter(
-                    description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DD)",
-                    example = "2026-02-06T14:00:00",
+                    description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DDThh-mm)",
+                    example = "2026-02-06T14:00",
                     required = true
             )
             @RequestParam LocalDateTime occurrenceDate
