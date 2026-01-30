@@ -155,7 +155,24 @@ public class RecurrenceGroupConverter {
                 .build();
     }
 
-    public static RecurrenceException toRecurrenceException(
+    public static RecurrenceException toRecurrenceExceptionForDelete(
+            RecurrenceGroup recurrenceGroup,
+            LocalDateTime time) {
+        return RecurrenceException.builder()
+                .exceptionDate(time.toLocalDate())
+                .title(null)
+                .content(null)
+                .startTime(null)
+                .endTime(null)
+                .exceptionType(ExceptionType.SKIP)
+                .location(null)
+                .color(null)
+                .isAllDay(null)
+                .recurrenceGroup(recurrenceGroup)
+                .build();
+    }
+
+    public static RecurrenceException toRecurrenceExceptionForUpdate(
             EventReqDTO.UpdateReq req,
             RecurrenceGroup recurrenceGroup,
             LocalDateTime time) {

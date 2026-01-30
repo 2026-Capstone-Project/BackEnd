@@ -2,6 +2,7 @@ package com.project.backend.domain.event.controller;
 
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
+import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.service.command.EventCommandService;
 import com.project.backend.domain.event.service.query.EventQueryService;
 import com.project.backend.global.apiPayload.CustomResponse;
@@ -59,13 +60,26 @@ public class EventController implements EventDocs {
     }
 
     @PatchMapping("/{eventId}")
-    public CustomResponse<EventResDTO.DetailRes> updateEvent(
+    @Override
+    public CustomResponse<Void> updateEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
             @RequestBody EventReqDTO.UpdateReq req
     ){
         eventCommandService.updateEvent(req, eventId, customUserDetails.getId());
         return CustomResponse.onSuccess("수정 완료", null);
+    }
+
+    @DeleteMapping("/{eventId}")
+    //@Override
+    public CustomResponse<Void> deleteEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId,
+            @RequestParam(required = false) LocalDate occurrenceDate,
+            @RequestParam(required = false) RecurrenceUpdateScope scope
+    ){
+        eventCommandService.deleteEvent(eventId, occurrenceDate, scope, customUserDetails.getId());
+        return CustomResponse.onSuccess("삭제 완료", null);
     }
 
 }

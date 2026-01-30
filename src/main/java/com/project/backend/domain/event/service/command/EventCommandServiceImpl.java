@@ -10,6 +10,7 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventRepository;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -106,6 +108,35 @@ public class EventCommandServiceImpl implements EventCommandService {
             case THIS_EVENT -> updateThisEventOnly(req, event, start);
             case THIS_AND_FOLLOWING_EVENTS -> updateThisAndFutureEvents(req, event, member, start, end);
             case ALL_EVENTS -> updateAllEvents(req, event, member, start, end);
+            default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
+        }
+    }
+
+    @Override
+    public void deleteEvent(Long eventId, LocalDate occurrenceDate, RecurrenceUpdateScope scope, Long memberId) {
+        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        eventValidator.validateDelete(event, occurrenceDate ,scope);
+
+        // 단일 일정일 경우
+        if (event.getRecurrenceGroup() == null) {
+            eventRepository.delete(event);
+        }
+
+        // 반복 그룹을 가진 일정일 경우
+        switch (scope) {
+            case THIS_EVENT -> {
+                deleteThisEventOnly(event, occurrenceDate);
+            }
+            case THIS_AND_FOLLOWING_EVENTS -> {
+                deleteThisAndFutureEvents(event, occurrenceDate);
+            }
+            case ALL_EVENTS -> {
+                eventRepository.delete(event);
+                recurrenceGroupRepository.delete(event.getRecurrenceGroup());
+            }
+            default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
     }
 
@@ -137,7 +168,16 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDateTime start
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
-        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceException(req, rg, start);
+        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(req, rg, start);
+        recurrenceExRepository.save(ex);
+        rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
+    }
+
+    // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우
+    private void deleteThisEventOnly(Event event, LocalDate start) {
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+        RecurrenceException ex =
+                RecurrenceGroupConverter.toRecurrenceExceptionForDelete(rg, start.atStartOfDay());
         recurrenceExRepository.save(ex);
         rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
     }
@@ -165,6 +205,15 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         newEvent.updateRecurrenceGroup(newRg); // 연관관계 적용
         eventRepository.save(newEvent);
+    }
+
+    // 반복그룹이 있는 해당 일정과 그 이후 일정 삭제 하는 경우
+    private void deleteThisAndFutureEvents(
+            Event event,
+            LocalDate occurrenceDate) {
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+        // 해당 event가 속한 반복그룹의 종료기간을 해당 event의 생성일 하루전으로 설정
+        rg.updateEndDateTime(occurrenceDate.atStartOfDay());
     }
 
     // 반복 그룹이 있는 일정에서 전체 일정 수정한느 경우
