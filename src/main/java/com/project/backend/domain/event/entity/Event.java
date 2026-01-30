@@ -55,7 +55,7 @@ public class Event extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recurrence_group_id")
     private RecurrenceGroup recurrenceGroup;
 

@@ -10,8 +10,10 @@ import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.time.Duration;
+
 import java.time.LocalDateTime;
+import java.util.List;
+import java.time.Duration;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -72,6 +74,7 @@ public class EventConverter {
                 .build();
     }
 
+    // TODO : 오버 로딩 임시조치
     public static EventResDTO.DetailRes toDetailRes(Event event) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -82,7 +85,32 @@ public class EventConverter {
                 .location(event.getLocation())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                // TODO : 임시 조치이므로 리팩토링 대상
+                .recurrenceGroup(event.getRecurrenceGroup() != null
+                        ? RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup())
+                        : null)
+                .build();
+    }
+
+    // TODO : 오버 로딩 임시조치
+    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime start, LocalDateTime end) {
+        return EventResDTO.DetailRes.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .content(event.getContent())
+                .start(start)
+                .end(end)
+                .location(event.getLocation())
+                .isAllDay(event.getIsAllDay())
+                .color(event.getColor())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
+                .build();
+    }
+
+
+    public static EventResDTO.EventsListRes toEventsListRes(List<EventResDTO.DetailRes> details) {
+        return EventResDTO.EventsListRes.builder()
+                .details(details)
                 .build();
     }
 }

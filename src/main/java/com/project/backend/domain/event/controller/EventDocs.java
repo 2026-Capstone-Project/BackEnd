@@ -17,6 +17,9 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.time.LocalDate;
 
 @Tag(name = "일정(Event) API", description = "일정 생성 API")
 public interface EventDocs {
@@ -530,6 +533,49 @@ public interface EventDocs {
     );
 
     @Operation(
+            summary = "이벤트 목록 조회",
+            description = """
+        인증된 사용자의 이벤트를
+        지정한 날짜 범위(startDate ~ endDate) 내에서 조회합니다.
+        
+        - 로그인 사용자 기준으로 조회됩니다.
+        - 반복 일정은 지정한 기간 내에 포함되는 인스턴스만 반환됩니다.
+        """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "이벤트 목록 조회 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증되지 않은 사용자"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 날짜 범위 요청"
+            )
+    })
+    CustomResponse<EventResDTO.EventsListRes> getEvents(
+            @AuthenticationPrincipal
+            @Parameter(hidden = true)
+            CustomUserDetails customUserDetails,
+
+            @Parameter(
+                    description = "조회 시작 날짜 (YYYY-MM-DD)",
+                    example = "2026-01-01",
+                    required = true
+            )
+            @RequestParam LocalDate startDate,
+
+            @Parameter(
+                    description = "조회 종료 날짜 (YYYY-MM-DD)",
+                    example = "2026-01-31",
+                    required = true
+            )
+            @RequestParam LocalDate endDate
+    );
+  
             summary = "일정 수정",
             description = """
                 선택한 일정을 수정합니다. (PATCH)
