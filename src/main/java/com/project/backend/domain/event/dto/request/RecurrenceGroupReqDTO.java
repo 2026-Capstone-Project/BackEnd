@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public class RecurrenceGroupReqDTO {
             Integer intervalValue,
 
             // WEEKLY: 반복 요일
-            List<String> daysOfWeek,
+            List<DayOfWeek> daysOfWeek,
 
             // MONTHLY: 반복 타입
             MonthlyType monthlyType,
@@ -30,7 +31,7 @@ public class RecurrenceGroupReqDTO {
             @Min(1)
             @Max(5)
             Integer weekOfMonth,
-            List<String> dayOfWeekInMonth,
+            List<DayOfWeek> dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)
@@ -59,7 +60,7 @@ public class RecurrenceGroupReqDTO {
             Integer intervalValue,
 
             // WEEKLY: 반복 요일
-            List<String> daysOfWeek,
+            List<DayOfWeek> daysOfWeek,
 
             // MONTHLY: 반복 타입
             MonthlyType monthlyType,
@@ -68,7 +69,7 @@ public class RecurrenceGroupReqDTO {
             @Min(1)
             @Max(5)
             Integer weekOfMonth,
-            List<String> dayOfWeekInMonth,
+            List<DayOfWeek> dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)

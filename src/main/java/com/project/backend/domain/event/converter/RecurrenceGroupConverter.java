@@ -13,7 +13,9 @@ import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,21 +43,86 @@ public class RecurrenceGroupConverter {
                 .build();
     }
 
-    public static RecurrenceGroupSpec from(RecurrenceGroupReqDTO.CreateReq req) {
-        return RecurrenceGroupSpec.builder()
-                .frequency(req.frequency())
-                .interval(req.intervalValue() != null ? req.intervalValue() : 1)
-                .daysOfWeek(req.daysOfWeek())
-                .monthlyType(req.monthlyType())
-                .daysOfMonth(req.daysOfMonth())
-                .weekOfMonth(req.weekOfMonth())
-                .dayOfWeekInMonth(req.dayOfWeekInMonth())
-                .monthOfYear(req.monthOfYear())
-                .endType(req.endType() != null ? req.endType() : RecurrenceEndType.NEVER)
-                .endDate(req.endDate())
-                .occurrenceCount(req.occurrenceCount())
-                .build();
+    public static RecurrenceGroupSpec from(
+            RecurrenceGroupReqDTO.CreateReq req,
+            LocalDateTime startTime
+    ) {
+        RecurrenceFrequency frequency = req.frequency();
+
+        RecurrenceGroupSpec.RecurrenceGroupSpecBuilder b =
+                RecurrenceGroupSpec.builder()
+                        .frequency(frequency)
+                        .interval(req.intervalValue() != null ? req.intervalValue() : 1)
+                        .endType(req.endType() != null ? req.endType() : RecurrenceEndType.NEVER)
+                        .endDate(req.endDate())
+                        .occurrenceCount(req.occurrenceCount());
+
+        switch (frequency) {
+
+            case DAILY -> {
+                // DAILY는 추가 필드 없음
+            }
+
+            case WEEKLY -> {
+                // daysOfWeek 없으면 startTime 기준 요일 자동 설정
+                b.daysOfWeek(
+                        req.daysOfWeek() != null && !req.daysOfWeek().isEmpty()
+                                ? req.daysOfWeek()
+                                : List.of(startTime.getDayOfWeek())
+                );
+            }
+
+            case MONTHLY -> {
+                MonthlyType monthlyType =
+                        req.monthlyType() != null
+                                ? req.monthlyType()
+                                : MonthlyType.DAY_OF_MONTH; // 디폴트
+
+                b.monthlyType(monthlyType);
+
+                if (monthlyType == MonthlyType.DAY_OF_MONTH) {
+                    b.daysOfMonth(
+                            req.daysOfMonth() != null && !req.daysOfMonth().isEmpty()
+                                    ? req.daysOfMonth()
+                                    : List.of(startTime.getDayOfMonth())
+                    );
+                }
+
+                if (monthlyType == MonthlyType.DAY_OF_WEEK) {
+                    b.weekOfMonth(
+                            req.weekOfMonth() != null
+                                    ? req.weekOfMonth()
+                                    : getWeekOfMonth(startTime)
+                    );
+
+                    b.dayOfWeekInMonth(
+                            req.dayOfWeekInMonth() != null && !req.dayOfWeekInMonth().isEmpty()
+                                    ? req.dayOfWeekInMonth()
+                                    : List.of(startTime.getDayOfWeek())
+                    );
+                }
+            }
+
+            case YEARLY -> {
+                b.monthOfYear(
+                        req.monthOfYear() != null
+                                ? req.monthOfYear()
+                                : startTime.getMonthValue()
+                );
+
+                b.daysOfMonth(
+                        req.daysOfMonth() != null && !req.daysOfMonth().isEmpty()
+                                ? req.daysOfMonth()
+                                : List.of(startTime.getDayOfMonth())
+                );
+            }
+
+            default -> throw new IllegalArgumentException("Unsupported frequency");
+        }
+
+        return b.build();
     }
+
 
     public static RecurrenceGroupSpec from(RecurrenceGroupReqDTO.UpdateReq req, RecurrenceGroup rg, LocalDateTime time) {
         RecurrenceGroupSpec.RecurrenceGroupSpecBuilder b = RecurrenceGroupSpec.builder();
@@ -132,10 +199,7 @@ public class RecurrenceGroupConverter {
             return null;
         }
 
-        return rgSpec.daysOfWeek().stream()
-                .distinct()
-                .sorted()
-                .collect(Collectors.joining(","));
+        return serializeDaysOfWeek(rgSpec.daysOfWeek());
     }
 
     private static String resolveMonthlyWeekDays(RecurrenceGroupSpec rgSpec) {
@@ -263,12 +327,12 @@ public class RecurrenceGroupConverter {
         switch (frequency) {
             case WEEKLY -> {
                 // daysOfWeek 없으면 startTime 기준 요일 자동 설정
-                List<String> days =
+                List<DayOfWeek> days =
                         req.daysOfWeek() != null
                                 ? req.daysOfWeek()
                                 : (rg.getDaysOfWeekAsList() != null && !rg.getDaysOfWeekAsList().isEmpty()
-                                ? rg.getDaysOfWeekAsList()
-                                : List.of(time.getDayOfWeek().name().substring(0, 3)));
+                                ? toDayOfWeekList(rg.getDaysOfWeek())
+                                : List.of(time.getDayOfWeek()));
 
                 b.daysOfWeek(days);
             }
@@ -302,13 +366,13 @@ public class RecurrenceGroupConverter {
                                     : (rg.getWeekOfMonth() != null ? rg.getWeekOfMonth()
                                     : getWeekOfMonth(time));
 
-                    List<String> dayOfWeekInMonth =
+                    List<DayOfWeek> dayOfWeekInMonth =
                             req.dayOfWeekInMonth() != null
                                     ? req.dayOfWeekInMonth()
                                     : (rg.getDayOfWeekInMonthAsList() != null
                                     && !rg.getDayOfWeekInMonthAsList().isEmpty()
-                                    ? rg.getDayOfWeekInMonthAsList()
-                                    : List.of(time.getDayOfWeek().name().substring(0, 3)));
+                                    ? toDayOfWeekList(rg.getDayOfWeekInMonth())
+                                    : List.of(time.getDayOfWeek()));
 
                     b.weekOfMonth(weekOfMonth);
                     b.dayOfWeekInMonth(dayOfWeekInMonth);
@@ -354,7 +418,23 @@ public class RecurrenceGroupConverter {
             }
         }
     }
+
     private static int getWeekOfMonth(LocalDateTime time) {
         return (time.getDayOfMonth() - 1) / 7 + 1;
+    }
+
+    private static String serializeDaysOfWeek(List<DayOfWeek> daysOfWeek) {
+        return daysOfWeek.stream()
+                .distinct()
+                .sorted()
+                .map(DayOfWeek::name)
+                .collect(Collectors.joining(","));
+    }
+
+    private static List<DayOfWeek> toDayOfWeekList(String daysOfWeek) {
+        return Arrays.stream(daysOfWeek.split(","))
+                .map(String::trim)
+                .map(DayOfWeek::valueOf)
+                .toList();
     }
 }

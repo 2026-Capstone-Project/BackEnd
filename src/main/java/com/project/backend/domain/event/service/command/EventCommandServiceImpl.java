@@ -53,7 +53,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
 
-            RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup());
+            RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
             recurrenceGroup = createRecurrenceGroup(rgSpec, member);
         }
 
@@ -177,13 +177,13 @@ public class EventCommandServiceImpl implements EventCommandService {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
         // 해당 일정을 포함한 이후 일정 수정을 위해 새 event와 RecurrenceGroup을 만들어야함
-        // Event 엔티티를 만들기 위한 내부 명세
-        EventSpec eventSpec = EventConverter.from(req, event, start, end);
-        Event newEvent = createEvent(eventSpec, member, rg);
-
         // RecurrenceGroup 엔티티를 만들기 위한 내부 명세
         RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), rg, start);
         RecurrenceGroup newRg = createRecurrenceGroup(rgSpec, event.getMember());
+
+        // Event 엔티티를 만들기 위한 내부 명세
+        EventSpec eventSpec = EventConverter.from(req, event, start, end);
+        Event newEvent = createEvent(eventSpec, member, newRg);
 
         newEvent.updateRecurrenceGroup(newRg); // 새 이벤트에 새 반복 그룹 연관관계 설정
 

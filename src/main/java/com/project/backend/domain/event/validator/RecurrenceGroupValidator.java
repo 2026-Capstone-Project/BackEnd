@@ -10,8 +10,10 @@ import com.project.backend.domain.event.exception.RecurrenceGroupException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -141,7 +143,7 @@ public class RecurrenceGroupValidator {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_MONTHLY_INTERVAL_VALUE);
                 }
                 if (req.monthlyType() == MonthlyType.DAY_OF_MONTH
-                        && req.weekOfMonth() != null || req.dayOfWeekInMonth() != null) {
+                        && (req.weekOfMonth() != null || req.dayOfWeekInMonth() != null)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
                 if (req.monthlyType() == MonthlyType.DAY_OF_WEEK && req.daysOfMonth() != null) {
@@ -169,9 +171,9 @@ public class RecurrenceGroupValidator {
         RecurrenceFrequency frequency =
                 req.frequency() != null ? req.frequency() : baseRg.getFrequency();
 
-        List<String> daysOfWeek =
+        List<DayOfWeek> daysOfWeek =
                 req.daysOfWeek() != null ? req.daysOfWeek()
-                        : (frequency == RecurrenceFrequency.WEEKLY ? baseRg.getDaysOfWeekAsList() : null);
+                        : (frequency == RecurrenceFrequency.WEEKLY ? toDayOfWeekList(baseRg.getDaysOfWeek()) : null);
 
         MonthlyType monthlyType =
                 req.monthlyType() != null ? req.monthlyType()
@@ -182,11 +184,11 @@ public class RecurrenceGroupValidator {
                         && monthlyType == MonthlyType.DAY_OF_WEEK
                         ? baseRg.getWeekOfMonth() : null);
 
-        List<String> dayOfWeekInMonth =
+        List<DayOfWeek> dayOfWeekInMonth =
                 req.dayOfWeekInMonth() != null ? req.dayOfWeekInMonth()
                         : (frequency == RecurrenceFrequency.MONTHLY
                         && monthlyType == MonthlyType.DAY_OF_WEEK
-                        ? baseRg.getDayOfWeekInMonthAsList() : null);
+                        ? toDayOfWeekList(baseRg.getDayOfWeekInMonth()) : null);
 
         List<Integer> daysOfMonth =
                 req.daysOfMonth() != null ? req.daysOfMonth()
@@ -252,15 +254,21 @@ public class RecurrenceGroupValidator {
         }
     }
 
-    private static final Set<String> VALID_DAYS =
-            Set.of("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN");
+    private static final Set<DayOfWeek> VALID_DAYS =
+            Set.of(DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY,
+                    DayOfWeek.SATURDAY,
+                    DayOfWeek.SUNDAY);
 
     private void validateWeeklyDays(RecurrenceGroupReqDTO.CreateReq req) {
         if (req.frequency() != RecurrenceFrequency.WEEKLY) return;
 
         if (req.daysOfWeek() == null || req.daysOfWeek().isEmpty()) return; // default 허용
 
-        for (String day : req.daysOfWeek()) {
+        for (DayOfWeek day : req.daysOfWeek()) {
             if (!VALID_DAYS.contains(day)) {
                 throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
             }
@@ -273,16 +281,14 @@ public class RecurrenceGroupValidator {
 
         if (frequency != RecurrenceFrequency.WEEKLY) return;
 
-        List<String> days =
-                req.daysOfWeek() != null ? req.daysOfWeek() : baseRg.getDaysOfWeekAsList();
+        List<DayOfWeek> days =
+                req.daysOfWeek() != null ? req.daysOfWeek() : toDayOfWeekList(baseRg.getDaysOfWeek());
 
-        if (days == null || days.isEmpty()) return;
+        if (days.isEmpty()) return;
 
-        for (String day : days) {
+        for (DayOfWeek day : days) {
             if (!VALID_DAYS.contains(day)) {
-                throw new RecurrenceGroupException(
-                        RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK
-                );
+                throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
             }
         }
     }
@@ -291,11 +297,11 @@ public class RecurrenceGroupValidator {
         if (req.frequency() != RecurrenceFrequency.MONTHLY
                 || req.monthlyType() != MonthlyType.DAY_OF_WEEK) return;
 
-        List<String> days = req.dayOfWeekInMonth();
+        List<DayOfWeek> days = req.dayOfWeekInMonth();
 
         if (days == null || days.isEmpty()) return;
 
-        for (String day : req.dayOfWeekInMonth()) {
+        for (DayOfWeek day : req.dayOfWeekInMonth()) {
             if (!VALID_DAYS.contains(day)) {
                 throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
             }
@@ -315,24 +321,24 @@ public class RecurrenceGroupValidator {
         if (frequency != RecurrenceFrequency.MONTHLY ||
                 monthlyType != MonthlyType.DAY_OF_WEEK) return;
 
-        List<String> days =
+        List<DayOfWeek> days =
                 req.dayOfWeekInMonth() != null
                         ? req.dayOfWeekInMonth()
-                        : baseRg.getDayOfWeekInMonthAsList();
+                        : toDayOfWeekList(baseRg.getDayOfWeekInMonth());
 
-        if (days == null || days.isEmpty()) return;
+        if (days.isEmpty()) return;
 
-        for (String day : days) {
+        for (DayOfWeek day : days) {
             if (!VALID_DAYS.contains(day)) {
-                throw new RecurrenceGroupException(
-                        RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK
-                );
+                throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
             }
         }
     }
 
-
-
-
-
+    private static List<DayOfWeek> toDayOfWeekList(String daysOfWeek) {
+        return Arrays.stream(daysOfWeek.split(","))
+                .map(String::trim)
+                .map(DayOfWeek::valueOf)
+                .toList();
+    }
 }
