@@ -160,9 +160,11 @@ public class EventQueryServiceImpl implements EventQueryService {
             EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
 
             // 익셉션 테이블 찾기
-            List<RecurrenceException> recurrenceExceptions =
-                    recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
-
+            List<RecurrenceException> recurrenceExceptions = new ArrayList<>();
+            if (event.getRecurrenceGroup() != null) {
+                recurrenceExceptions =
+                        recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+            }
             // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
             if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {
                 expandedEvents.add(EventConverter.toDetailRes(event));
