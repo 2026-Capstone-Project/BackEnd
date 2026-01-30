@@ -24,10 +24,7 @@ import java.time.LocalDateTime;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
 import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
@@ -143,6 +140,11 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         // 최상위 이벤트 확장
         List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
+
+        // 시작 날짜 기준으로 정렬
+        eventsListRes.sort(
+                Comparator.comparing(EventResDTO.DetailRes::start)
+        );
 
         return EventConverter.toEventsListRes(eventsListRes);
     }
