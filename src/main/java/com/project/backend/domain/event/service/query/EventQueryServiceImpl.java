@@ -206,6 +206,11 @@ public class EventQueryServiceImpl implements EventQueryService {
                 if (current.isAfter(endRange)) {
                     break;
                 }
+                LocalDate endDate = event.getRecurrenceGroup().getEndDate();
+                // 패턴의 종료 시간이 정해진 경우에 현재 시간이 종료 시간을 넘어선 경우 → 종료
+                if (endDate != null && current.toLocalDate().isAfter(endDate)) {
+                    break;
+                }
                 // 모든 탈출 조건을 통과한 객체는 DTO로 변환
                 expandedEvents.add(EventConverter.toDetailRes(event, current, current.plus(duration)));
                 // 카운트 증가
