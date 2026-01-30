@@ -211,7 +211,7 @@ public class EventCommandServiceImpl implements EventCommandService {
       
       // TODO : 임시 조치이므로 리펙토링
         if (baseRg != null) {
-            baseRg.setEvent(event);
+            baseRg.setEvent(newEvent);
             recurrenceGroupRepository.save(baseRg);
         }
         eventRepository.save(newEvent);
