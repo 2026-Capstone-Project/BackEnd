@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import java.time.LocalDate;
+
 
 @Tag(name = "일정(Event) API", description = "일정 생성 API")
 public interface EventDocs {
@@ -59,6 +61,9 @@ public interface EventDocs {
                     - PURPLE
                     - GRAY
                     - YELLOW
+                
+                - recurrenceGroup (RecurrenceGroup)
+                    - 반복
 
                 ## 반복 일정 처리 규칙
 
@@ -67,12 +72,30 @@ public interface EventDocs {
                 - 반복을 사용하는 경우에만
                   → recurrenceGroup 객체를 포함합니다
 
-                ## 🔁 반복 일정 파라미터 (recurrenceGroup)
+                ---
+                ## 반복 간격(intervalValue) 규칙
+                
+                - intervalValue는 간격(n일,n월,n년 마다)을 의미합니다.
+                - 반복 규칙을 **변경하지 않는 경우**:
+                  - intervalValue를 전달하지 않아도 됩니다.
+                  - 기존 반복 그룹의 intervalValue가 유지됩니다.
+                
+                - 반복 규칙을 **변경하는 경우** (frequency 변경 또는 단일 일정에서 반복그룹(recurrenceGroup)을 생성):
+                  - intervalValue을 1로 설정한다면 기본값이므로 전달하지 않아도 됩니다.
+                
+                ### frequency 별 intervalValue 허용 범위
+                - DAILY   : 1 ~ 364
+                - WEEKLY  : 1 (고정)
+                - MONTHLY : 1 ~ 11
+                - YEARLY  : 1 ~ 99
+                
+                ---
+                ## 반복 일정 파라미터 (recurrenceGroup)
 
                 ### 공통 필수 필드
                 - frequency (RecurrenceFrequency)
                   - DAILY / WEEKLY / MONTHLY / YEARLY
-                  
+                
                 - endType (RecurrenceEndType)
                   - NEVER
                   - END_BY_DATE
@@ -80,8 +103,8 @@ public interface EventDocs {
 
                 ---
                 ### WEEKLY (매주 반복)
-                - daysOfWeek (List<String>)
-                  - 예: ["MON", "WED", "FRI"]
+                - daysOfWeek (List<DayOfWeek>)
+                  - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
 
                 ---
                 ### MONTHLY (매월 반복)
@@ -97,8 +120,8 @@ public interface EventDocs {
                 #### monthlyType = DAY_OF_WEEK
                 - weekOfMonth (Integer)
                   - 예: 2 (두 번째)
-                - dayOfWeekInMonth (String)
-                  - 예: "MON", "TUE"
+                - dayOfWeekInMonth (DayOfWeek)
+                  - 예: "MONDAY", "TUESDAY"
 
                 ---
                 ### YEARLY (매년 반복)
@@ -151,8 +174,7 @@ public interface EventDocs {
                                           "startTime": "2026-01-27T09:00:00",
                                           "endTime": "2026-01-27T09:15:00",
                                           "recurrenceGroup": {
-                                            "frequency": "DAILY",
-                                            "endType": "NEVER"
+                                            "frequency": "DAILY"
                                           }
                                         }
                                         """
@@ -170,7 +192,7 @@ public interface EventDocs {
                                           "isAllDay": false,
                                           "recurrenceGroup": {
                                             "frequency": "WEEKLY",
-                                            "daysOfWeek": ["MON", "WED", "FRI"],
+                                            "daysOfWeek": ["MONDAY", "WEDNESDAY", "FRIDAY"],
                                             "endType": "END_BY_DATE",
                                             "endDate": "2026-04-30"
                                           }
@@ -186,8 +208,7 @@ public interface EventDocs {
                                           "startTime": "2026-01-27T10:00:00",
                                           "endTime": "2026-01-27T11:00:00",
                                           "recurrenceGroup": {
-                                            "frequency": "WEEKLY",
-                                            "endType": "NEVER"
+                                            "frequency": "WEEKLY"
                                           }
                                         }
                                         """
@@ -228,15 +249,14 @@ public interface EventDocs {
                                             "frequency": "MONTHLY",
                                             "monthlyType": "DAY_OF_WEEK",
                                             "weekOfMonth": 2,
-                                            "dayOfWeekInMonth": ["TUE"],
-                                            "endType": "NEVER"
+                                            "dayOfWeekInMonth": ["TUESDAY"]
                                           }
                                         }
                                         """
                             ),
 
                             @ExampleObject(
-                                    name = "월간 반복 일정 (매월 N일, 최소 입력)",
+                                    name = "월간 반복 일정 (매월 N일, 최소 입력, 2개월마다 반복)",
                                     description = "monthlyType DAY_OF_MONTH, 날짜는 startTime 기준 자동 설정",
                                     value = """
                                         {
@@ -245,15 +265,15 @@ public interface EventDocs {
                                           "endTime": "2026-01-15T09:30:00",
                                           "recurrenceGroup": {
                                             "frequency": "MONTHLY",
-                                            "monthlyType": "DAY_OF_MONTH",
-                                            "endType": "NEVER"
+                                            "intervalValue": 2,
+                                            "monthlyType": "DAY_OF_MONTH"
                                           }
                                         }
                                         """
                             ),
 
                             @ExampleObject(
-                                    name = "월간 반복 일정 (매월 N번째 요일, 최소 입력)",
+                                    name = "월간 반복 일정 (매월 N번째 요일, 최소 입력, 3개월마다 반복)",
                                     description = "monthlyType DAY_OF_WEEK, 주차/요일은 startTime 기준 자동 설정",
                                     value = """
                                         {
@@ -262,8 +282,9 @@ public interface EventDocs {
                                           "endTime": "2026-01-27T15:00:00",
                                           "recurrenceGroup": {
                                             "frequency": "MONTHLY",
+                                            "intervalValue": 3,
                                             "monthlyType": "DAY_OF_WEEK",
-                                            "endType": "NEVER"
+                                            "weekOfMonth": 1
                                           }
                                         }
                                         """
@@ -282,7 +303,6 @@ public interface EventDocs {
                                           "recurrenceGroup": {
                                             "frequency": "YEARLY",
                                             "monthOfYear": 6,
-                                            "daysOfMonth": [10,15],
                                             "endType": "END_BY_COUNT",
                                             "occurrenceCount": 9
                                           }
@@ -291,7 +311,7 @@ public interface EventDocs {
                             ),
 
                             @ExampleObject(
-                                    name = "연간 반복 일정 (최소 입력)",
+                                    name = "연간 반복 일정 (최소 입력, 2년마다 반복",
                                     description = "frequency만 YEARLY로 설정, 월/일은 startTime 기준 자동 설정",
                                     value = """
                                         {
@@ -300,7 +320,7 @@ public interface EventDocs {
                                           "endTime": "2026-01-15T09:30:00",
                                           "recurrenceGroup": {
                                             "frequency": "YEARLY",
-                                            "endType": "NEVER"
+                                            "intervalValue": 2
                                           }
                                         }
                                         """
@@ -309,6 +329,7 @@ public interface EventDocs {
             )
     )
     @ApiResponses({
+
             @ApiResponse(
                     responseCode = "200",
                     description = "일정 생성 성공",
@@ -316,169 +337,138 @@ public interface EventDocs {
                             schema = @Schema(implementation = EventResDTO.CreateRes.class)
                     )
             ),
+
             @ApiResponse(
                     responseCode = "400",
-                    description = "시간필드 값을 설정하지 않았습니다",
+                    description = "일정 생성 요청이 유효성 규칙을 위반한 경우",
                     content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_TIME",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "EVENT400_1",
-                          "message": "시간을 설정하지 않았습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "end가 start 보다 더 이전 시간일 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_TIME_RANGE",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "EVENT400_2",
-                          "message": "시간 설정이 잘못되었습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "설정한 반복 타입과 관련 없는 필드에 값이 들어간경우\n" +
-                            "EX) WEEKLY 설정인데 monthOfYear 필드에 값이 있는 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_FREQUENCY_CONDITION",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_15",
-                          "message": "FREQUENCY 타입에 따른 불필요한 필드값이 채워져 있습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "설정한 종료 타입과 관련 없는 필드에 값이 들어간경우\n" +
-                            "EX) END_BY_COUNT 설정인데 endDate 필드에 값이 있는 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_END_CONDITION",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_1",
-                          "message": "EndType 타입에 따른 불필요한 필드값이 채워져 있습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "EndType이 END_BY_DATE인데, endDate 필드에 값이 없는 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "END_DATE_REQUIRED",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_2",
-                          "message": "종료 날짜가 설정되지 않았습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "EndType이 END_BY_COUNT인데, occurrenceCount 필드에 값이 없는 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "END_COUNT_REQUIRED",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_3",
-                          "message": "종료 카운트가 설정되지 않았습니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "NEVER, END_BY_DATE, END_BY_COUNT 이외의 값이 EndType 값으로 들어간 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_END_TYPE",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_4",
-                          "message": "잘못된 종료타입입니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "DAY_OF_MONTH, DAY_OF_WEEK 이외의 값이 MonthlyType 값으로 들어간 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_MONTHLY_TYPE",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_11",
-                          "message": "잘못된 월간 타입입니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "endDate 의 값이 생성하려는 일정의 start 값보다 이전인 경우",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_END_DATE_RANGE",
-                                    value = """
-                        {
-                          "isSuccess": false,
-                          "code": "RG400_13",
-                          "message": "종료 날짜가 일정 시작 날짜보다 빠릅니다"
-                        }
-                        """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "MON, TUE, WEN, THU, FRI, SAT, SUN 이외의 값이 dayOfWeek 값으로 들어간 경",
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    name = "INVALID_DAY_OF_WEEK",
-                                    value = """
-                        {
-                          "isSuc우ess": false,
-                          "code": "RG400_14",
-                          "message": "잘못된 요일입니다"
-                        }
-                        """
-                            )
+                            examples = {
+
+                                    // ===== EVENT =====
+                                    @ExampleObject(
+                                            name = "EVENT400_1",
+                                            summary = "시간 필드를 설정하지 않은 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "EVENT400_1",
+                                          "message": "시간을 설정하지 않았습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "EVENT400_2",
+                                            summary = "end 시간이 start 시간보다 이전인 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "EVENT400_2",
+                                          "message": "시간 설정이 잘못되었습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    // ===== RECURRENCE GROUP =====
+                                    @ExampleObject(
+                                            name = "RG400_15",
+                                            summary = "설정한 반복 타입과 관련 없는 필드가 함께 전달된 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_15",
+                                          "message": "FREQUENCY 타입에 따른 불필요한 필드값이 채워져 있습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_1",
+                                            summary = "설정한 종료 타입과 관련 없는 필드가 함께 전달된 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_1",
+                                          "message": "EndType 타입에 따른 불필요한 필드값이 채워져 있습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_2",
+                                            summary = "EndType이 END_BY_DATE인데 endDate가 없는 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_2",
+                                          "message": "종료 날짜가 설정되지 않았습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_3",
+                                            summary = "EndType이 END_BY_COUNT인데 occurrenceCount가 없는 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_3",
+                                          "message": "종료 카운트가 설정되지 않았습니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_4",
+                                            summary = "유효하지 않은 EndType 값이 전달된 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_4",
+                                          "message": "잘못된 종료타입입니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_11",
+                                            summary = "유효하지 않은 MonthlyType 값이 전달된 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_11",
+                                          "message": "잘못된 월간 타입입니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_13",
+                                            summary = "endDate가 일정 시작 날짜보다 이전인 경우",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_13",
+                                          "message": "종료 날짜가 일정 시작 날짜보다 빠릅니다"
+                                        }
+                                        """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "RG400_14",
+                                            summary = "유효하지 않은 요일 값이 전달된 경우\n" +
+                                                    "EX) MONDAY가 아닌 MON 전달 시",
+                                            value = """
+                                        {
+                                          "isSuccess": false,
+                                          "code": "RG400_14",
+                                          "message": "잘못된 요일입니다"
+                                        }
+                                        """
+                                    )
+                            }
                     )
             )
-
     })
     CustomResponse<EventResDTO.CreateRes> createEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -613,9 +603,14 @@ public interface EventDocs {
                   - occurrenceDate는 반복 규칙에 의해 **실제로 발생하는 날짜여야 합니다**.
                   - 반복 규칙에 존재하지 않는 날짜를 전달하면 오류가 발생합니다.
                     (예: 매달 15일 반복인데 14일 전달)
-        
+               
                 - 단일 일정의 경우:
                   - occurrenceDate는 전달하지 않습니다.
+                - 반복을 가진 원본 일정인 경우:
+                  - occurrenceDate는 전달하지 않습니다.
+                  
+                - **반복을 통해 계산된 일정인 경우**:
+                  - **occurrenceDate에 계산된 객체의 startTime을 넣어 전달해야합니다.**
         
                 ---
                 ## 반복 간격(intervalValue) 규칙
@@ -661,6 +656,7 @@ public interface EventDocs {
                 - 반복 일정 전체를 수정합니다.
                 - 기존 반복 그룹과 실제 일정은 제거됩니다.
                 - 새로운 반복 규칙으로 전체 일정이 재생성되고, 수정한 일정이 새 일정으로 생성됩니다.
+                - **반복을 가진 일정을 변경할 때, 선택한 일정이 계산된 일정이 아닌 원본 일정일 경우 ALL_EVENTS만 가능합니다.**
         
                 ---
                 ## 시간(startTime / endTime) 처리 규칙
@@ -738,7 +734,7 @@ public interface EventDocs {
                                         {
                                           "recurrenceGroup": {
                                             "frequency": "WEEKLY",
-                                            "daysOfWeek": ["MON", "WED"],
+                                            "daysOfWeek": ["MONDAY", "WEDNESDAY"],
                                             "endType": "NEVER"
                                           }
                                         }
@@ -749,7 +745,8 @@ public interface EventDocs {
                                     name = "반복 일정 - 이 일정만 수정 (시간 변경)",
                                     description = """
                                         반복 일정 중 선택한 계산된 회차의 시간만 수정합니다.
-                                        실제 eventId를 가진 일정을 수정하는 것이 아니라면 occurrenceDate는 필수입니다.
+                                        원본 일정은 THIS_EVENT 수정 불가능합니다.
+                                        실제 eventId를 가진 일정을 수정하는 것이 아니라 occurrenceDate는 필수입니다.
                                         """,
                                     value = """
                                         {
@@ -765,7 +762,8 @@ public interface EventDocs {
                                     name = "반복 일정 - 이 일정만 수정 (제목 변경)",
                                     description = """
                                         반복 일정 중 선택한 계산된 회차의 제목만 수정합니다.
-                                        실제 eventId를 가진 일정을 수정하는 것이 아니라면 occurrenceDate는 필수입니다.
+                                        원본 일정은 THIS_EVENT 수정 불가능합니다.
+                                        실제 eventId를 가진 일정을 수정하는 것이 아니라 occurrenceDate는 필수입니다.
                                         """,
                                     value = """
                                         {
@@ -779,7 +777,8 @@ public interface EventDocs {
                             @ExampleObject(
                                     name = "반복 일정 - 이 일정 + 이후 수정",
                                     description = """
-                                    선택한 회차와 그 이후 일정들의 반복 규칙을 수정합니다.
+                                    선택한 계산된 일과와 그 이후 일정들의 반복 규칙을 수정합니다.
+                                    원본 일정은 THIS_AND_FOLLOWING_EVENTS 수정 불가능합니다.
                                     """,
                                     value = """
                                         {
@@ -787,7 +786,7 @@ public interface EventDocs {
                                           "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                           "recurrenceGroup": {
                                             "frequency": "WEEKLY",
-                                            "daysOfWeek": ["THU"],
+                                            "daysOfWeek": ["THURSDAY"],
                                             "endType": "NEVER"
                                           }
                                         }
@@ -800,7 +799,7 @@ public interface EventDocs {
                                     선택한 회차와 그 이후 일정들의 반복 규칙을 수정합니다.
                             
                                     상황:
-                                    - 반복 타입이 WEEKLY가 아닌 다른 타입을 가진 일정을 대상으로 반복 객체를 수정하는 상황입니다.
+                                    - 반복 타입이 WEEKLY가 아닌 다른 타입을 가진 계산된 일정을 대상으로 반복 객체를 수정하는 상황입니다.
                                     """,
                                     value = """
                                         {
@@ -808,7 +807,7 @@ public interface EventDocs {
                                           "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                           "recurrenceGroup": {
                                             "frequency": "WEEKLY",
-                                            "daysOfWeek": ["MON", "THU"],
+                                            "daysOfWeek": ["MONDAY", "THURSDAY"],
                                             "endType": "NEVER"
                                           }
                                         }
@@ -820,6 +819,7 @@ public interface EventDocs {
                                     name = "반복 일정 - 전체 수정",
                                     description = """
                                     반복 일정 전체의 반복 규칙을 수정합니다.
+                                    해당 예시는 원본일정인 경우입니다. (occurrenceDate가 없기 때문에)
                                     """,
                                     value = """
                                         {
@@ -828,7 +828,7 @@ public interface EventDocs {
                                             "frequency": "MONTHLY",
                                             "monthlyType": "DAY_OF_WEEK",
                                             "weekOfMonth": 2,
-                                            "dayOfWeekInMonth": ["TUE"],
+                                            "dayOfWeekInMonth": ["TUESDAY"],
                                             "endType": "NEVER"
                                           }
                                         }
@@ -839,9 +839,9 @@ public interface EventDocs {
                                     name = "반복 일정 - 전체 수정 (intervalValue 포함)",
                                     description = """
                                     반복 일정 전체의 반복 규칙을 수정합니다.
-                            
+                                    해당 예시는 원본일정인 경우입니다. (occurrenceDate가 없기 때문에)
                                     상황:
-                                    - 반복 타입이 YEARLY가 아닌 같은 타입을 가진 일정을 대상으로 반복 객체를 수정하는 상황입니다.
+                                    - 반복 타입이 YEARLY가 아닌 같은 타입을 가진 원본 일정을 대상으로 반복 객체를 수정하는 상황입니다.
                                     """,
                                     value = """
                                         {
