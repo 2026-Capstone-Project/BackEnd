@@ -71,7 +71,7 @@ public class EventController implements EventDocs {
     }
 
     @DeleteMapping("/{eventId}")
-    //@Override
+    @Override
     public CustomResponse<Void> deleteEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
