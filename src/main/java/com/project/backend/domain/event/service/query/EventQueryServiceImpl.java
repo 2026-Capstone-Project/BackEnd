@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,10 +42,51 @@ public class EventQueryServiceImpl implements EventQueryService {
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId) {
+
         Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        return EventConverter.toDetailRes(event, time);
+        // 찾고자 하는 것이 부모 이벤트인 경우
+        if (event.getStartTime().isEqual(time)) {
+            log.debug("부모 이벤트 발견");
+            return EventConverter.toDetailRes(event);
+        }
+
+        // 생성기에 최초로 들어갈 기준 시간
+        LocalDateTime current = event.getStartTime();
+        // 끝 시간을 결정하기 위한 범위 계산
+        Duration duration = Duration.between(event.getStartTime(), event.getEndTime());
+
+        // 생성기 & 종료 조건 생성
+        Generator generator = generatorFactory.getGenerator(event.getRecurrenceGroup());
+        EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
+
+        int count = 1;
+
+        // endCondition에 의한 무한반복
+        while (endCondition.shouldContinue(current, count, event.getRecurrenceGroup())) {
+
+            // 시간 생성
+            current = generator.next(current, event.getRecurrenceGroup());
+
+            // 이벤트를 찾은 경우
+            if (current.equals(time)) {
+                return EventConverter.toDetailRes(event, current, current.plus(duration));
+            }
+            // 검색하고자 했던 시간을 넘어선 경우
+            if (current.isAfter(time)) {
+                log.debug("설정한 이벤트 종료 시간 초과");
+                break;
+            }
+            // 모든 탈출 조건문에 걸리지 않았을 때, 최후의 종료
+            if (count > 20000) {
+                log.debug("반복 한도 초과");
+                break;
+            }
+            count++;
+        }
+        // 아무것도 찾지 못하고 반복 종료 시
+        throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
     }
 
     @Override

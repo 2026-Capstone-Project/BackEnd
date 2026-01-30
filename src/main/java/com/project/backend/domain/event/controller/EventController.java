@@ -29,7 +29,7 @@ public class EventController implements EventDocs {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody EventReqDTO.CreateReq createReq){
         EventResDTO.CreateRes resDTO = eventCommandService.createEvent(createReq, customUserDetails.getId());
-        return CustomResponse.onSuccess("OK", resDTO);
+        return CustomResponse.onSuccess("이벤트 생성 완료", resDTO);
     }
 
     @GetMapping("/{eventId}")
@@ -43,7 +43,7 @@ public class EventController implements EventDocs {
                 eventId,
                 occurrenceDate,
                 customUserDetails.getId());
-        return CustomResponse.onSuccess("OK", resDTO);
+        return CustomResponse.onSuccess("이벤트 단일 조회 완료", resDTO);
     }
 
     @GetMapping()
