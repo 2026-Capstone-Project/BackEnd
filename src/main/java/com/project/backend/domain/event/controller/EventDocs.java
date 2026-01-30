@@ -129,8 +129,6 @@ public interface EventDocs {
                     ### YEARLY (매년 반복)
                     - monthOfYear (Integer)
                       - 1 ~ 12
-                    - daysOfMonth (Integer)
-                      - 1 ~ 31
                     
                     ---
                     ## 🔚 반복 종료 조건
