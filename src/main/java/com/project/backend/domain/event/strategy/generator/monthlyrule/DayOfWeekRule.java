@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.strategy.generator.monthlyrule;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
@@ -16,17 +16,17 @@ import java.util.stream.Collectors;
 public class DayOfWeekRule implements MonthlyRule {
 
     @Override
-    public LocalDateTime next(LocalDateTime current, RecurrenceGroup rg) {
+    public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
         // N 번째 주 판별
         WeekFields wf = WeekFields.ISO;
 
         // 반복 주
-        int weekOfMonth = rg.getWeekOfMonth();
+        int weekOfMonth = rule.getWeekOfMonth();
         // 반복 요일
-        String dayOfWeekInMonth = rg.getDayOfWeekInMonth();
+        String dayOfWeekInMonth = rule.getDayOfWeekInMonth();
 
-        int interval = rg.getIntervalValue();
+        int interval = rule.getIntervalValue();
 
         int baseMonth = current.getMonth().getValue();
 

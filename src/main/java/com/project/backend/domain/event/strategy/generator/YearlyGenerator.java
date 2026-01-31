@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.strategy.generator;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -14,11 +14,11 @@ import java.util.stream.Collectors;
 public class YearlyGenerator implements Generator {
 
     @Override
-    public LocalDateTime next(LocalDateTime current, RecurrenceGroup rg) {
+    public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
-        int monthOfYear = rg.getMonthOfYear();
+        int monthOfYear = rule.getMonthOfYear();
 
-        String daysOfMonth = rg.getDaysOfMonth();
+        String daysOfMonth = rule.getDaysOfMonth();
 
         List<Integer> targetDays = Arrays.stream(daysOfMonth.split(","))
                 .map(Integer::parseInt)

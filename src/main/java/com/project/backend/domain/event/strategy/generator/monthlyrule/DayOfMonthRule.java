@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.strategy.generator.monthlyrule;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -14,12 +14,12 @@ import java.util.stream.Collectors;
 public class DayOfMonthRule implements MonthlyRule {
 
     @Override
-    public LocalDateTime next(LocalDateTime current, RecurrenceGroup rg) {
+    public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
         // M달
-        int interval = rg.getIntervalValue();
+        int interval = rule.getIntervalValue();
         // X일
-        String daysOfMonth = rg.getDaysOfMonth();
+        String daysOfMonth = rule.getDaysOfMonth();
 
         // String으로 저장된 반복 일을 Integer 가변 리스트로
         List<Integer> targetDays = Arrays.stream(daysOfMonth.split(","))

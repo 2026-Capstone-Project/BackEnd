@@ -1,8 +1,8 @@
 package com.project.backend.domain.event.strategy.generator;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.strategy.generator.monthlyrule.DayOfMonthRule;
 import com.project.backend.domain.event.strategy.generator.monthlyrule.DayOfWeekRule;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,11 +18,11 @@ public class MonthlyGenerator implements Generator {
     private final DayOfWeekRule dayOfWeekRule;
 
     @Override
-    public LocalDateTime next(LocalDateTime current, RecurrenceGroup rg) {
+    public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
         // 월별 처리 방식
-        return switch (rg.getMonthlyType()) {
-            case DAY_OF_MONTH -> dayOfMonthRule.next(current, rg);
-            case DAY_OF_WEEK -> dayOfWeekRule.next(current, rg);
+        return switch (rule.getMonthlyType()) {
+            case DAY_OF_MONTH -> dayOfMonthRule.next(current, rule);
+            case DAY_OF_WEEK -> dayOfWeekRule.next(current, rule);
         };
     }
 }

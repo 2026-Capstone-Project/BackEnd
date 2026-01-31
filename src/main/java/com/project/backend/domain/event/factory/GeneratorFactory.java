@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.factory;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.strategy.generator.*;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +20,14 @@ public class GeneratorFactory {
     private final MonthlyGenerator monthlyGenerator;
     private final YearlyGenerator yearlyGenerator;
 
-    public Generator getGenerator(RecurrenceGroup rg) {
+    public Generator getGenerator(RecurrenceRule rule) {
 
-        // 단발성 이벤트
-        if (rg == null) {
+        // 단발성 이벤트 또는 할 일
+        if (rule == null) {
             return defaultGenerator;
         }
 
-        return switch (rg.getFrequency()) {
+        return switch (rule.getFrequency()) {
             case DAILY -> dailyGenerator;
             case WEEKLY -> weeklyGenerator;
             case MONTHLY -> monthlyGenerator;

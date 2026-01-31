@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.strategy.generator;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
@@ -15,10 +15,10 @@ import java.util.stream.Collectors;
 public class WeeklyGenerator implements Generator {
 
     @Override
-    public LocalDateTime next(LocalDateTime current, RecurrenceGroup rg) {
+    public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
         // 반복 요일
-        String daysOfWeek = rg.getDaysOfWeek();
+        String daysOfWeek = rule.getDaysOfWeek();
 
         // String으로 저장된 반복 요일을 DayOfWeek 가변 리스트로 변형
         List<DayOfWeek> days = Arrays.stream(daysOfWeek.split(","))
