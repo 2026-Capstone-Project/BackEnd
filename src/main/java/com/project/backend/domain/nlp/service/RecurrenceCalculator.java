@@ -168,7 +168,7 @@ public class RecurrenceCalculator {
             }
         }
 
-        // 현재 월에 더 이상 대상 날짜가 없으면 다음 interval 월의 첫 번째 대상 날짜로 이동
+        // 현재 월에 더 이상 대상 날짜가 없으면 다음 intervalValue 월의 첫 번째 대상 날짜로 이동
         LocalDate nextMonth = current.plusMonths(rule.getIntervalOrDefault()).withDayOfMonth(1);
         int firstTargetDay = targetDays.get(0);
         int lastDayOfNextMonth = nextMonth.lengthOfMonth();

@@ -22,12 +22,12 @@ public class Setting extends BaseEntity {
     private Long id;
 
     @Builder.Default
-    @Column(name = "is_daily_briefing", nullable = false)
-    private Boolean isDailyBriefing = true;
+    @Column(name = "daily_briefing", nullable = false)
+    private Boolean dailyBriefing = true;
 
     @Builder.Default
     @Column(name = "briefing_time")
-    private LocalTime briefingTime = LocalTime.of(8, 0);
+    private LocalTime dailyBriefingTime = LocalTime.of(8, 0);
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -46,4 +46,25 @@ public class Setting extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false, unique = true)
     private Member member;
+
+    // update 메서드
+    public void toggleDailyBriefing() {
+        this.dailyBriefing = !this.dailyBriefing;
+    }
+
+    public void updateDailyBriefingTime(LocalTime newDailyBriefingTime) {
+        this.dailyBriefingTime = newDailyBriefingTime;
+    }
+
+    public void updateReminderTiming(ReminderTiming newReminderTiming) {
+        this.reminderTiming = newReminderTiming;
+    }
+
+    public void toggleSuggestion() {
+        this.suggestion = !this.suggestion;
+    }
+
+    public void updateDefaultView(DefaultView newDefaultView) {
+        this.defaultView = newDefaultView;
+    }
 }
