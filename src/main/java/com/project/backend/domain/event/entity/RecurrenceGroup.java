@@ -5,6 +5,7 @@ import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.entity.BaseEntity;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,7 @@ import java.util.Set;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "recurrence_group")
-public class RecurrenceGroup extends BaseEntity {
+public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
