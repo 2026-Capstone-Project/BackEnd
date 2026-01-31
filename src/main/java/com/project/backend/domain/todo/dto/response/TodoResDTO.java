@@ -18,6 +18,6 @@ public class TodoResDTO {
             Priority priority,
             String memo,
             Boolean isCompleted,
-            Long recurringTodoId
+            Long todoRecurrenceGroupId
     ) {}
 }

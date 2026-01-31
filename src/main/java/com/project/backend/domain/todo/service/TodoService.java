@@ -5,21 +5,23 @@ import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
-import com.project.backend.domain.todo.entity.RecurringTodo;
 import com.project.backend.domain.todo.entity.Todo;
-import com.project.backend.domain.todo.repository.RecurringTodoRepository;
+import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.domain.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 할 일 서비스 (임시)
+ * TODO: TodoQueryService, TodoCommandService로 분리 예정
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TodoService {
 
     private final TodoRepository todoRepository;
-    private final RecurringTodoRepository recurringTodoRepository;
     private final MemberRepository memberRepository;
 
     @Transactional
@@ -27,16 +29,12 @@ public class TodoService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        RecurringTodo recurringTodo = null;
+        TodoRecurrenceGroup todoRecurrenceGroup = null;
 
-        // 반복 할일인 경우 RecurringTodo 먼저 생성
-        if (reqDTO.recurrence() != null) {
-            recurringTodo = TodoConverter.toRecurringTodo(reqDTO, member);
-            recurringTodo = recurringTodoRepository.save(recurringTodo);
-        }
+        // TODO: 반복 할 일 처리는 TodoCommandService에서 구현 예정
 
-        // Todo 생성
-        Todo todo = TodoConverter.toTodo(reqDTO, member, recurringTodo);
+        // 할 일 생성
+        Todo todo = TodoConverter.toTodo(reqDTO, member, todoRecurrenceGroup);
         todo = todoRepository.save(todo);
 
         return TodoConverter.toTodoInfo(todo);
