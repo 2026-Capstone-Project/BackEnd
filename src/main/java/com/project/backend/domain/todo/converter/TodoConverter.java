@@ -10,8 +10,6 @@ import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -33,19 +31,17 @@ public class TodoConverter {
     }
 
     public static TodoResDTO.TodoInfo toTodoInfo(Todo todo) {
-        LocalDate dueDate = todo.getDueDate();
-        LocalTime dueTime = todo.getDueTime();
-
         return TodoResDTO.TodoInfo.builder()
-                .id(todo.getId())
+                .todoId(todo.getId())
                 .title(todo.getTitle())
-                .dueDate(dueDate)
-                .dueTime(dueTime)
+                .dueDate(todo.getDueDate())
+                .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
                 .memo(todo.getMemo())
                 .isCompleted(todo.getIsCompleted())
-                .todoRecurrenceGroupId(todo.getTodoRecurrenceGroup() != null ? todo.getTodoRecurrenceGroup().getId() : null)
+                .isRecurring(todo.isRecurring())
+                .recurrenceGroupId(todo.getTodoRecurrenceGroup() != null ? todo.getTodoRecurrenceGroup().getId() : null)
                 .build();
     }
 
