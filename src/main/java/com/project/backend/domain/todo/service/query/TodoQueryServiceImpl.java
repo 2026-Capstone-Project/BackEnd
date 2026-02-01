@@ -1,0 +1,333 @@
+package com.project.backend.domain.todo.service.query;
+
+import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.event.factory.EndConditionFactory;
+import com.project.backend.domain.event.factory.GeneratorFactory;
+import com.project.backend.domain.event.strategy.endcondition.EndCondition;
+import com.project.backend.domain.event.strategy.generator.Generator;
+import com.project.backend.domain.todo.converter.TodoConverter;
+import com.project.backend.domain.todo.dto.response.TodoResDTO;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceException;
+import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
+import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoFilter;
+import com.project.backend.domain.todo.exception.TodoErrorCode;
+import com.project.backend.domain.todo.exception.TodoException;
+import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
+import com.project.backend.domain.todo.repository.TodoRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class TodoQueryServiceImpl implements TodoQueryService {
+
+    private final TodoRepository todoRepository;
+    private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+    private final GeneratorFactory generatorFactory;
+    private final EndConditionFactory endConditionFactory;
+
+    @Override
+    public TodoResDTO.TodoListRes getTodos(Long memberId, TodoFilter filter) {
+        List<Todo> todos = todoRepository.findByMemberId(memberId);
+
+        List<TodoResDTO.TodoListItem> todoListItems = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+
+        for (Todo todo : todos) {
+            if (todo.isRecurring()) {
+                // 반복 할 일: 다음 1개만 계산
+                LocalDate nextOccurrence = getNextOccurrence(todo, today);
+                if (nextOccurrence != null) {
+                    Boolean isCompleted = getCompletedStatus(todo, nextOccurrence);
+                    todoListItems.add(TodoConverter.toTodoListItem(todo, nextOccurrence, isCompleted));
+                }
+            } else {
+                // 단일 할 일
+                todoListItems.add(TodoConverter.toTodoListItem(todo, todo.getDueDate(), todo.getIsCompleted()));
+            }
+        }
+
+        // 필터 적용
+        todoListItems = applyFilter(todoListItems, filter, today);
+
+        // 날짜순 정렬
+        todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::occurrenceDate));
+
+        return TodoResDTO.TodoListRes.builder()
+                .todos(todoListItems)
+                .build();
+    }
+
+    @Override
+    public TodoResDTO.TodoListRes getTodosForCalendar(Long memberId, LocalDate startDate, LocalDate endDate) {
+        List<Todo> todos = todoRepository.findByMemberId(memberId);
+
+        List<TodoResDTO.TodoListItem> expandedTodos = expandTodos(todos, startDate, endDate);
+
+        // 날짜순 정렬
+        expandedTodos.sort(Comparator.comparing(TodoResDTO.TodoListItem::occurrenceDate));
+
+        return TodoResDTO.TodoListRes.builder()
+                .todos(expandedTodos)
+                .build();
+    }
+
+    @Override
+    public TodoResDTO.TodoDetailRes getTodoDetail(Long memberId, Long todoId, LocalDate occurrenceDate) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+        // 권한 확인
+        if (!todo.getMember().getId().equals(memberId)) {
+            throw new TodoException(TodoErrorCode.TODO_FORBIDDEN);
+        }
+
+        // 반복 할 일인 경우 occurrenceDate 필수
+        if (todo.isRecurring() && occurrenceDate == null) {
+            throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
+        }
+
+        // 반복 할 일인 경우 예외 확인
+        if (todo.isRecurring()) {
+            Optional<TodoRecurrenceException> exception = todoRecurrenceExceptionRepository
+                    .findByTodoRecurrenceGroupIdAndExceptionDate(
+                            todo.getTodoRecurrenceGroup().getId(),
+                            occurrenceDate
+                    );
+
+            if (exception.isPresent()) {
+                TodoRecurrenceException ex = exception.get();
+                if (ex.getExceptionType() == ExceptionType.SKIP) {
+                    throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+                }
+                return TodoConverter.toTodoDetailRes(todo, occurrenceDate, ex);
+            }
+        }
+
+        LocalDate dateToUse = occurrenceDate != null ? occurrenceDate : todo.getDueDate();
+        return TodoConverter.toTodoDetailRes(todo, dateToUse);
+    }
+
+    @Override
+    public TodoResDTO.TodoProgressRes getProgress(Long memberId, LocalDate date) {
+        // 해당 날짜의 할 일들 조회
+        TodoResDTO.TodoListRes todosForDay = getTodosForCalendar(memberId, date, date);
+
+        int totalCount = todosForDay.todos().size();
+        int completedCount = (int) todosForDay.todos().stream()
+                .filter(TodoResDTO.TodoListItem::isCompleted)
+                .count();
+
+        return TodoConverter.toTodoProgressRes(date, totalCount, completedCount);
+    }
+
+    // ===== Private Methods =====
+
+    /**
+     * 오늘 이후 가장 가까운 다음 반복 날짜 계산
+     */
+    private LocalDate getNextOccurrence(Todo todo, LocalDate fromDate) {
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+        if (group == null) {
+            return null;
+        }
+
+        Generator generator = generatorFactory.getGenerator(group);
+        EndCondition endCondition = endConditionFactory.getEndCondition(group);
+
+        // 예외 날짜 조회
+        Set<LocalDate> skipDates = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupId(group.getId())
+                .stream()
+                .filter(ex -> ex.getExceptionType() == ExceptionType.SKIP)
+                .map(TodoRecurrenceException::getExceptionDate)
+                .collect(Collectors.toSet());
+
+        // 기준 시간 설정 (dueDate + dueTime)
+        LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+        LocalDateTime fromDateTime = fromDate.atStartOfDay();
+
+        int count = 1;
+        int maxIterations = 1000;
+
+        // 첫 번째 날짜가 fromDate 이후인지 확인
+        if (!current.toLocalDate().isBefore(fromDate) && !skipDates.contains(current.toLocalDate())) {
+            return current.toLocalDate();
+        }
+
+        while (endCondition.shouldContinue(current, count, group) && count < maxIterations) {
+            current = generator.next(current, group);
+            if (current == null) {
+                break;
+            }
+
+            LocalDate occurrenceDate = current.toLocalDate();
+
+            // fromDate 이후이고 SKIP이 아닌 날짜면 반환
+            if (!occurrenceDate.isBefore(fromDate) && !skipDates.contains(occurrenceDate)) {
+                return occurrenceDate;
+            }
+
+            count++;
+        }
+
+        return null;
+    }
+
+    /**
+     * 특정 날짜의 완료 상태 조회
+     */
+    private Boolean getCompletedStatus(Todo todo, LocalDate occurrenceDate) {
+        if (!todo.isRecurring()) {
+            return todo.getIsCompleted();
+        }
+
+        Optional<TodoRecurrenceException> exception = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupIdAndExceptionDate(
+                        todo.getTodoRecurrenceGroup().getId(),
+                        occurrenceDate
+                );
+
+        return exception.map(TodoRecurrenceException::getIsCompleted).orElse(false);
+    }
+
+    /**
+     * 범위 내 할 일 펼치기
+     */
+    private List<TodoResDTO.TodoListItem> expandTodos(List<Todo> todos, LocalDate startDate, LocalDate endDate) {
+        List<TodoResDTO.TodoListItem> expandedTodos = new ArrayList<>();
+
+        for (Todo todo : todos) {
+            if (todo.isRecurring()) {
+                // 반복 할 일 펼치기
+                expandedTodos.addAll(expandRecurringTodo(todo, startDate, endDate));
+            } else {
+                // 단일 할 일: 범위 내에 있으면 추가
+                LocalDate dueDate = todo.getDueDate();
+                if (!dueDate.isBefore(startDate) && !dueDate.isAfter(endDate)) {
+                    expandedTodos.add(TodoConverter.toTodoListItem(todo, dueDate, todo.getIsCompleted()));
+                }
+            }
+        }
+
+        return expandedTodos;
+    }
+
+    /**
+     * 반복 할 일을 범위 내에서 펼침
+     */
+    private List<TodoResDTO.TodoListItem> expandRecurringTodo(Todo todo, LocalDate startDate, LocalDate endDate) {
+        List<TodoResDTO.TodoListItem> expanded = new ArrayList<>();
+
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+        Generator generator = generatorFactory.getGenerator(group);
+        EndCondition endCondition = endConditionFactory.getEndCondition(group);
+
+        // 예외 조회
+        Map<LocalDate, TodoRecurrenceException> exceptionMap = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupId(group.getId())
+                .stream()
+                .collect(Collectors.toMap(
+                        TodoRecurrenceException::getExceptionDate,
+                        ex -> ex,
+                        (existing, replacement) -> existing
+                ));
+
+        // 기준 시간 설정
+        LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+
+        int count = 1;
+        int maxIterations = 1000;
+
+        // 첫 번째 날짜 처리
+        LocalDate firstDate = current.toLocalDate();
+        if (!firstDate.isBefore(startDate) && !firstDate.isAfter(endDate)) {
+            TodoRecurrenceException exception = exceptionMap.get(firstDate);
+            if (exception == null || exception.getExceptionType() != ExceptionType.SKIP) {
+                expanded.add(createTodoListItem(todo, firstDate, exception));
+            }
+        }
+
+        while (endCondition.shouldContinue(current, count, group) && count < maxIterations) {
+            current = generator.next(current, group);
+            if (current == null) {
+                break;
+            }
+
+            LocalDate occurrenceDate = current.toLocalDate();
+
+            // 범위 이전이면 스킵
+            if (occurrenceDate.isBefore(startDate)) {
+                count++;
+                continue;
+            }
+
+            // 범위 이후면 종료
+            if (occurrenceDate.isAfter(endDate)) {
+                break;
+            }
+
+            // 종료 날짜 확인
+            if (group.getEndDate() != null && occurrenceDate.isAfter(group.getEndDate())) {
+                break;
+            }
+
+            // 예외 처리
+            TodoRecurrenceException exception = exceptionMap.get(occurrenceDate);
+            if (exception != null && exception.getExceptionType() == ExceptionType.SKIP) {
+                count++;
+                continue;
+            }
+
+            expanded.add(createTodoListItem(todo, occurrenceDate, exception));
+            count++;
+        }
+
+        return expanded;
+    }
+
+    /**
+     * TodoListItem 생성 (예외 적용)
+     */
+    private TodoResDTO.TodoListItem createTodoListItem(Todo todo, LocalDate occurrenceDate,
+                                                        TodoRecurrenceException exception) {
+        if (exception != null) {
+            return TodoConverter.toTodoListItem(todo, occurrenceDate, exception);
+        }
+        return TodoConverter.toTodoListItem(todo, occurrenceDate, false);
+    }
+
+    /**
+     * 필터 적용
+     */
+    private List<TodoResDTO.TodoListItem> applyFilter(List<TodoResDTO.TodoListItem> todos,
+                                                       TodoFilter filter, LocalDate today) {
+        return switch (filter) {
+            case ALL -> todos;
+            case TODAY -> todos.stream()
+                    .filter(t -> t.occurrenceDate().equals(today))
+                    .collect(Collectors.toList());
+            case PRIORITY -> todos.stream()
+                    .sorted(Comparator.comparing(TodoResDTO.TodoListItem::priority,
+                            Comparator.comparingInt(p -> p == Priority.HIGH ? 0 : p == Priority.MEDIUM ? 1 : 2)))
+                    .collect(Collectors.toList());
+            case COMPLETED -> todos.stream()
+                    .filter(TodoResDTO.TodoListItem::isCompleted)
+                    .collect(Collectors.toList());
+        };
+    }
+}
