@@ -148,13 +148,13 @@ public class NlpSaverService {
     }
 
     private List<Long> saveTodo(NlpReqDTO.ConfirmItem item, Member member) {
-        LocalDate dueDate = item.date();
+        LocalDate startDate = item.date();
         LocalTime dueTime = item.getStartTimeOrDefault();
 
         Todo todo = Todo.builder()
                 .member(member)
                 .title(item.title())
-                .dueDate(dueDate)
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .isCompleted(false)
                 .build();

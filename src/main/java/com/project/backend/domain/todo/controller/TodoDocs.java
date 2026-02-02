@@ -38,7 +38,7 @@ public interface TodoDocs {
                 | 필드 | 타입 | 필수 | 설명 |
                 |------|------|------|------|
                 | `title` | String | ✅ | 할 일 제목 (최대 100자) |
-                | `dueDate` | LocalDate | ✅ | 마감일 (형식: YYYY-MM-DD) |
+                | `startDate` | LocalDate | ✅ | 시작일 (형식: YYYY-MM-DD) |
                 | `dueTime` | LocalTime | ❌ | 마감 시간 (형식: HH:mm, 종일이면 생략) |
                 | `isAllDay` | Boolean | ✅ | 종일 여부 (true/false) |
                 | `priority` | Priority | ✅ | 우선순위 (HIGH, MEDIUM, LOW) |
@@ -103,10 +103,10 @@ public interface TodoDocs {
                 ---
                 ## 📅 연간 반복 (YEARLY)
 
-                > 시작 날짜(dueDate)의 **월/일 기준**으로 매년 반복됩니다.
+                > 시작 날짜(startDate)의 **월/일 기준**으로 매년 반복됩니다.
                 > 별도의 설정 필드가 없습니다.
 
-                예: `dueDate: "2025-03-15"` → 매년 3월 15일에 반복
+                예: `startDate: "2025-03-15"` → 매년 3월 15일에 반복
                 """
     )
     @ApiResponses({
@@ -122,7 +122,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "1. 단일 할 일", value = """
                                         {
                                             "title": "과제 제출",
-                                            "dueDate": "2025-12-31",
+                                            "startDate": "2025-12-31",
                                             "dueTime": "23:00",
                                             "isAllDay": false,
                                             "priority": "HIGH",
@@ -132,7 +132,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "2. 종일 할 일", value = """
                                         {
                                             "title": "휴가",
-                                            "dueDate": "2025-01-15",
+                                            "startDate": "2025-01-15",
                                             "isAllDay": true,
                                             "priority": "LOW"
                                         }
@@ -140,7 +140,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "3. 매일 반복", value = """
                                         {
                                             "title": "약 먹기",
-                                            "dueDate": "2025-01-01",
+                                            "startDate": "2025-01-01",
                                             "dueTime": "09:00",
                                             "isAllDay": false,
                                             "priority": "HIGH",
@@ -155,7 +155,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "4. 매주 월/수/금 반복", value = """
                                         {
                                             "title": "운동",
-                                            "dueDate": "2025-01-06",
+                                            "startDate": "2025-01-06",
                                             "dueTime": "07:00",
                                             "isAllDay": false,
                                             "priority": "MEDIUM",
@@ -171,7 +171,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "5. 격주 토요일 반복", value = """
                                         {
                                             "title": "청소",
-                                            "dueDate": "2025-01-04",
+                                            "startDate": "2025-01-04",
                                             "isAllDay": true,
                                             "priority": "MEDIUM",
                                             "recurrenceGroup": {
@@ -185,7 +185,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "6. 매월 15일 반복", value = """
                                         {
                                             "title": "월세 납부",
-                                            "dueDate": "2025-01-15",
+                                            "startDate": "2025-01-15",
                                             "isAllDay": true,
                                             "priority": "HIGH",
                                             "recurrenceGroup": {
@@ -200,7 +200,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "7. 매월 두 번째 화요일 반복", value = """
                                         {
                                             "title": "정기 회의",
-                                            "dueDate": "2025-01-14",
+                                            "startDate": "2025-01-14",
                                             "dueTime": "14:00",
                                             "isAllDay": false,
                                             "priority": "HIGH",
@@ -218,7 +218,7 @@ public interface TodoDocs {
                                     @ExampleObject(name = "8. 매년 반복 (시작일 기준)", value = """
                                         {
                                             "title": "새해 목표 점검",
-                                            "dueDate": "2025-01-01",
+                                            "startDate": "2025-01-01",
                                             "isAllDay": true,
                                             "priority": "MEDIUM",
                                             "recurrenceGroup": {
@@ -342,7 +342,7 @@ public interface TodoDocs {
                 | 필드 | 타입 | 설명 |
                 |------|------|------|
                 | `title` | String | 제목 (최대 100자) |
-                | `dueDate` | LocalDate | 마감일 |
+                | `startDate` | LocalDate | 시작일 |
                 | `dueTime` | LocalTime | 마감 시간 |
                 | `isAllDay` | Boolean | 종일 여부 |
                 | `priority` | Priority | 우선순위 (HIGH, MEDIUM, LOW) |
@@ -381,9 +381,9 @@ public interface TodoDocs {
                                             "memo": "급한 일!"
                                         }
                                         """),
-                                    @ExampleObject(name = "마감일 변경", value = """
+                                    @ExampleObject(name = "시작일 변경", value = """
                                         {
-                                            "dueDate": "2025-02-01",
+                                            "startDate": "2025-02-01",
                                             "dueTime": "18:00"
                                         }
                                         """)

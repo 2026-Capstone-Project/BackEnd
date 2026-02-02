@@ -130,7 +130,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 todo.incomplete();
             }
             log.debug("단일 할 일 완료 상태 변경 - todoId: {}, isCompleted: {}", todoId, isCompleted);
-            return TodoConverter.toTodoCompleteRes(todo, todo.getDueDate(), isCompleted);
+            return TodoConverter.toTodoCompleteRes(todo, todo.getStartDate(), isCompleted);
         }
 
         // 반복 할 일인 경우 occurrenceDate 필수
@@ -187,7 +187,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private void updateSingleTodo(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
         todo.update(
                 reqDTO.title(),
-                reqDTO.dueDate(),
+                reqDTO.startDate(),
                 reqDTO.dueTime(),
                 reqDTO.isAllDay(),
                 reqDTO.priority(),
@@ -197,33 +197,50 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     }
 
     /**
-     * 반복 할 일 - 이 할 일만 수정 (OVERRIDE 예외 생성)
+     * 반복 할 일 - 이 할 일만 수정 (OVERRIDE 예외 생성/수정)
      */
     private TodoResDTO.TodoInfo updateThisTodoOnly(Todo todo, LocalDate occurrenceDate,
                                                     TodoReqDTO.UpdateTodo reqDTO) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
-        // 기존 예외가 있으면 삭제
-        todoRecurrenceExceptionRepository
+        // 기존 예외 조회
+        TodoRecurrenceException existingException = todoRecurrenceExceptionRepository
                 .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate)
-                .ifPresent(todoRecurrenceExceptionRepository::delete);
+                .orElse(null);
 
-        // OVERRIDE 예외 생성
-        TodoRecurrenceException exception = TodoRecurrenceException.createOverride(
-                group,
-                occurrenceDate,
-                reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
-                reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
-                reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
-                reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo()
-        );
+        TodoRecurrenceException exception;
 
-        todoRecurrenceExceptionRepository.save(exception);
-        group.addExceptionDate(exception);
+        if (existingException != null) {
+            // 기존 예외가 있으면 업데이트
+            String newTitle = reqDTO.title() != null ? reqDTO.title()
+                    : (existingException.getTitle() != null ? existingException.getTitle() : todo.getTitle());
+            java.time.LocalTime newDueTime = reqDTO.dueTime() != null ? reqDTO.dueTime()
+                    : (existingException.getDueTime() != null ? existingException.getDueTime() : todo.getDueTime());
+            com.project.backend.domain.todo.enums.Priority newPriority = reqDTO.priority() != null ? reqDTO.priority()
+                    : (existingException.getPriority() != null ? existingException.getPriority() : todo.getPriority());
+            String newMemo = reqDTO.memo() != null ? reqDTO.memo()
+                    : (existingException.getMemo() != null ? existingException.getMemo() : todo.getMemo());
 
-        log.debug("반복 할 일 예외 수정 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
+            existingException.updateOverride(newTitle, newDueTime, newPriority, newMemo);
+            exception = existingException;
+            log.debug("반복 할 일 예외 수정 완료 (업데이트) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
+        } else {
+            // 기존 예외가 없으면 새로 생성
+            exception = TodoRecurrenceException.createOverride(
+                    group,
+                    occurrenceDate,
+                    reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
+                    reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
+                    reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
+                    reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo()
+            );
+            todoRecurrenceExceptionRepository.save(exception);
+            group.addExceptionDate(exception);
+            log.debug("반복 할 일 예외 수정 완료 (생성) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
+        }
 
-        return TodoConverter.toTodoInfo(todo);
+        // 수정된 예외 정보를 포함하여 반환
+        return TodoConverter.toTodoInfo(todo, occurrenceDate, exception);
     }
 
     /**
@@ -234,15 +251,18 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         TodoRecurrenceGroup oldGroup = todo.getTodoRecurrenceGroup();
         Member member = todo.getMember();
 
-        // 기존 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정
-        oldGroup.updateEndByDate(occurrenceDate.minusDays(1));
-
-        // 새 반복 그룹 생성
-        TodoRecurrenceGroup newGroup = null;
+        // 새 반복 그룹 생성 (요청에 없으면 기존 설정 복사) - oldGroup 수정 전에 먼저 복사!
+        TodoRecurrenceGroup newGroup;
         if (reqDTO.recurrenceGroup() != null) {
             newGroup = TodoConverter.toTodoRecurrenceGroup(reqDTO.recurrenceGroup(), member);
-            newGroup = todoRecurrenceGroupRepository.save(newGroup);
+        } else {
+            // 기존 반복 설정 복사 (원본 endDate 유지)
+            newGroup = copyRecurrenceGroup(oldGroup, member);
         }
+        newGroup = todoRecurrenceGroupRepository.save(newGroup);
+
+        // 기존 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정 (복사 후에 수정!)
+        oldGroup.updateEndByDate(occurrenceDate.minusDays(1));
 
         // 새 Todo 생성
         Todo newTodo = Todo.createRecurring(
@@ -259,9 +279,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         newTodo = todoRepository.save(newTodo);
 
         // 반복 그룹에 Todo 연결
-        if (newGroup != null) {
-            newGroup.setTodo(newTodo);
-        }
+        newGroup.setTodo(newTodo);
 
         log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
 
@@ -275,7 +293,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 원본 Todo 수정
         todo.update(
                 reqDTO.title(),
-                reqDTO.dueDate(),
+                reqDTO.startDate(),
                 reqDTO.dueTime(),
                 reqDTO.isAllDay(),
                 reqDTO.priority(),
@@ -331,5 +349,24 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         todoRecurrenceGroupRepository.delete(group);
 
         log.debug("반복 할 일 전체 삭제 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
+    }
+
+    /**
+     * 기존 반복 그룹 설정을 복사하여 새 그룹 생성
+     */
+    private TodoRecurrenceGroup copyRecurrenceGroup(TodoRecurrenceGroup oldGroup, Member member) {
+        return TodoRecurrenceGroup.create(
+                member,
+                oldGroup.getFrequency(),
+                oldGroup.getIntervalValue(),
+                oldGroup.getDaysOfWeek(),
+                oldGroup.getMonthlyType(),
+                oldGroup.getDaysOfMonth(),
+                oldGroup.getWeekOfMonth(),
+                oldGroup.getDayOfWeekInMonth(),
+                oldGroup.getEndType(),
+                oldGroup.getEndDate(),
+                oldGroup.getOccurrenceCount()
+        );
     }
 }

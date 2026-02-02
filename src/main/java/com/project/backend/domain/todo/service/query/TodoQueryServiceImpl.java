@@ -55,7 +55,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
                 }
             } else {
                 // 단일 할 일
-                todoListItems.add(TodoConverter.toTodoListItem(todo, todo.getDueDate(), todo.getIsCompleted()));
+                todoListItems.add(TodoConverter.toTodoListItem(todo, todo.getStartDate(), todo.getIsCompleted()));
             }
         }
 
@@ -100,36 +100,37 @@ public class TodoQueryServiceImpl implements TodoQueryService {
             throw new TodoException(TodoErrorCode.TODO_FORBIDDEN);
         }
 
+        // 단일 할 일인 경우 occurrenceDate 무시하고 startDate 사용
+        if (!todo.isRecurring()) {
+            return TodoConverter.toTodoDetailRes(todo, todo.getStartDate());
+        }
+
         // 반복 할 일인 경우 occurrenceDate 필수
-        if (todo.isRecurring() && occurrenceDate == null) {
+        if (occurrenceDate == null) {
             throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
         }
 
-        // 반복 할 일인 경우
-        if (todo.isRecurring()) {
-            // 유효한 반복 날짜인지 검증
-            if (!isValidOccurrenceDate(todo, occurrenceDate)) {
-                throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
-            }
-
-            // 예외 확인
-            Optional<TodoRecurrenceException> exception = todoRecurrenceExceptionRepository
-                    .findByTodoRecurrenceGroupIdAndExceptionDate(
-                            todo.getTodoRecurrenceGroup().getId(),
-                            occurrenceDate
-                    );
-
-            if (exception.isPresent()) {
-                TodoRecurrenceException ex = exception.get();
-                if (ex.getExceptionType() == ExceptionType.SKIP) {
-                    throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
-                }
-                return TodoConverter.toTodoDetailRes(todo, occurrenceDate, ex);
-            }
+        // 유효한 반복 날짜인지 검증
+        if (!isValidOccurrenceDate(todo, occurrenceDate)) {
+            throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 
-        LocalDate dateToUse = occurrenceDate != null ? occurrenceDate : todo.getDueDate();
-        return TodoConverter.toTodoDetailRes(todo, dateToUse);
+        // 예외 확인
+        Optional<TodoRecurrenceException> exception = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupIdAndExceptionDate(
+                        todo.getTodoRecurrenceGroup().getId(),
+                        occurrenceDate
+                );
+
+        if (exception.isPresent()) {
+            TodoRecurrenceException ex = exception.get();
+            if (ex.getExceptionType() == ExceptionType.SKIP) {
+                throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+            }
+            return TodoConverter.toTodoDetailRes(todo, occurrenceDate, ex);
+        }
+
+        return TodoConverter.toTodoDetailRes(todo, occurrenceDate);
     }
 
     @Override
@@ -149,7 +150,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
 
     /**
      * 반복 할 일의 유효한 날짜인지 검증
-     * - 시작일(dueDate) 이후인지
+     * - 시작일(startDate) 이후인지
      * - 종료일(endDate) 이전인지
      * - 반복 패턴에 맞는 날짜인지 (DAILY, WEEKLY, MONTHLY, YEARLY)
      */
@@ -160,7 +161,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         }
 
         // 1. 시작일 이전이면 유효하지 않음
-        if (occurrenceDate.isBefore(todo.getDueDate())) {
+        if (occurrenceDate.isBefore(todo.getStartDate())) {
             return false;
         }
 
@@ -170,7 +171,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         }
 
         // 3. 시작일과 같으면 유효함
-        if (occurrenceDate.equals(todo.getDueDate())) {
+        if (occurrenceDate.equals(todo.getStartDate())) {
             return true;
         }
 
@@ -179,7 +180,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         EndCondition endCondition = endConditionFactory.getEndCondition(group);
 
         LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
-        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+        LocalDateTime current = todo.getStartDate().atTime(dueTime);
 
         int count = 1;
         int maxIterations = 10000; // 충분한 반복 횟수
@@ -233,9 +234,9 @@ public class TodoQueryServiceImpl implements TodoQueryService {
                 .map(TodoRecurrenceException::getExceptionDate)
                 .collect(Collectors.toSet());
 
-        // 기준 시간 설정 (dueDate + dueTime)
+        // 기준 시간 설정 (startDate + dueTime)
         LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
-        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+        LocalDateTime current = todo.getStartDate().atTime(dueTime);
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
 
         int count = 1;
@@ -294,9 +295,9 @@ public class TodoQueryServiceImpl implements TodoQueryService {
                 expandedTodos.addAll(expandRecurringTodo(todo, startDate, endDate));
             } else {
                 // 단일 할 일: 범위 내에 있으면 추가
-                LocalDate dueDate = todo.getDueDate();
-                if (!dueDate.isBefore(startDate) && !dueDate.isAfter(endDate)) {
-                    expandedTodos.add(TodoConverter.toTodoListItem(todo, dueDate, todo.getIsCompleted()));
+                LocalDate todoStartDate = todo.getStartDate();
+                if (!todoStartDate.isBefore(startDate) && !todoStartDate.isAfter(endDate)) {
+                    expandedTodos.add(TodoConverter.toTodoListItem(todo, todoStartDate, todo.getIsCompleted()));
                 }
             }
         }
@@ -326,7 +327,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
 
         // 기준 시간 설정
         LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
-        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+        LocalDateTime current = todo.getStartDate().atTime(dueTime);
 
         int count = 1;
         int maxIterations = 1000;

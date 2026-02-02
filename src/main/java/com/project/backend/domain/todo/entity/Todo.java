@@ -24,8 +24,8 @@ public class Todo extends BaseEntity {
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    @Column(name = "due_date", nullable = false)
-    private LocalDate dueDate;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
     @Column(name = "due_time")
     private LocalTime dueTime;
@@ -80,10 +80,10 @@ public class Todo extends BaseEntity {
     /**
      * 할 일 정보 수정
      */
-    public void update(String title, LocalDate dueDate, LocalTime dueTime,
+    public void update(String title, LocalDate startDate, LocalTime dueTime,
                        Boolean isAllDay, Priority priority, String memo) {
         if (title != null) this.title = title;
-        if (dueDate != null) this.dueDate = dueDate;
+        if (startDate != null) this.startDate = startDate;
         this.dueTime = dueTime;
         if (isAllDay != null) this.isAllDay = isAllDay;
         if (priority != null) this.priority = priority;
@@ -105,7 +105,7 @@ public class Todo extends BaseEntity {
     public static Todo createSingle(
             Member member,
             String title,
-            LocalDate dueDate,
+            LocalDate startDate,
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
@@ -114,7 +114,7 @@ public class Todo extends BaseEntity {
         return Todo.builder()
                 .member(member)
                 .title(title)
-                .dueDate(dueDate)
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .isAllDay(isAllDay != null ? isAllDay : false)
                 .priority(priority != null ? priority : Priority.MEDIUM)
@@ -129,7 +129,7 @@ public class Todo extends BaseEntity {
     public static Todo createRecurring(
             Member member,
             String title,
-            LocalDate dueDate,
+            LocalDate startDate,
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
@@ -139,7 +139,7 @@ public class Todo extends BaseEntity {
         return Todo.builder()
                 .member(member)
                 .title(title)
-                .dueDate(dueDate)
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .isAllDay(isAllDay != null ? isAllDay : false)
                 .priority(priority != null ? priority : Priority.MEDIUM)

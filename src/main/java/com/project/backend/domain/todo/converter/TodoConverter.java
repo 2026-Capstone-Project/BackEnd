@@ -27,7 +27,7 @@ public class TodoConverter {
     public static Todo toTodo(TodoReqDTO.CreateTodo reqDTO, Member member, TodoRecurrenceGroup todoRecurrenceGroup) {
         return Todo.builder()
                 .title(reqDTO.title())
-                .dueDate(reqDTO.dueDate())
+                .startDate(reqDTO.startDate())
                 .dueTime(reqDTO.dueTime())
                 .isAllDay(reqDTO.isAllDay() != null ? reqDTO.isAllDay() : false)
                 .priority(reqDTO.priority() != null ? reqDTO.priority() : Priority.MEDIUM)
@@ -87,8 +87,9 @@ public class TodoConverter {
     public static TodoResDTO.TodoInfo toTodoInfo(Todo todo) {
         return TodoResDTO.TodoInfo.builder()
                 .todoId(todo.getId())
+                .occurrenceDate(null)
                 .title(todo.getTitle())
-                .dueDate(todo.getDueDate())
+                .startDate(todo.getStartDate())
                 .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
@@ -98,6 +99,27 @@ public class TodoConverter {
                 .recurrenceGroupId(todo.getTodoRecurrenceGroup() != null
                         ? todo.getTodoRecurrenceGroup().getId()
                         : null)
+                .build();
+    }
+
+    /**
+     * Todo + Exception → TodoInfo (THIS_TODO 수정 응답)
+     * 예외로 수정된 특정 날짜의 정보를 반환
+     */
+    public static TodoResDTO.TodoInfo toTodoInfo(Todo todo, LocalDate occurrenceDate,
+                                                   TodoRecurrenceException exception) {
+        return TodoResDTO.TodoInfo.builder()
+                .todoId(todo.getId())
+                .occurrenceDate(occurrenceDate)
+                .title(exception.getTitle() != null ? exception.getTitle() : todo.getTitle())
+                .startDate(todo.getStartDate())
+                .dueTime(exception.getDueTime() != null ? exception.getDueTime() : todo.getDueTime())
+                .isAllDay(todo.getIsAllDay())
+                .priority(exception.getPriority() != null ? exception.getPriority() : todo.getPriority())
+                .memo(exception.getMemo() != null ? exception.getMemo() : todo.getMemo())
+                .isCompleted(exception.getIsCompleted())
+                .isRecurring(true)
+                .recurrenceGroupId(todo.getTodoRecurrenceGroup().getId())
                 .build();
     }
 

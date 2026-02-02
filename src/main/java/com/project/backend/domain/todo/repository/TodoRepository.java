@@ -24,12 +24,12 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     /**
      * 회원의 특정 날짜 할 일 조회
      */
-    List<Todo> findByMemberIdAndDueDate(Long memberId, LocalDate dueDate);
+    List<Todo> findByMemberIdAndStartDate(Long memberId, LocalDate startDate);
 
     /**
      * 회원의 기간 내 할 일 조회
      */
-    List<Todo> findByMemberIdAndDueDateBetween(Long memberId, LocalDate start, LocalDate end);
+    List<Todo> findByMemberIdAndStartDateBetween(Long memberId, LocalDate start, LocalDate end);
 
     /**
      * 회원의 모든 할 일 삭제

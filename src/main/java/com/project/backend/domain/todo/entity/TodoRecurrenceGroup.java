@@ -82,7 +82,7 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
     // ===== RecurrenceRule 인터페이스 구현 =====
 
     /**
-     * Todo에서는 YEARLY 반복 시 시작일(dueDate)의 월/일을 사용하므로
+     * Todo에서는 YEARLY 반복 시 시작일(startDate)의 월/일을 사용하므로
      * monthOfYear 필드를 사용하지 않음
      */
     @Override

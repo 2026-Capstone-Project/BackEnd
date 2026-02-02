@@ -24,8 +24,8 @@ public class TodoReqDTO {
             @Size(max = 100, message = "제목은 100자 이하여야 합니다.")
             String title,
 
-            @NotNull(message = "마감일은 필수입니다.")
-            LocalDate dueDate,
+            @NotNull(message = "시작일은 필수입니다.")
+            LocalDate startDate,
 
             LocalTime dueTime,
 
@@ -75,7 +75,7 @@ public class TodoReqDTO {
             @Size(max = 100, message = "제목은 100자 이하여야 합니다.")
             String title,
 
-            LocalDate dueDate,
+            LocalDate startDate,
 
             LocalTime dueTime,
 

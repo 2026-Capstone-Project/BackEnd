@@ -19,8 +19,9 @@ public class TodoResDTO {
     @Builder
     public record TodoInfo(
             Long todoId,
+            LocalDate occurrenceDate,  // THIS_TODO 수정 시 해당 날짜, 그 외는 null
             String title,
-            LocalDate dueDate,
+            LocalDate startDate,
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,

@@ -74,6 +74,17 @@ public class TodoRecurrenceException {
         this.isCompleted = false;
     }
 
+    /**
+     * OVERRIDE 예외 정보 수정
+     */
+    public void updateOverride(String title, LocalTime dueTime, Priority priority, String memo) {
+        this.exceptionType = ExceptionType.OVERRIDE;
+        this.title = title;
+        this.dueTime = dueTime;
+        this.priority = priority;
+        this.memo = memo;
+    }
+
     // ===== 팩토리 메서드 =====
 
     /**
