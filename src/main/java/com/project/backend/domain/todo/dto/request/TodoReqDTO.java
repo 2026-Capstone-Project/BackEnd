@@ -77,6 +77,8 @@ public class TodoReqDTO {
 
             LocalDate startDate,
 
+            LocalDate endDate,  // 반복 할 일 종료일 변경
+
             LocalTime dueTime,
 
             Boolean isAllDay,

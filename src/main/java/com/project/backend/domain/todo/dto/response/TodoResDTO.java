@@ -22,6 +22,7 @@ public class TodoResDTO {
             LocalDate occurrenceDate,  // THIS_TODO 수정 시 해당 날짜, 그 외는 null
             String title,
             LocalDate startDate,
+            LocalDate endDate,         // 반복 할 일의 종료일 (단일 할 일은 null)
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,

@@ -261,6 +261,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         }
         newGroup = todoRecurrenceGroupRepository.save(newGroup);
 
+        // endDate가 별도로 제공된 경우 새 그룹의 종료일 변경
+        if (reqDTO.endDate() != null) {
+            newGroup.updateEndByDate(reqDTO.endDate());
+        }
+
         // 기존 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정 (복사 후에 수정!)
         oldGroup.updateEndByDate(occurrenceDate.minusDays(1));
 
@@ -299,6 +304,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.priority(),
                 reqDTO.memo()
         );
+
+        // 반복 종료일 변경
+        if (reqDTO.endDate() != null && todo.getTodoRecurrenceGroup() != null) {
+            todo.getTodoRecurrenceGroup().updateEndByDate(reqDTO.endDate());
+        }
 
         log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
 

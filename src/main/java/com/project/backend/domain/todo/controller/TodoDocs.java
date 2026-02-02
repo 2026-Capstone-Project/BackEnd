@@ -343,6 +343,7 @@ public interface TodoDocs {
                 |------|------|------|
                 | `title` | String | 제목 (최대 100자) |
                 | `startDate` | LocalDate | 시작일 |
+                | `endDate` | LocalDate | 종료일 (반복 할 일, THIS_AND_FOLLOWING/ALL_TODOS만 적용) |
                 | `dueTime` | LocalTime | 마감 시간 |
                 | `isAllDay` | Boolean | 종일 여부 |
                 | `priority` | Priority | 우선순위 (HIGH, MEDIUM, LOW) |
@@ -385,6 +386,11 @@ public interface TodoDocs {
                                         {
                                             "startDate": "2025-02-01",
                                             "dueTime": "18:00"
+                                        }
+                                        """),
+                                    @ExampleObject(name = "반복 종료일 변경", value = """
+                                        {
+                                            "endDate": "2025-03-31"
                                         }
                                         """)
                             }

@@ -85,20 +85,20 @@ public class TodoConverter {
      * Todo → TodoInfo (생성/수정 응답)
      */
     public static TodoResDTO.TodoInfo toTodoInfo(Todo todo) {
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
         return TodoResDTO.TodoInfo.builder()
                 .todoId(todo.getId())
                 .occurrenceDate(null)
                 .title(todo.getTitle())
                 .startDate(todo.getStartDate())
+                .endDate(group != null ? group.getEndDate() : null)
                 .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
                 .memo(todo.getMemo())
                 .isCompleted(todo.getIsCompleted())
                 .isRecurring(todo.isRecurring())
-                .recurrenceGroupId(todo.getTodoRecurrenceGroup() != null
-                        ? todo.getTodoRecurrenceGroup().getId()
-                        : null)
+                .recurrenceGroupId(group != null ? group.getId() : null)
                 .build();
     }
 
@@ -108,18 +108,20 @@ public class TodoConverter {
      */
     public static TodoResDTO.TodoInfo toTodoInfo(Todo todo, LocalDate occurrenceDate,
                                                    TodoRecurrenceException exception) {
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
         return TodoResDTO.TodoInfo.builder()
                 .todoId(todo.getId())
                 .occurrenceDate(occurrenceDate)
                 .title(exception.getTitle() != null ? exception.getTitle() : todo.getTitle())
                 .startDate(todo.getStartDate())
+                .endDate(group != null ? group.getEndDate() : null)
                 .dueTime(exception.getDueTime() != null ? exception.getDueTime() : todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(exception.getPriority() != null ? exception.getPriority() : todo.getPriority())
                 .memo(exception.getMemo() != null ? exception.getMemo() : todo.getMemo())
                 .isCompleted(exception.getIsCompleted())
                 .isRecurring(true)
-                .recurrenceGroupId(todo.getTodoRecurrenceGroup().getId())
+                .recurrenceGroupId(group.getId())
                 .build();
     }
 
