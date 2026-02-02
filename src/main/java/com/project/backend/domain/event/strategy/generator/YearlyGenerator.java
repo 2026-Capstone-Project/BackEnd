@@ -13,9 +13,18 @@ public class YearlyGenerator implements Generator {
     @Override
     public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
-        int monthOfYear = rule.getMonthOfYear();
+        // monthOfYear가 null이면 현재 날짜의 월을 사용 (Todo의 경우)
+        int monthOfYear = rule.getMonthOfYear() != null
+                ? rule.getMonthOfYear()
+                : current.getMonthValue();
 
         List<Integer> targetDays = RecurrenceUtils.parseDaysOfMonth(rule.getDaysOfMonth());
+
+        // targetDays가 null이거나 비어있으면 현재 날짜의 일을 사용 (Todo의 경우)
+        if (targetDays == null || targetDays.isEmpty()) {
+            // 단순히 intervalValue년 후 같은 월/일 반환
+            return current.plusYears(rule.getIntervalValue() != null ? rule.getIntervalValue() : 1);
+        }
 
         // 입력 일
         int baseDay = current.getDayOfMonth();
@@ -31,7 +40,7 @@ public class YearlyGenerator implements Generator {
             // 입력 일이 반복 일의 마지막이라면
         } else if (baseDay == targetDays.getLast()) {
             // 다음 년도 변경
-            current = current.plusYears(1);
+            current = current.plusYears(rule.getIntervalValue() != null ? rule.getIntervalValue() : 1);
         }
 
         // 다음 반복 대상
