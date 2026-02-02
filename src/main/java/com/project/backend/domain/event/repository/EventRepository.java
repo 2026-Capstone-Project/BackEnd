@@ -34,4 +34,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("memberId") Long memberId,
             @Param("startRange") LocalDateTime startRange,
             @Param("endRange") LocalDateTime endRange);
+
+    List<Event> findAllByMemberId(@Param("memberId") Long memberId);
 }
