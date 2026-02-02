@@ -50,7 +50,7 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
     @Column(name = "week_of_month")
     private Integer weekOfMonth;
 
-    @Column(name = "day_of_week_in_month", length = 10)
+    @Column(name = "day_of_week_in_month", length = 60)
     private String dayOfWeekInMonth;
 
     @Column(name = "month_of_year")
