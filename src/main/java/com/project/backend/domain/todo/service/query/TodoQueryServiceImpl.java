@@ -146,6 +146,18 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         return TodoConverter.toTodoProgressRes(date, totalCount, completedCount);
     }
 
+    @Override
+    public boolean isValidOccurrenceDate(Long todoId, LocalDate occurrenceDate) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.isRecurring()) {
+            return false;
+        }
+
+        return isValidOccurrenceDate(todo, occurrenceDate);
+    }
+
     // ===== Private Methods =====
 
     /**

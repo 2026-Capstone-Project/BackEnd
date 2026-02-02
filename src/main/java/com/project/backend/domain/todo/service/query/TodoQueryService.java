@@ -30,4 +30,9 @@ public interface TodoQueryService {
      * 진행 상황 조회
      */
     TodoResDTO.TodoProgressRes getProgress(Long memberId, LocalDate date);
+
+    /**
+     * 반복 할 일의 유효한 날짜인지 검증
+     */
+    boolean isValidOccurrenceDate(Long todoId, LocalDate occurrenceDate);
 }

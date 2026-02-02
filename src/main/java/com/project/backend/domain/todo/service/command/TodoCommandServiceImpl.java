@@ -16,6 +16,7 @@ import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
+import com.project.backend.domain.todo.service.query.TodoQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final TodoRepository todoRepository;
     private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+    private final TodoQueryService todoQueryService;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -82,6 +84,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             throw new TodoException(TodoErrorCode.INVALID_UPDATE_SCOPE);
         }
 
+        // 유효한 반복 날짜인지 검증
+        if (!todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
+            throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+        }
+
         return switch (scope) {
             case THIS_TODO -> updateThisTodoOnly(todo, occurrenceDate, reqDTO);
             case THIS_AND_FOLLOWING -> updateThisAndFollowing(todo, occurrenceDate, reqDTO);
@@ -110,6 +117,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             throw new TodoException(TodoErrorCode.INVALID_UPDATE_SCOPE);
         }
 
+        // 유효한 반복 날짜인지 검증
+        if (!todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
+            throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+        }
+
         switch (scope) {
             case THIS_TODO -> deleteThisTodoOnly(todo, occurrenceDate);
             case THIS_AND_FOLLOWING -> deleteThisAndFollowing(todo, occurrenceDate);
@@ -136,6 +148,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 반복 할 일인 경우 occurrenceDate 필수
         if (occurrenceDate == null) {
             throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
+        }
+
+        // 유효한 반복 날짜인지 검증
+        if (!todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
+            throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
