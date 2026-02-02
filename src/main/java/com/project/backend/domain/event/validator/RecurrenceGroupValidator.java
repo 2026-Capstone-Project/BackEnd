@@ -3,6 +3,7 @@ package com.project.backend.domain.event.validator;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
@@ -143,15 +144,18 @@ public class RecurrenceGroupValidator {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_MONTHLY_INTERVAL_VALUE);
                 }
                 if (req.monthlyType() == MonthlyType.DAY_OF_MONTH
-                        && (req.weekOfMonth() != null || req.dayOfWeekInMonth() != null)) {
+                        && (req.weekOfMonth() != null || req.dayOfWeekInMonth() != null || req.weekdayRule() != null)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
-                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK && req.daysOfMonth() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
-                }
-                // n달 몇째주 몇요일 일때, 몇째주인지는 보내야함 디폴트 1
-                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK && req.weekOfMonth() == null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.WEEK_OF_MONTH_REQUIRED);
+                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK) {
+                    if (req.daysOfMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
+                    }
+                    if (req.weekdayRule() != null
+                            && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
+                            && req.dayOfWeekInMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
+                    }
                 }
             }
             case YEARLY -> {
@@ -163,7 +167,6 @@ public class RecurrenceGroupValidator {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_YEARLY_INTERVAL_VALUE);
                 }
             }
-            default -> throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_TYPE);
         }
     }
 
@@ -230,15 +233,18 @@ public class RecurrenceGroupValidator {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_MONTHLY_INTERVAL_VALUE);
                 }
                 if (monthlyType == MonthlyType.DAY_OF_MONTH
-                        && (weekOfMonth != null || dayOfWeekInMonth != null)) {
+                        && (weekOfMonth != null || dayOfWeekInMonth != null || req.weekdayRule() != null)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
-                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK && req.daysOfMonth() != null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
-                }
-                // n달 몇째주 몇요일 일때, 몇째주인지는 보내야함 디폴트 1
-                if (monthlyType == MonthlyType.DAY_OF_WEEK && weekOfMonth == null) {
-                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.WEEK_OF_MONTH_REQUIRED);
+                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK) {
+                    if (req.daysOfMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
+                    }
+                    if (req.weekdayRule() != null
+                            && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
+                            && req.dayOfWeekInMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
+                    }
                 }
             }
             case YEARLY -> {
@@ -250,7 +256,6 @@ public class RecurrenceGroupValidator {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_YEARLY_INTERVAL_VALUE);
                 }
             }
-            default -> throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_TYPE);
         }
     }
 

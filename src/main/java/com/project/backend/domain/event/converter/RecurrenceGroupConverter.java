@@ -5,10 +5,7 @@ import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.ExceptionType;
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.event.enums.*;
 import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -16,6 +13,7 @@ import lombok.NoArgsConstructor;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -95,11 +93,16 @@ public class RecurrenceGroupConverter {
                                     : getWeekOfMonth(startTime)
                     );
 
-                    b.dayOfWeekInMonth(
-                            req.dayOfWeekInMonth() != null && !req.dayOfWeekInMonth().isEmpty()
-                                    ? req.dayOfWeekInMonth()
-                                    : List.of(startTime.getDayOfWeek())
+                    MonthlyWeekdayRule rule = resolveMonthlyWeekdayRuleForCreate(req.weekdayRule());
+
+                    List<DayOfWeek> daysOfWeekInMonth = resolveDaysFromRule(
+                            rule,
+                            req.dayOfWeekInMonth(),
+                            null,
+                            startTime
                     );
+
+                    b.dayOfWeekInMonth(daysOfWeekInMonth);
                 }
             }
 
@@ -279,6 +282,77 @@ public class RecurrenceGroupConverter {
         return rgSpec.monthOfYear();
     }
 
+    private static List<DayOfWeek> resolveDaysFromRule(
+            MonthlyWeekdayRule rule,
+            List<DayOfWeek> rawDays,
+            List<DayOfWeek> fallbackDays,
+            LocalDateTime baseTime
+    ) {
+        if (rule == MonthlyWeekdayRule.SINGLE) {
+            if (rawDays != null && !rawDays.isEmpty()) {
+                return rawDays;
+            }
+            if (fallbackDays != null && !fallbackDays.isEmpty()) {
+                return fallbackDays;
+            }
+            return List.of(baseTime.getDayOfWeek());
+        }
+
+        return interpretWeekdayRule(rule);
+    }
+
+    private static MonthlyWeekdayRule resolveMonthlyWeekdayRuleForCreate(MonthlyWeekdayRule rule) {
+        return rule != null ? rule : MonthlyWeekdayRule.SINGLE;
+    }
+
+    private static MonthlyWeekdayRule resolveMonthlyWeekdayRuleForUpdate(
+            RecurrenceGroup rg,
+            MonthlyWeekdayRule rawRule
+            ) {
+
+        if (rawRule != null) {
+            return rawRule;
+        }
+
+        String daysOfWeekInMonth = rg.getDayOfWeekInMonth();
+        return inferWeekdayRuleFromDays(toDayOfWeekList(daysOfWeekInMonth));
+    }
+
+    private static MonthlyWeekdayRule inferWeekdayRuleFromDays(List<DayOfWeek> daysOfWeek) {
+        if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+            return MonthlyWeekdayRule.SINGLE;
+        }
+
+        EnumSet<DayOfWeek> set = EnumSet.copyOf(daysOfWeek);
+
+        if (set.size() == 1) {
+            return MonthlyWeekdayRule.SINGLE;
+        }
+
+        if (set.equals(EnumSet.of(
+                        DayOfWeek.MONDAY,
+                        DayOfWeek.TUESDAY,
+                        DayOfWeek.WEDNESDAY,
+                        DayOfWeek.THURSDAY,
+                        DayOfWeek.FRIDAY
+        ))) {
+            return MonthlyWeekdayRule.WEEKDAY;
+        }
+
+        if (set.equals(EnumSet.of(
+                        DayOfWeek.SATURDAY,
+                        DayOfWeek.SUNDAY
+        ))) {
+            return MonthlyWeekdayRule.WEEKEND;
+        }
+
+        if (set.equals(EnumSet.allOf(DayOfWeek.class))) {
+            return MonthlyWeekdayRule.ALL_DAYS;
+        }
+
+        return MonthlyWeekdayRule.SINGLE;
+    }
+
     private static Boolean isCustomRecurrence(RecurrenceGroupSpec rgSpec) {
         return (rgSpec.daysOfWeek() != null && !rgSpec.daysOfWeek().isEmpty())
                 || rgSpec.monthlyType() != null
@@ -315,7 +389,7 @@ public class RecurrenceGroupConverter {
             RecurrenceGroupSpec.RecurrenceGroupSpecBuilder b,
             RecurrenceGroupReqDTO.UpdateReq req,
             RecurrenceGroup rg,
-            LocalDateTime time
+            LocalDateTime startTime
     ) {
         RecurrenceFrequency frequency =
                 req.frequency() != null ? req.frequency() : rg.getFrequency();
@@ -349,7 +423,7 @@ public class RecurrenceGroupConverter {
                                 ? req.daysOfWeek()
                                 : (rg.getDaysOfWeekAsList() != null && !rg.getDaysOfWeekAsList().isEmpty()
                                 ? toDayOfWeekList(rg.getDaysOfWeek())
-                                : List.of(time.getDayOfWeek()));
+                                : List.of(startTime.getDayOfWeek()));
 
                 b.daysOfWeek(days);
             }
@@ -371,7 +445,7 @@ public class RecurrenceGroupConverter {
                                     ? req.daysOfMonth()
                                     : (rg.getDaysOfMonthAsList() != null && !rg.getDaysOfMonthAsList().isEmpty()
                                     ? rg.getDaysOfMonthAsList()
-                                    : List.of(time.getDayOfMonth()));
+                                    : List.of(startTime.getDayOfMonth()));
 
                     b.daysOfMonth(daysOfMonth);
                 }
@@ -381,18 +455,20 @@ public class RecurrenceGroupConverter {
                             req.weekOfMonth() != null
                                     ? req.weekOfMonth()
                                     : (rg.getWeekOfMonth() != null ? rg.getWeekOfMonth()
-                                    : getWeekOfMonth(time));
-
-                    List<DayOfWeek> dayOfWeekInMonth =
-                            req.dayOfWeekInMonth() != null
-                                    ? req.dayOfWeekInMonth()
-                                    : (rg.getDayOfWeekInMonthAsList() != null
-                                    && !rg.getDayOfWeekInMonthAsList().isEmpty()
-                                    ? toDayOfWeekList(rg.getDayOfWeekInMonth())
-                                    : List.of(time.getDayOfWeek()));
+                                    : getWeekOfMonth(startTime));
 
                     b.weekOfMonth(weekOfMonth);
-                    b.dayOfWeekInMonth(dayOfWeekInMonth);
+
+                    MonthlyWeekdayRule rule = resolveMonthlyWeekdayRuleForUpdate(rg, req.weekdayRule());
+
+                    List<DayOfWeek> daysOfWeekInMonth = resolveDaysFromRule(
+                            rule,
+                            req.dayOfWeekInMonth(),
+                            toDayOfWeekList(rg.getDayOfWeekInMonth()),
+                            startTime
+                    );
+
+                    b.dayOfWeekInMonth(daysOfWeekInMonth);
                 }
             }
 
@@ -402,7 +478,7 @@ public class RecurrenceGroupConverter {
                                 ? req.monthOfYear()
                                 : (rg.getMonthOfYear() != null
                                 ? rg.getMonthOfYear()
-                                : time.getMonthValue());
+                                : startTime.getMonthValue());
 
                 b.monthOfYear(monthOfYear);
             }
@@ -453,5 +529,28 @@ public class RecurrenceGroupConverter {
                 .map(String::trim)
                 .map(DayOfWeek::valueOf)
                 .toList();
+    }
+
+    private static List<DayOfWeek> interpretWeekdayRule(MonthlyWeekdayRule rule) {
+        return switch (rule){
+            case WEEKDAY -> List.of(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY);
+            case WEEKEND -> List.of(
+                    DayOfWeek.SATURDAY,
+                    DayOfWeek.SUNDAY);
+            case ALL_DAYS -> List.of(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY,
+                    DayOfWeek.SATURDAY,
+                    DayOfWeek.SUNDAY);
+            default -> throw new IllegalStateException("SINGLE rule should not be interpreted here");
+        };
     }
 }

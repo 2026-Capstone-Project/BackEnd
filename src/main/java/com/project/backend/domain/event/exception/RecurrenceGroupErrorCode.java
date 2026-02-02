@@ -14,14 +14,14 @@ public enum RecurrenceGroupErrorCode implements BaseErrorCode {
     END_DATE_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_2", "종료 날짜가 설정되지 않았습니다."),
     END_COUNT_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_3", "종료 카운트가 설정되지 않았습니다."),
     INVALID_END_TYPE(HttpStatus.BAD_REQUEST, "RG400_4", "잘못된 종료타입입니다."),
-    DAYS_OF_WEEK_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_5", "매주 무슨 요일 반복인지 설정되지 않았습니다."),
-    MONTHLY_TYPE_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_6", "매달 반복 타입이 설정되지 않았습니다."),
-    DAY_OF_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_7", "매달 반복 일이 설정되지 않았습니다."),
-    WEEK_OF_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_8", "매달 반복 주가 설정되지 않았습니다."),
-    DAY_OF_WEEK_IN_MONTH_REQUIRED
-            (HttpStatus.BAD_REQUEST, "RG400_9", "그 달의 n번째주 요일이 설정되지 않았습니다."),
-    INVALID_FREQUENCY_TYPE(HttpStatus.BAD_REQUEST, "RG400_11", "잘못된 반복 타입입니다."),
-    MONTH_OF_YEAR_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_12", "매년 반복 월이 설정되지 않았습니다."),
+    //DAYS_OF_WEEK_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_5", "매주 무슨 요일 반복인지 설정되지 않았습니다."),
+    //MONTHLY_TYPE_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_6", "매달 반복 타입이 설정되지 않았습니다."),
+    //DAY_OF_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_7", "매달 반복 일이 설정되지 않았습니다."),
+    //WEEK_OF_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_8", "매달 반복 주가 설정되지 않았습니다."),
+    INVALID_DAY_OF_WEEK_IN_MONTH
+            (HttpStatus.BAD_REQUEST, "RG400_9", "주중, 주말, 모든 날 선택 시 개별 요일 선택을 사용할 수 없습니다."),
+    //INVALID_FREQUENCY_TYPE(HttpStatus.BAD_REQUEST, "RG400_11", "잘못된 반복 타입입니다."),
+    //MONTH_OF_YEAR_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_12", "매년 반복 월이 설정되지 않았습니다."),
     INVALID_END_DATE_RANGE(HttpStatus.BAD_REQUEST, "RG400_13", "종료 날짜가 일정 시작 날짜보다 빠릅니다."),
     INVALID_DAY_OF_WEEK(HttpStatus.BAD_REQUEST, "RG400_14", "잘못된 요일입니다."),
     INVALID_FREQUENCY_CONDITION
