@@ -1,6 +1,5 @@
 package com.project.backend.domain.todo.service.command;
 
-import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -46,13 +45,13 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         if (reqDTO.recurrenceGroup() != null) {
             recurrenceGroup = TodoConverter.toTodoRecurrenceGroup(reqDTO.recurrenceGroup(), member);
             recurrenceGroup = todoRecurrenceGroupRepository.save(recurrenceGroup);
-            log.info("반복 할 일 그룹 생성 완료 - groupId: {}", recurrenceGroup.getId());
+            log.debug("반복 할 일 그룹 생성 완료 - groupId: {}", recurrenceGroup.getId());
         }
 
         // 3. Todo 생성
         Todo todo = TodoConverter.toTodo(reqDTO, member, recurrenceGroup);
         todo = todoRepository.save(todo);
-        log.info("할 일 생성 완료 - todoId: {}", todo.getId());
+        log.debug("할 일 생성 완료 - todoId: {}", todo.getId());
 
         // 4. 반복 그룹에 Todo 연결
         if (recurrenceGroup != null) {
@@ -97,7 +96,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
             todoRepository.delete(todo);
-            log.info("단일 할 일 삭제 완료 - todoId: {}", todoId);
+            log.debug("단일 할 일 삭제 완료 - todoId: {}", todoId);
             return;
         }
 
@@ -130,7 +129,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             } else {
                 todo.incomplete();
             }
-            log.info("단일 할 일 완료 상태 변경 - todoId: {}, isCompleted: {}", todoId, isCompleted);
+            log.debug("단일 할 일 완료 상태 변경 - todoId: {}, isCompleted: {}", todoId, isCompleted);
             return TodoConverter.toTodoCompleteRes(todo, todo.getDueDate(), isCompleted);
         }
 
@@ -153,14 +152,14 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             } else {
                 exception.incomplete();
             }
-            log.info("반복 할 일 완료 상태 변경 (기존 예외 수정) - todoId: {}, date: {}, isCompleted: {}",
+            log.debug("반복 할 일 완료 상태 변경 (기존 예외 수정) - todoId: {}, date: {}, isCompleted: {}",
                     todoId, occurrenceDate, isCompleted);
         } else if (isCompleted) {
             // 완료로 변경할 때만 새 예외 생성 (미완료는 기본값이므로 생성 불필요)
             TodoRecurrenceException newException = TodoRecurrenceException.createCompleted(group, occurrenceDate);
             todoRecurrenceExceptionRepository.save(newException);
             group.addExceptionDate(newException);
-            log.info("반복 할 일 완료 상태 변경 (새 예외 생성) - todoId: {}, date: {}", todoId, occurrenceDate);
+            log.debug("반복 할 일 완료 상태 변경 (새 예외 생성) - todoId: {}, date: {}", todoId, occurrenceDate);
         }
 
         return TodoConverter.toTodoCompleteRes(todo, occurrenceDate, isCompleted);
@@ -194,7 +193,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.priority(),
                 reqDTO.memo()
         );
-        log.info("단일 할 일 수정 완료 - todoId: {}", todo.getId());
+        log.debug("단일 할 일 수정 완료 - todoId: {}", todo.getId());
     }
 
     /**
@@ -222,7 +221,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         todoRecurrenceExceptionRepository.save(exception);
         group.addExceptionDate(exception);
 
-        log.info("반복 할 일 예외 수정 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
+        log.debug("반복 할 일 예외 수정 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
 
         return TodoConverter.toTodoInfo(todo);
     }
@@ -264,7 +263,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             newGroup.setTodo(newTodo);
         }
 
-        log.info("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
+        log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
 
         return TodoConverter.toTodoInfo(newTodo);
     }
@@ -283,7 +282,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.memo()
         );
 
-        log.info("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
+        log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
 
         return TodoConverter.toTodoInfo(todo);
     }
@@ -304,7 +303,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         todoRecurrenceExceptionRepository.save(exception);
         group.addExceptionDate(exception);
 
-        log.info("반복 할 일 예외 삭제 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
+        log.debug("반복 할 일 예외 삭제 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
     }
 
     /**
@@ -316,7 +315,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정
         group.updateEndByDate(occurrenceDate.minusDays(1));
 
-        log.info("반복 할 일 이후 삭제 완료 - todoId: {}, newEndDate: {}", todo.getId(), occurrenceDate.minusDays(1));
+        log.debug("반복 할 일 이후 삭제 완료 - todoId: {}, newEndDate: {}", todo.getId(), occurrenceDate.minusDays(1));
     }
 
     /**
@@ -331,6 +330,6 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 반복 그룹 삭제
         todoRecurrenceGroupRepository.delete(group);
 
-        log.info("반복 할 일 전체 삭제 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
+        log.debug("반복 할 일 전체 삭제 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
     }
 }

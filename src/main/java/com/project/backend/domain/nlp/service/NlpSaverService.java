@@ -101,7 +101,7 @@ public class NlpSaverService {
             savedIds.add(event.getId());
         }
 
-        log.info("반복 일정 생성 완료 - groupId: {}, count: {}", group.getId(), savedIds.size());
+        log.debug("반복 일정 생성 완료 - groupId: {}, count: {}", group.getId(), savedIds.size());
         return savedIds;
     }
 

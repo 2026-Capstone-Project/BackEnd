@@ -43,7 +43,7 @@ public class RecurrenceCalculator {
             throw new NlpException(NlpErrorCode.RECURRENCE_DATE_EXCEEDED);
         }
 
-        log.info("반복 일정 계산 완료 - frequency: {}, count: {}", rule.frequency(), dates.size());
+        log.debug("반복 일정 계산 완료 - frequency: {}, count: {}", rule.frequency(), dates.size());
         return dates;
     }
 

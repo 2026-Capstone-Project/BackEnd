@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
 
-@Tag(name = "할 일 API", description = "할 일(Todo) 관리 API")
+@Tag(name = "할 일 API", description = "할 일(Todo) 관리 API by 김지명")
 public interface TodoDocs {
 
     // ===== 생성 =====
