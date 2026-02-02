@@ -544,9 +544,9 @@ public interface EventDocs {
             @Parameter(
                     description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DDThh-mm)",
                     example = "2026-02-06T14:00",
-                    required = true
+                    required = false
             )
-            @RequestParam LocalDateTime occurrenceDate
+            @RequestParam (required = false) LocalDateTime occurrenceDate
     );
 
     @Operation(

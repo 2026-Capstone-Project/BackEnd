@@ -44,10 +44,19 @@ public class EventQueryServiceImpl implements EventQueryService {
 
 
     @Override
-    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId) {
+    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDateTime, Long memberId) {
 
         Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        // 계산된 일정이 아닐 경우 occurrenceDateTime은 null로 들어오므로 eventId에 따른 일정의 startTime을 가져오기
+        LocalDateTime time = occurrenceDateTime != null ? occurrenceDateTime : event.getStartTime();
+
+        // 찾고자 하는 것이 부모 이벤트인 경우
+        if (event.getStartTime().isEqual(time)) {
+            log.debug("부모 이벤트 발견");
+            return EventConverter.toDetailRes(event);
+        }
 
         // 익셉션 테이블 생성
         List<RecurrenceException> recurrenceExceptions =
@@ -65,12 +74,6 @@ public class EventQueryServiceImpl implements EventQueryService {
                 // 잘 찾았으니 리턴
                 return EventConverter.toDetailRes(ex, event);
             }
-        }
-
-        // 찾고자 하는 것이 부모 이벤트인 경우
-        if (event.getStartTime().isEqual(time)) {
-            log.debug("부모 이벤트 발견");
-            return EventConverter.toDetailRes(event);
         }
 
         // 생성기에 최초로 들어갈 기준 시간
