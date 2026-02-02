@@ -62,8 +62,14 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         // 필터 적용
         todoListItems = applyFilter(todoListItems, filter, today);
 
-        // 날짜순 정렬
-        todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::occurrenceDate));
+        if (filter == TodoFilter.PRIORITY) {
+            return TodoResDTO.TodoListRes.builder()
+                    .todos(todoListItems)
+                    .build();
+        } else {
+            // 날짜순 정렬
+            todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::occurrenceDate));
+        }
 
         return TodoResDTO.TodoListRes.builder()
                 .todos(todoListItems)
@@ -99,8 +105,14 @@ public class TodoQueryServiceImpl implements TodoQueryService {
             throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
         }
 
-        // 반복 할 일인 경우 예외 확인
+        // 반복 할 일인 경우
         if (todo.isRecurring()) {
+            // 유효한 반복 날짜인지 검증
+            if (!isValidOccurrenceDate(todo, occurrenceDate)) {
+                throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+            }
+
+            // 예외 확인
             Optional<TodoRecurrenceException> exception = todoRecurrenceExceptionRepository
                     .findByTodoRecurrenceGroupIdAndExceptionDate(
                             todo.getTodoRecurrenceGroup().getId(),
@@ -134,6 +146,72 @@ public class TodoQueryServiceImpl implements TodoQueryService {
     }
 
     // ===== Private Methods =====
+
+    /**
+     * 반복 할 일의 유효한 날짜인지 검증
+     * - 시작일(dueDate) 이후인지
+     * - 종료일(endDate) 이전인지
+     * - 반복 패턴에 맞는 날짜인지 (DAILY, WEEKLY, MONTHLY, YEARLY)
+     */
+    private boolean isValidOccurrenceDate(Todo todo, LocalDate occurrenceDate) {
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+        if (group == null) {
+            return false;
+        }
+
+        // 1. 시작일 이전이면 유효하지 않음
+        if (occurrenceDate.isBefore(todo.getDueDate())) {
+            return false;
+        }
+
+        // 2. 종료일 이후이면 유효하지 않음
+        if (group.getEndDate() != null && occurrenceDate.isAfter(group.getEndDate())) {
+            return false;
+        }
+
+        // 3. 시작일과 같으면 유효함
+        if (occurrenceDate.equals(todo.getDueDate())) {
+            return true;
+        }
+
+        // 4. 반복 패턴에 맞는 날짜인지 확인
+        Generator generator = generatorFactory.getGenerator(group);
+        EndCondition endCondition = endConditionFactory.getEndCondition(group);
+
+        LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+        LocalDateTime current = todo.getDueDate().atTime(dueTime);
+
+        int count = 1;
+        int maxIterations = 10000; // 충분한 반복 횟수
+
+        while (endCondition.shouldContinue(current, count, group) && count < maxIterations) {
+            current = generator.next(current, group);
+            if (current == null) {
+                break;
+            }
+
+            LocalDate generatedDate = current.toLocalDate();
+
+            // 종료일 체크
+            if (group.getEndDate() != null && generatedDate.isAfter(group.getEndDate())) {
+                break;
+            }
+
+            // 찾고자 하는 날짜와 일치하면 유효함
+            if (generatedDate.equals(occurrenceDate)) {
+                return true;
+            }
+
+            // 이미 지나쳤으면 더 이상 찾을 필요 없음
+            if (generatedDate.isAfter(occurrenceDate)) {
+                break;
+            }
+
+            count++;
+        }
+
+        return false;
+    }
 
     /**
      * 오늘 이후 가장 가까운 다음 반복 날짜 계산
