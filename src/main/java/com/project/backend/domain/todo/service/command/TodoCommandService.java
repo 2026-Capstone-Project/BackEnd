@@ -23,4 +23,9 @@ public interface TodoCommandService {
      * 할 일 삭제
      */
     void deleteTodo(Long memberId, Long todoId, LocalDate occurrenceDate, RecurrenceUpdateScope scope);
+
+    /**
+     * 할 일 완료 상태 변경
+     */
+    TodoResDTO.TodoCompleteRes updateCompleteStatus(Long memberId, Long todoId, LocalDate occurrenceDate, boolean isCompleted);
 }

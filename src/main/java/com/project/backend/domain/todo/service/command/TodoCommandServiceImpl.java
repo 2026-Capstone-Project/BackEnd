@@ -118,6 +118,54 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         }
     }
 
+    @Override
+    public TodoResDTO.TodoCompleteRes updateCompleteStatus(Long memberId, Long todoId,
+                                                            LocalDate occurrenceDate, boolean isCompleted) {
+        Todo todo = getTodoWithPermissionCheck(memberId, todoId);
+
+        // 단일 할 일인 경우
+        if (!todo.isRecurring()) {
+            if (isCompleted) {
+                todo.complete();
+            } else {
+                todo.incomplete();
+            }
+            log.info("단일 할 일 완료 상태 변경 - todoId: {}, isCompleted: {}", todoId, isCompleted);
+            return TodoConverter.toTodoCompleteRes(todo, todo.getDueDate(), isCompleted);
+        }
+
+        // 반복 할 일인 경우 occurrenceDate 필수
+        if (occurrenceDate == null) {
+            throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
+        }
+
+        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+
+        // 해당 날짜의 예외 조회
+        TodoRecurrenceException exception = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate)
+                .orElse(null);
+
+        if (exception != null) {
+            // 기존 예외가 있으면 완료 상태 변경
+            if (isCompleted) {
+                exception.complete();
+            } else {
+                exception.incomplete();
+            }
+            log.info("반복 할 일 완료 상태 변경 (기존 예외 수정) - todoId: {}, date: {}, isCompleted: {}",
+                    todoId, occurrenceDate, isCompleted);
+        } else if (isCompleted) {
+            // 완료로 변경할 때만 새 예외 생성 (미완료는 기본값이므로 생성 불필요)
+            TodoRecurrenceException newException = TodoRecurrenceException.createCompleted(group, occurrenceDate);
+            todoRecurrenceExceptionRepository.save(newException);
+            group.addExceptionDate(newException);
+            log.info("반복 할 일 완료 상태 변경 (새 예외 생성) - todoId: {}, date: {}", todoId, occurrenceDate);
+        }
+
+        return TodoConverter.toTodoCompleteRes(todo, occurrenceDate, isCompleted);
+    }
+
     // ===== Private Methods =====
 
     /**
