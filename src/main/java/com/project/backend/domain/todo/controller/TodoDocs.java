@@ -103,10 +103,10 @@ public interface TodoDocs {
                 ---
                 ## 📅 연간 반복 (YEARLY)
 
-                | 필드 | 타입 | 필수 | 설명 |
-                |------|------|------|------|
-                | `monthOfYear` | Integer | ❌ | 반복할 월 (1~12, 기본값: 시작월) |
-                | `daysOfMonth` | List<Integer> | ❌ | 반복할 날짜 |
+                > 시작 날짜(dueDate)의 **월/일 기준**으로 매년 반복됩니다.
+                > 별도의 설정 필드가 없습니다.
+
+                예: `dueDate: "2025-03-15"` → 매년 3월 15일에 반복
                 """
     )
     @ApiResponses({
@@ -215,7 +215,7 @@ public interface TodoDocs {
                                             }
                                         }
                                         """),
-                                    @ExampleObject(name = "8. 매년 1월 1일 반복", value = """
+                                    @ExampleObject(name = "8. 매년 반복 (시작일 기준)", value = """
                                         {
                                             "title": "새해 목표 점검",
                                             "dueDate": "2025-01-01",
@@ -224,8 +224,6 @@ public interface TodoDocs {
                                             "recurrenceGroup": {
                                                 "frequency": "YEARLY",
                                                 "intervalValue": 1,
-                                                "monthOfYear": 1,
-                                                "daysOfMonth": [1],
                                                 "endType": "NEVER"
                                             }
                                         }

@@ -73,7 +73,6 @@ public class TodoConverter {
                 daysOfMonth,
                 reqDTO.weekOfMonth(),
                 dayOfWeekInMonth,
-                reqDTO.monthOfYear(),
                 reqDTO.endType(),
                 reqDTO.endDate(),
                 reqDTO.occurrenceCount()
@@ -216,7 +215,6 @@ public class TodoConverter {
                 .daysOfMonth(daysOfMonth)
                 .weekOfMonth(group.getWeekOfMonth())
                 .dayOfWeekInMonth(dayOfWeekInMonth)
-                .monthOfYear(group.getMonthOfYear())
                 .endType(group.getEndType())
                 .endDate(group.getEndDate())
                 .occurrenceCount(group.getOccurrenceCount())

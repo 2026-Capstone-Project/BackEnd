@@ -60,8 +60,6 @@ public class TodoReqDTO {
 
             DayOfWeek dayOfWeekInMonth,
 
-            Integer monthOfYear,
-
             @NotNull(message = "종료 조건은 필수입니다.")
             RecurrenceEndType endType,
 

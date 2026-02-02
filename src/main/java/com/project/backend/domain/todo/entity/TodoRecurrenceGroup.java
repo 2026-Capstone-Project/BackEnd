@@ -53,10 +53,6 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
     @Column(name = "day_of_week_in_month", length = 20)
     private String dayOfWeekInMonth;
 
-    // YEARLY: 반복 월 (1~12)
-    @Column(name = "month_of_year")
-    private Integer monthOfYear;
-
     // 종료 조건
     @Enumerated(EnumType.STRING)
     @Column(name = "end_type", nullable = false, length = 20)
@@ -82,6 +78,17 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "todo_id")
     private Todo todo;
+
+    // ===== RecurrenceRule 인터페이스 구현 =====
+
+    /**
+     * Todo에서는 YEARLY 반복 시 시작일(dueDate)의 월/일을 사용하므로
+     * monthOfYear 필드를 사용하지 않음
+     */
+    @Override
+    public Integer getMonthOfYear() {
+        return null;
+    }
 
     // ===== 비즈니스 메서드 =====
 
@@ -118,7 +125,6 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
             String daysOfMonth,
             Integer weekOfMonth,
             String dayOfWeekInMonth,
-            Integer monthOfYear,
             RecurrenceEndType endType,
             LocalDate endDate,
             Integer occurrenceCount
@@ -132,7 +138,6 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
                 .daysOfMonth(daysOfMonth)
                 .weekOfMonth(weekOfMonth)
                 .dayOfWeekInMonth(dayOfWeekInMonth)
-                .monthOfYear(monthOfYear)
                 .endType(endType != null ? endType : RecurrenceEndType.NEVER)
                 .endDate(endDate)
                 .occurrenceCount(occurrenceCount)
