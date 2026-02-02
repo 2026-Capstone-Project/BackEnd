@@ -147,13 +147,14 @@ public class RecurrenceGroupValidator {
                         && (req.weekOfMonth() != null || req.dayOfWeekInMonth() != null || req.weekdayRule() != null)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
-                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK) {
-                    if (req.daysOfMonth() != null) {
-                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
+                if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE) {
+                    if (req.dayOfWeekInMonth() != null && req.dayOfWeekInMonth().size() != 1) {
+                        throw new RecurrenceGroupException(
+                                RecurrenceGroupErrorCode.INVALID_SIZE_OF_DAY_OF_WEEK_IN_MONTH
+                        );
                     }
-                    if (req.weekdayRule() != null
-                            && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
-                            && req.dayOfWeekInMonth() != null) {
+                } else {
+                    if (req.weekdayRule() != null && req.dayOfWeekInMonth() != null) {
                         throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
                     }
                 }
@@ -240,10 +241,17 @@ public class RecurrenceGroupValidator {
                     if (req.daysOfMonth() != null) {
                         throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                     }
-                    if (req.weekdayRule() != null
-                            && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
-                            && req.dayOfWeekInMonth() != null) {
-                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
+
+                    if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE) {
+                        if (req.dayOfWeekInMonth() != null && req.dayOfWeekInMonth().size() != 1) {
+                            throw new RecurrenceGroupException(
+                                    RecurrenceGroupErrorCode.INVALID_SIZE_OF_DAY_OF_WEEK_IN_MONTH
+                            );
+                        }
+                    } else {
+                        if (req.weekdayRule() != null && req.dayOfWeekInMonth() != null) {
+                            throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
+                        }
                     }
                 }
             }

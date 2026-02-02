@@ -20,6 +20,8 @@ public enum RecurrenceGroupErrorCode implements BaseErrorCode {
     //WEEK_OF_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_8", "매달 반복 주가 설정되지 않았습니다."),
     INVALID_DAY_OF_WEEK_IN_MONTH
             (HttpStatus.BAD_REQUEST, "RG400_9", "주중, 주말, 모든 날 선택 시 개별 요일 선택을 사용할 수 없습니다."),
+    INVALID_SIZE_OF_DAY_OF_WEEK_IN_MONTH
+            (HttpStatus.BAD_REQUEST, "RG400_10", "단일 선택 시 개별 요일에는 1개의 요일만 들어갑니다."),
     //INVALID_FREQUENCY_TYPE(HttpStatus.BAD_REQUEST, "RG400_11", "잘못된 반복 타입입니다."),
     //MONTH_OF_YEAR_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_12", "매년 반복 월이 설정되지 않았습니다."),
     INVALID_END_DATE_RANGE(HttpStatus.BAD_REQUEST, "RG400_13", "종료 날짜가 일정 시작 날짜보다 빠릅니다."),
