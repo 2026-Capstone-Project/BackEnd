@@ -40,7 +40,6 @@ public interface EventDocs {
                       - 일정 제목
                     - startTime (LocalDateTime)
                       - 일정 시작 일시
-                      - ISO-8601 형식 (예: 2026-01-27T10:00:00)
                     - endTime (LocalDateTime)
                       - 일정 종료 일시
                     
@@ -63,7 +62,6 @@ public interface EventDocs {
                         - PURPLE
                         - GRAY
                         - YELLOW
-                    
                     - recurrenceGroup (RecurrenceGroup)
                         - 반복
                     
@@ -78,11 +76,10 @@ public interface EventDocs {
                     ## 반복 간격(intervalValue) 규칙
                     
                     - intervalValue는 간격(n일,n월,n년 마다)을 의미합니다.
-                    - 반복 규칙을 **변경하지 않는 경우**:
+                    - 반복 규칙을 **생성하지 않는 경우**:
                       - intervalValue를 전달하지 않아도 됩니다.
-                      - 기존 반복 그룹의 intervalValue가 유지됩니다.
                     
-                    - 반복 규칙을 **변경하는 경우** (frequency 변경 또는 단일 일정에서 반복그룹(recurrenceGroup)을 생성):
+                    - 반복 규칙을 **생성하는 경우** (반복그룹(recurrenceGroup)을 생성):
                       - intervalValue을 1로 설정한다면 기본값이므로 전달하지 않아도 됩니다.
                     
                     ### frequency 별 intervalValue 허용 범위
@@ -93,42 +90,57 @@ public interface EventDocs {
                     
                     ---
                     ## 반복 일정 파라미터 (recurrenceGroup)
-                    
-                    ### 공통 필수 필드
+                     - 반복 규칙 생성 시, 필수로 입력해야하는 파라미터
+                    ### 필수 필드
                     - frequency (RecurrenceFrequency)
                       - DAILY / WEEKLY / MONTHLY / YEARLY
                     
+                    ### 필수 필드 X
                     - endType (RecurrenceEndType)
                       - NEVER
                       - END_BY_DATE
                       - END_BY_COUNT
-                    
+                      → null값으로 보낸다면, NEVER로 저장됨. 대신 endType이 null이라면, endDate와 occurrenceCount도 null이어야함
+                    ---
+                    ### DAILY (매일 반복)
+                      - 특정 필드 없음 (공통 필드 intervalValue를 제외한)
                     ---
                     ### WEEKLY (매주 반복)
                     - daysOfWeek (List<DayOfWeek>)
                       - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
-                    
+                      → 매주 반복 선택후 dayOfWeek 필드를 null로 보내면, 일정의 startTime 기준 요일로 저장됨.
                     ---
                     ### MONTHLY (매월 반복)
-                    
                     - monthlyType (MonthlyType)
                       - DAY_OF_MONTH : 매월 N일
                       - DAY_OF_WEEK : 매월 N번째 X요일
+                      → 매월 반복일정인경우 정해야하는 값인데, null로 보낸다면 DAY_OF_MONTH로 저장됨.
+                    - weekdayRule (MonthlyWeekdayRule)
+                      - SINGLE : 단일 요일
+                      - WEEKDAY : 주중
+                      - WEEKEND : 주말
+                      - ALL_DAYS : 매일
+                      → 매월 n번째주 n요일일 경우 정해야하는 값인데, null로 보내면 SINGLE로 저장됨.
                     
                     #### monthlyType = DAY_OF_MONTH
                     - daysOfMonth (List<Integer>)
                       - 예: [15]
-                    
+                      → dayOfMonth 필드가 null이라면, 일정의 startTime 기준 일로 저장됨.
                     #### monthlyType = DAY_OF_WEEK
                     - weekOfMonth (Integer)
                       - 예: 2 (두 번째)
+                      → weekOfMonth 필드가 null이라면, 일정의 startTime 기준 주로 저장됨.
+                    - weekdayRule (MonthlyWeekdayRule)
+                      - 예: "WEEKDAY"
+                      - 위 설명 참고
                     - dayOfWeekInMonth (DayOfWeek)
-                      - 예: "MONDAY", "TUESDAY"
-                    
+                      - 예: "MONDAY"
+                      → dayOfWeekMonth 필드가 null이라면, 일정의 startTime 기준 요일로 저장됨.
                     ---
                     ### YEARLY (매년 반복)
                     - monthOfYear (Integer)
                       - 1 ~ 12
+                      → monthOfYaer 필드가 null이라면, 일정의 startTime 기준 월로 저장됨.
                     
                     ---
                     ## 🔚 반복 종료 조건
@@ -284,7 +296,8 @@ public interface EventDocs {
                                                 "frequency": "MONTHLY",
                                                 "intervalValue": 3,
                                                 "monthlyType": "DAY_OF_WEEK",
-                                                "weekOfMonth": 1
+                                                "weekOfMonth": 1,
+                                                "weekdayRule": "WEEKDAY"
                                               }
                                             }
                                             """
@@ -431,13 +444,13 @@ public interface EventDocs {
                                     ),
 
                                     @ExampleObject(
-                                            name = "RG400_11",
-                                            summary = "유효하지 않은 MonthlyType 값이 전달된 경우",
+                                            name = "RG400_4",
+                                            summary = "weekdayRule이 SINGLE or null이 아닌데, 개별 요일 선택한 경우",
                                             value = """
                                                     {
                                                       "isSuccess": false,
-                                                      "code": "RG400_11",
-                                                      "message": "잘못된 월간 타입입니다"
+                                                      "code": "RG400_9",
+                                                      "message": "주중, 주말, 모든 날 선택 시 개별 요일 선택을 사용할 수 없습니다."
                                                     }
                                                     """
                                     ),
