@@ -55,8 +55,8 @@ public interface TodoDocs {
                 | `frequency` | RecurrenceFrequency | ✅ | 반복 주기 |
                 | `intervalValue` | Integer | ❌ | 반복 간격 (기본값: 1) |
                 | `endType` | RecurrenceEndType | ✅ | 종료 조건 |
-                | `endDate` | LocalDate | 조건부 | endType이 UNTIL_DATE일 때 필수 |
-                | `occurrenceCount` | Integer | 조건부 | endType이 AFTER_COUNT일 때 필수 |
+                | `endDate` | LocalDate | 조건부 | endType이 END_BY_DATE일 때 필수 |
+                | `occurrenceCount` | Integer | 조건부 | endType이 END_BY_COUNT일 때 필수 |
 
                 ### 반복 주기 (frequency)
                 - `DAILY`: 매일 반복
@@ -66,8 +66,8 @@ public interface TodoDocs {
 
                 ### 종료 조건 (endType)
                 - `NEVER`: 무한 반복
-                - `UNTIL_DATE`: 특정 날짜까지 → `endDate` 필수
-                - `AFTER_COUNT`: 특정 횟수만큼 → `occurrenceCount` 필수
+                - `END_BY_DATE`: 특정 날짜까지 → `endDate` 필수
+                - `END_BY_COUNT`: 특정 횟수만큼 → `occurrenceCount` 필수
 
                 ---
                 ## 📅 주간 반복 (WEEKLY)
@@ -147,7 +147,7 @@ public interface TodoDocs {
                                             "recurrenceGroup": {
                                                 "frequency": "DAILY",
                                                 "intervalValue": 1,
-                                                "endType": "AFTER_COUNT",
+                                                "endType": "END_BY_COUNT",
                                                 "occurrenceCount": 30
                                             }
                                         }
@@ -163,7 +163,7 @@ public interface TodoDocs {
                                                 "frequency": "WEEKLY",
                                                 "intervalValue": 1,
                                                 "daysOfWeek": ["MONDAY", "WEDNESDAY", "FRIDAY"],
-                                                "endType": "UNTIL_DATE",
+                                                "endType": "END_BY_DATE",
                                                 "endDate": "2025-03-31"
                                             }
                                         }
@@ -210,7 +210,7 @@ public interface TodoDocs {
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
                                                 "dayOfWeekInMonth": "TUESDAY",
-                                                "endType": "AFTER_COUNT",
+                                                "endType": "END_BY_COUNT",
                                                 "occurrenceCount": 12
                                             }
                                         }
