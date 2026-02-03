@@ -202,10 +202,12 @@ public class RecurrenceCalculator {
     private LocalDate getNextYearly(LocalDate current, NlpReqDTO.RecurrenceRule rule) {
         LocalDate nextYear = current.plusYears(rule.getIntervalOrDefault());
 
+        // monthOfYear가 지정되면 해당 월로 설정
         if (rule.monthOfYear() != null) {
             nextYear = nextYear.withMonth(rule.monthOfYear());
         }
 
+        // daysOfMonth가 지정되면 해당 일로 설정
         if (rule.daysOfMonth() != null && !rule.daysOfMonth().isEmpty()) {
             int targetDay = rule.daysOfMonth().get(0);
             int lastDayOfMonth = nextYear.lengthOfMonth();

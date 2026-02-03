@@ -131,17 +131,40 @@ public class NlpConverter {
 
         return NlpReqDTO.RecurrenceRule.builder()
                 .frequency(parseFrequency(llmRule.frequency()))
-                .interval(llmRule.interval())
+                .intervalValue(llmRule.intervalValue())
                 .daysOfWeek(llmRule.daysOfWeek())
-                .monthlyType(MonthlyType.DAY_OF_MONTH)
-                .daysOfMonth(null)
-                .weekOfMonth(null)
-                .dayOfWeekInMonth(null)
-                .monthOfYear(null)
-                .endType(llmRule.endDate() != null ? RecurrenceEndType.END_BY_DATE : RecurrenceEndType.NEVER)
+                .monthlyType(parseMonthlyType(llmRule.monthlyType()))
+                .daysOfMonth(llmRule.daysOfMonth())
+                .weekOfMonth(llmRule.weekOfMonth())
+                .dayOfWeekInMonth(llmRule.dayOfWeekInMonth())
+                .monthOfYear(llmRule.monthOfYear())
+                .endType(parseEndType(llmRule.endType(), llmRule.endDate()))
                 .endDate(parseDate(llmRule.endDate()))
-                .occurrenceCount(null)
+                .occurrenceCount(llmRule.occurrenceCount())
                 .build();
+    }
+
+    private static MonthlyType parseMonthlyType(String monthlyType) {
+        if (monthlyType == null || monthlyType.isBlank()) {
+            return null;
+        }
+        try {
+            return MonthlyType.valueOf(monthlyType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static RecurrenceEndType parseEndType(String endType, String endDate) {
+        if (endType != null && !endType.isBlank()) {
+            try {
+                return RecurrenceEndType.valueOf(endType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 파싱 실패 시 아래 로직으로 폴백
+            }
+        }
+        // endType이 없으면 endDate 유무로 추론 (하위 호환)
+        return endDate != null ? RecurrenceEndType.END_BY_DATE : RecurrenceEndType.NEVER;
     }
 
     private static RecurrenceFrequency parseFrequency(String frequency) {

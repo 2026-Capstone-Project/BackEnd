@@ -68,32 +68,50 @@ public class NlpReqDTO {
             @NotNull(message = "반복 주기는 필수입니다")
             RecurrenceFrequency frequency,
 
-            // intervalValue 필드는 향후 확장을 위해 유지하되, 현재는 무시됨 (항상 1 사용)
-            Integer interval,
+            // 반복 간격 (기본값: 1, 향후 격주/2일마다 등 지원 예정)
+            Integer intervalValue,
 
-            // WEEKLY: 반복 요일
+            // WEEKLY: 반복 요일 ["MONDAY", "WEDNESDAY", "FRIDAY"]
             List<String> daysOfWeek,
 
             // MONTHLY: 반복 타입
             MonthlyType monthlyType,
+
+            // MONTHLY (DAY_OF_MONTH): 반복 일자 [1, 15, 30]
             List<Integer> daysOfMonth,
+
+            // MONTHLY (DAY_OF_WEEK): N번째 주 (1~5, -1은 마지막)
             Integer weekOfMonth,
+
+            // MONTHLY (DAY_OF_WEEK): 반복 요일 "MONDAY"
             String dayOfWeekInMonth,
 
-            // YEARLY: 반복 월
+            // YEARLY: 반복 월 (1~12)
             Integer monthOfYear,
 
             // 종료 조건
             RecurrenceEndType endType,
+
+            // END_BY_DATE: 종료 날짜
             LocalDate endDate,
+
+            // END_BY_COUNT: 반복 횟수
             Integer occurrenceCount
     ) {
         /**
-         * 현재 기획에서는 intervalValue 기능(격주, 2일마다 등)을 지원하지 않음.
-         * 향후 확장을 위해 필드는 유지하되, 항상 1을 반환.
+         * 반복 간격 기본값 반환.
+         * 현재 기획에서는 intervalValue 기능을 지원하지 않아 항상 1을 반환.
          */
         public int getIntervalOrDefault() {
-            return 1;
+            return intervalValue != null ? intervalValue : 1;
+        }
+
+        /**
+         * 종료 조건 기본값 반환.
+         * 명시되지 않으면 NEVER (무한 반복, 기본 3개월)
+         */
+        public RecurrenceEndType getEndTypeOrDefault() {
+            return endType != null ? endType : RecurrenceEndType.NEVER;
         }
     }
 }
