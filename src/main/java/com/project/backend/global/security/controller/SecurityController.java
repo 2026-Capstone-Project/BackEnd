@@ -31,12 +31,12 @@ public class SecurityController implements SecurityDocs {
             HttpServletRequest request,
             HttpServletResponse response
     ) {
-        String refreshToken = cookieUtil.getTokenFromCookie(request, "refresh-token");
+        String refreshToken = cookieUtil.getTokenFromCookie(request, "refresh_token");
         String accessToken = securityService.reissueCookie(refreshToken);
 
         // 쿠키 재발급
         log.debug("[ JwtAuthorizationFilter ] 쿠키를 재생성 합니다.");
-        cookieUtil.createJwtCookie(response, "access-token", accessToken, jwtUtil.getAccessExpMs());
+        cookieUtil.createJwtCookie(response, "access_token", accessToken, jwtUtil.getAccessExpMs());
 
         return CustomResponse.onSuccess("OK", "엑세스 쿠키가 재발급 되었습니다.");
     }
