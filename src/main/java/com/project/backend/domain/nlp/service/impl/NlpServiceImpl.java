@@ -38,7 +38,7 @@ public class NlpServiceImpl implements NlpService {
 
         String systemPrompt = promptTemplate.getSystemPrompt(baseDate);
         String userPrompt = promptTemplate.getUserPrompt(reqDTO.text());
-        log.info("LLM 파싱 요청 - memberId: {}, text: {}", memberId, reqDTO.text());
+        log.debug("LLM 파싱 요청 - memberId: {}, text: {}", memberId, reqDTO.text());
 
         String llmResponse = llmClient.chat(systemPrompt, userPrompt);
         return llmResponseParser.parse(llmResponse);
@@ -59,7 +59,7 @@ public class NlpServiceImpl implements NlpService {
                 List<Long> savedIds = nlpSaverService.save(item, member);
                 results.add(NlpResDTO.ConfirmResult.success(savedIds, item.type(), item.title()));
                 successCount++;
-                log.info("저장 성공 - type: {}, title: {}, count: {}", item.type(), item.title(), savedIds.size());
+                log.debug("저장 성공 - type: {}, title: {}, count: {}", item.type(), item.title(), savedIds.size());
             } catch (Exception e) {
                 results.add(NlpResDTO.ConfirmResult.failure(item.type(), item.title(), e.getMessage()));
                 failCount++;

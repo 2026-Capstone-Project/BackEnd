@@ -101,7 +101,7 @@ public class NlpSaverService {
             savedIds.add(event.getId());
         }
 
-        log.info("반복 일정 생성 완료 - groupId: {}, count: {}", group.getId(), savedIds.size());
+        log.debug("반복 일정 생성 완료 - groupId: {}, count: {}", group.getId(), savedIds.size());
         return savedIds;
     }
 
@@ -148,15 +148,13 @@ public class NlpSaverService {
     }
 
     private List<Long> saveTodo(NlpReqDTO.ConfirmItem item, Member member) {
-        LocalDateTime dueTime = null;
-        if (item.date() != null) {
-            LocalTime time = item.getStartTimeOrDefault() != null ? item.getStartTimeOrDefault() : LocalTime.of(23, 59);
-            dueTime = LocalDateTime.of(item.date(), time);
-        }
+        LocalDate startDate = item.date();
+        LocalTime dueTime = item.getStartTimeOrDefault();
 
         Todo todo = Todo.builder()
                 .member(member)
                 .title(item.title())
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .isCompleted(false)
                 .build();

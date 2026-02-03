@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.factory;
 
-import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.strategy.endcondition.*;
+import com.project.backend.global.recurrence.RecurrenceRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,14 +18,14 @@ public class EndConditionFactory {
     private final EndByDateCondition endByDateCondition;
     private final EndByCountCondition endByCountCondition;
 
-    public EndCondition getEndCondition(RecurrenceGroup rg) {
+    public EndCondition getEndCondition(RecurrenceRule rule) {
 
-        // 단발성 이벤트
-        if (rg == null) {
+        // 단발성 이벤트 또는 할 일
+        if (rule == null) {
             return defaultEndCondition;
         }
 
-        return switch (rg.getEndType()) {
+        return switch (rule.getEndType()) {
             case NEVER -> neverEndCondition;
             case END_BY_DATE -> endByDateCondition;
             case END_BY_COUNT -> endByCountCondition;
