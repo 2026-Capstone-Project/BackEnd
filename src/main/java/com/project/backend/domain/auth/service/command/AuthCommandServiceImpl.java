@@ -58,7 +58,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         cookieUtil.createJwtCookie(response, "refresh_token", refreshToken, refreshExpMs);
 
         // 토큰을 레디스에 등록
-        redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, accessExpMs, TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(jwtUtil.getSubject(refreshToken) + ":refresh", refreshToken, refreshExpMs, TimeUnit.MILLISECONDS);
 
         // 로그인 시 새로운 csrf 토큰 발급
         CsrfToken csrfToken = customCookieCsrfTokenRepository.generateToken(request);
