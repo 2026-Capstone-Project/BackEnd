@@ -15,6 +15,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -132,11 +133,11 @@ public class NlpConverter {
         return NlpReqDTO.RecurrenceRule.builder()
                 .frequency(parseFrequency(llmRule.frequency()))
                 .intervalValue(llmRule.intervalValue())
-                .daysOfWeek(llmRule.daysOfWeek())
+                .daysOfWeek(convertDaysOfWeek(llmRule.daysOfWeek()))
                 .monthlyType(parseMonthlyType(llmRule.monthlyType()))
                 .daysOfMonth(llmRule.daysOfMonth())
                 .weekOfMonth(llmRule.weekOfMonth())
-                .dayOfWeekInMonth(llmRule.dayOfWeekInMonth())
+                .dayOfWeekInMonth(convertDayOfWeek(llmRule.dayOfWeekInMonth()))
                 .monthOfYear(llmRule.monthOfYear())
                 .endType(parseEndType(llmRule.endType(), llmRule.endDate()))
                 .endDate(parseDate(llmRule.endDate()))
@@ -179,6 +180,44 @@ public class NlpConverter {
             case "YEARLY" -> RecurrenceFrequency.YEARLY;
             default -> null;
         };
+    }
+
+    // 3글자 → 전체 이름 매핑
+    private static final Map<String, String> DAY_SHORT_TO_FULL = Map.of(
+            "MON", "MONDAY",
+            "TUE", "TUESDAY",
+            "WED", "WEDNESDAY",
+            "THU", "THURSDAY",
+            "FRI", "FRIDAY",
+            "SAT", "SATURDAY",
+            "SUN", "SUNDAY"
+    );
+
+    /**
+     * 요일 문자열 리스트를 전체 이름(MONDAY 등)으로 정규화.
+     * 3글자(MON)와 전체(MONDAY) 둘 다 지원.
+     */
+    private static List<String> convertDaysOfWeek(List<String> daysOfWeek) {
+        if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+            return null;
+        }
+
+        return daysOfWeek.stream()
+                .map(NlpConverter::convertDayOfWeek)
+                .filter(day -> day != null)
+                .toList();
+    }
+
+    /**
+     * 단일 요일 문자열을 전체 이름(MONDAY 등)으로 정규화.
+     * 3글자(MON)와 전체(MONDAY) 둘 다 지원.
+     */
+    private static String convertDayOfWeek(String day) {
+        if (day == null || day.isBlank()) {
+            return null;
+        }
+        String upper = day.toUpperCase();
+        return DAY_SHORT_TO_FULL.getOrDefault(upper, upper);
     }
 
     private static List<NlpResDTO.AmbiguousOption> toAmbiguousOptions(List<LlmResDTO.LlmAmbiguousOption> options) {
