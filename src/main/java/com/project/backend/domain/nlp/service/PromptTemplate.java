@@ -30,7 +30,7 @@ public class PromptTemplate {
                     systemPromptResource.getInputStream().readAllBytes(),
                     StandardCharsets.UTF_8
             );
-            log.info("시스템 프롬프트 로드 완료");
+            log.debug("시스템 프롬프트 로드 완료");
         } catch (IOException e) {
             log.error("시스템 프롬프트 로드 실패", e);
             throw new IllegalStateException("시스템 프롬프트를 로드할 수 없습니다", e);
