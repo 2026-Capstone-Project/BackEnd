@@ -4,6 +4,8 @@ import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.enums.TodoFilter;
 
 import java.time.LocalDate;
+import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.reminder.entity.Reminder;
 
 public interface TodoQueryService {
 
@@ -35,4 +37,9 @@ public interface TodoQueryService {
      * 반복 할 일의 유효한 날짜인지 검증
      */
     boolean isValidOccurrenceDate(Long todoId, LocalDate occurrenceDate);
+
+    /**
+     * 할 일의 반복 여부 판단에 따른 리마인더 occurrenceTime 갱신
+     */
+    NextOccurrenceResult calculateNextOccurrence(Reminder reminder);
 }

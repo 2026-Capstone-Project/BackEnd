@@ -14,6 +14,8 @@ import com.project.backend.domain.event.repository.RecurrenceExceptionRepository
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
+import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.reminder.entity.Reminder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -150,6 +152,44 @@ public class EventQueryServiceImpl implements EventQueryService {
         );
 
         return EventConverter.toEventsListRes(eventsListRes);
+    }
+
+    @Override
+    public NextOccurrenceResult calculateNextOccurrence(Reminder reminder) {
+        Event event = eventRepository.findById(reminder.getTargetId())
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        // 반복 그룹이 있는 일정일 경우
+        if (event.getRecurrenceGroup() != null) {
+            // 리마인더의 가장 최근 계산된 날짜
+            LocalDateTime occurrenceTime = reminder.getOccurrenceTime();
+            // 생성기에 최초로 들어갈 기준 시간
+            LocalDateTime current = event.getStartTime();
+            RecurrenceGroup rg = event.getRecurrenceGroup();
+
+            // 생성기 & 종료 조건 생성
+            Generator generator = generatorFactory.getGenerator(event.getRecurrenceGroup());
+            EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
+
+            int count = 1;
+
+            while (endCondition.shouldContinue(current, count, rg)) {
+
+                current = generator.next(current, rg);
+
+                // 일정 정보가 들어간 리마인더의 occurrenceTime보다 이후일경우 바로 해당 시간 반환
+                if (current.isAfter(occurrenceTime)) {
+                    return NextOccurrenceResult.of(current);
+                }
+
+                count++;
+
+                if (count > 20_000) {
+                    break; // 안전장치
+                }
+            }
+        }
+        return NextOccurrenceResult.none();
     }
 
 
