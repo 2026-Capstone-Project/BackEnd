@@ -34,4 +34,16 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("memberId") Long memberId,
             @Param("startRange") LocalDateTime startRange,
             @Param("endRange") LocalDateTime endRange);
+
+    @Query("SELECT e " +
+            "FROM Event e " +
+            "WHERE e.member.id = :memberId " +
+            "AND e.startTime >= :from " +
+            "AND e.startTime <= :to " +
+            "AND e.recurrenceGroup IS NULL " +
+            "ORDER BY e.startTime")
+    List<Event> findByMemberIdAndInRangeAndRecurrenceGroupIsNull(
+            @Param("memberId") Long memberId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }
