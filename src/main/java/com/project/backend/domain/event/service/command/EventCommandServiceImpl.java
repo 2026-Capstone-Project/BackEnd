@@ -51,15 +51,20 @@ public class EventCommandServiceImpl implements EventCommandService {
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         RecurrenceGroup recurrenceGroup = null;
+        RecurrenceGroupSpec rgSpec = null;
+
         if (req.recurrenceGroup() != null) {
 
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
 
-            RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
+            rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
             recurrenceGroup = createRecurrenceGroup(rgSpec, member);
         }
 
-        EventSpec eventSpec = EventConverter.from(req);
+        // 반복 그룹을 통해 설정한 반복 요일, 일, 월에 따라 일정 startTime, endTime 변경
+        AdjustedTime adjustedTime = RecurrenceTimeAdjuster.adjust(req.startTime(), req.endTime(), rgSpec);
+
+        EventSpec eventSpec = EventConverter.from(req, adjustedTime.start(), adjustedTime.end());
         Event event = createEvent(eventSpec, member, recurrenceGroup);
 
         return EventConverter.toCreateRes(event);
@@ -188,17 +193,15 @@ public class EventCommandServiceImpl implements EventCommandService {
             EventReqDTO.UpdateReq req,
             Event event,
             Member member,
-            LocalDateTime start,
-            LocalDateTime end) {
+            LocalDateTime start
+    ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
         // 해당 event가 속한 반복그룹의 종료기간을 해당 event의 생성일 하루전으로 설정
         rg.updateEndDateTime(start);
 
-        // 해당 일정을 포함한 이후 일정 수정을 위해 새 event와 RecurrenceGroup을 만들어야함
-        // Event 엔티티를 만들기 위한 내부 명세
-        EventSpec eventSpec = EventConverter.from(req, event, start, end);
-        Event newEvent = EventConverter.toEvent(eventSpec, member, rg); // 새 이벤트 생성
+        // 새 반복그룹을 가진 새 이벤트 생성
+        Event newEvent = createEventWithNewRecurrenceGroup(req, event, member, start);
 
         // RecurrenceGroup 엔티티를 만들기 위한 내부 명세
         RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), rg, start);
@@ -222,14 +225,10 @@ public class EventCommandServiceImpl implements EventCommandService {
             EventReqDTO.UpdateReq req,
             Event event,
             Member member,
-            LocalDateTime start,
-            LocalDateTime end) {
-        RecurrenceGroup rg = event.getRecurrenceGroup();
-
-        // 해당 일정을 포함한 이후 일정 수정을 위해 새 event와 RecurrenceGroup을 만들어야함
-        // RecurrenceGroup 엔티티를 만들기 위한 내부 명세
-        RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), rg, start);
-        RecurrenceGroup newRg = createRecurrenceGroup(rgSpec, event.getMember());
+            LocalDateTime start
+    ) {
+        // 새 반복그룹을 가진 새 이벤트 생성
+        Event newEvent = createEventWithNewRecurrenceGroup(req, event, member, start);
 
         // Event 엔티티를 만들기 위한 내부 명세
         EventSpec eventSpec = EventConverter.from(req, event, start, end);
@@ -258,12 +257,6 @@ public class EventCommandServiceImpl implements EventCommandService {
     ) {
       
         Event newEvent = EventConverter.toEvent(eventSpec, member, baseRg);
-      
-      // TODO : 임시 조치이므로 리펙토링
-        if (baseRg != null) {
-            baseRg.setEvent(newEvent);
-            recurrenceGroupRepository.save(baseRg);
-        }
         eventRepository.save(newEvent);
         return newEvent;
     }

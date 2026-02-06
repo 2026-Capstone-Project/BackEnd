@@ -43,12 +43,12 @@ public class EventConverter {
                 .build();
     }
 
-    public static EventSpec from(EventReqDTO.CreateReq req) {
+    public static EventSpec from(EventReqDTO.CreateReq req, LocalDateTime start, LocalDateTime end) {
         return EventSpec.builder()
                 .title(req.title())
                 .content(req.content())
-                .startTime(req.startTime())
-                .endTime(req.endTime())
+                .startTime(start)
+                .endTime(end)
                 .location(req.location())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
