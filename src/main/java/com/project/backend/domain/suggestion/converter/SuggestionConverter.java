@@ -17,23 +17,6 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SuggestionConverter {
 
-    public static SuggestionReqDTO.LlmSuggestionDetail toLlmSuggestionDetail(
-            SuggestionCandidate detail,
-            Integer primaryDiff,
-            Integer secondaryDiff,
-            StableType stableType
-    ) {
-        return SuggestionReqDTO.LlmSuggestionDetail.builder()
-                .eventId(detail.id())
-                .title(detail.title())
-                .start(detail.start())
-                .primaryDiff(primaryDiff)
-                .secondaryDiff(secondaryDiff)
-                .stableType(stableType)
-                .category(Category.EVENT)
-                .build();
-    }
-
     public static SuggestionReqDTO.LlmSuggestionReq toLlmSuggestionReq(
             long suggestionReqCnt,
             List<SuggestionReqDTO.LlmSuggestionDetail> suggestionReqList
@@ -51,9 +34,8 @@ public class SuggestionConverter {
             Event previousEvent
     ) {
         return Suggestion.builder()
-                .title(baseCandidate.title())
-                .primaryDiff(baseCandidate.primaryDiff())
-                .secondaryDiff(baseCandidate.secondaryDiff())
+                .primaryPattern(baseCandidate.primary())
+                .secondaryPattern(baseCandidate.secondary())
                 .primaryContent(llmSuggestion.primaryContent())
                 .secondaryContent(llmSuggestion.secondaryContent())
                 .category(Category.EVENT)

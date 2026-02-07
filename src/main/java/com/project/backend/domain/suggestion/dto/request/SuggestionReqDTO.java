@@ -1,6 +1,8 @@
 package com.project.backend.domain.suggestion.dto.request;
 
+import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.domain.suggestion.enums.Category;
+import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.suggestion.enums.StableType;
 import lombok.Builder;
 
@@ -14,10 +16,13 @@ public class SuggestionReqDTO {
             Long eventId,
             String title,
             LocalDateTime start,
-            Integer primaryDiff,
-            Integer secondaryDiff,
+            Category category,
+
+            RecurrencePatternType patternType,
             StableType stableType,
-            Category category
+
+            SuggestionPattern primaryPattern,
+            SuggestionPattern secondaryPattern
     ) {
     }
 
