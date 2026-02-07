@@ -224,7 +224,8 @@ public class NlpSaverService {
         } else if (item.durationMinutes() != null && item.durationMinutes() > 0) {
             end = start.plusMinutes(item.durationMinutes());
         } else {
-            end = null;
+            // endTime, durationMinutes 둘 다 없으면 기본 1시간
+            end = start.plusHours(1);
         }
 
         return new TimeRange(start, end);
