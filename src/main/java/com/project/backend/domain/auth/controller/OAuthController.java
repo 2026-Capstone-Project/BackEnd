@@ -46,6 +46,9 @@ public class OAuthController implements OAuthDocs {
             HttpSession session
     ) throws IOException {
         oAuthService.handleCallback(provider, code, state, request, response, session);
+
+        // CORB 방지용 헤더 설정
+        response.setContentType("text/html;charset=UTF-8");
         response.sendRedirect(FRONTEND_LOGIN_SUCCESS_URL);
     }
 }
