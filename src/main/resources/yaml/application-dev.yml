@@ -31,7 +31,7 @@ spring:
 
   cookie:
     secure: true  # 운영환경(HTTPS)에서는 true, 로컬 HTTP 테스트 시에는 false
-    same-site: Lax
+    same-site: None # 26.02.08 프론트 요청으로 None으로 변경
 
   security:
     naver:
