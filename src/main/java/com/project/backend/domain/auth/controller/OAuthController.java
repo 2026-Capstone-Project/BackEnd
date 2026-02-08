@@ -2,7 +2,6 @@ package com.project.backend.domain.auth.controller;
 
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.service.OAuthService;
-import com.project.backend.global.apiPayload.CustomResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -23,6 +22,9 @@ public class OAuthController implements OAuthDocs {
 
     private final OAuthService oAuthService;
 
+    // TODO: 프론트 배포 후 설정 파일로 분리
+    private static final String FRONTEND_LOGIN_SUCCESS_URL = "http://localhost:5173/";
+
     @Override
     @GetMapping("/{provider}")
     public void redirectToProvider(
@@ -35,15 +37,15 @@ public class OAuthController implements OAuthDocs {
 
     @Override
     @GetMapping("/{provider}/callback")
-    public CustomResponse<String> handleCallback(
+    public void handleCallback(
             @PathVariable("provider") Provider provider,
             @RequestParam("code") String code,
             @RequestParam("state") String state,
             HttpServletRequest request,
             HttpServletResponse response,
             HttpSession session
-    ) {
+    ) throws IOException {
         oAuthService.handleCallback(provider, code, state, request, response, session);
-        return CustomResponse.onSuccess("OK", provider.name() + " 로그인 성공");
+        response.sendRedirect(FRONTEND_LOGIN_SUCCESS_URL);
     }
 }
