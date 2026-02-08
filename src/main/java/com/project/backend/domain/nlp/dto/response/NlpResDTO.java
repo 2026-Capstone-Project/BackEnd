@@ -73,29 +73,30 @@ public class NlpResDTO {
 
     @Builder
     public record ConfirmResult(
-            List<Long> ids,
+            Long savedId,
             ItemType type,
             String title,
-            int count,
+            boolean isRecurring,
             boolean success,
             String errorMessage
     ) {
-        public static ConfirmResult success(List<Long> ids, ItemType type, String title) {
+        public static ConfirmResult success(Long savedId, ItemType type, String title, boolean isRecurring) {
             return ConfirmResult.builder()
-                    .ids(ids)
+                    .savedId(savedId)
                     .type(type)
                     .title(title)
-                    .count(ids.size())
+                    .isRecurring(isRecurring)
                     .success(true)
                     .errorMessage(null)
                     .build();
         }
+
         public static ConfirmResult failure(ItemType type, String title, String errorMessage) {
             return ConfirmResult.builder()
-                    .ids(null)
+                    .savedId(null)
                     .type(type)
                     .title(title)
-                    .count(0)
+                    .isRecurring(false)
                     .success(false)
                     .errorMessage(errorMessage)
                     .build();
