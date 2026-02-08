@@ -56,10 +56,10 @@ public class NlpServiceImpl implements NlpService {
 
         for (NlpReqDTO.ConfirmItem item : reqDTO.items()) {
             try {
-                List<Long> savedIds = nlpSaverService.save(item, member);
-                results.add(NlpResDTO.ConfirmResult.success(savedIds, item.type(), item.title()));
+                Long savedId = nlpSaverService.save(item, member);
+                results.add(NlpResDTO.ConfirmResult.success(savedId, item.type(), item.title(), item.isRecurring()));
                 successCount++;
-                log.debug("저장 성공 - type: {}, title: {}, count: {}", item.type(), item.title(), savedIds.size());
+                log.debug("저장 성공 - type: {}, title: {}, savedId: {}", item.type(), item.title(), savedId);
             } catch (Exception e) {
                 results.add(NlpResDTO.ConfirmResult.failure(item.type(), item.title(), e.getMessage()));
                 failCount++;
@@ -77,10 +77,9 @@ public class NlpServiceImpl implements NlpService {
     }
 
     private String buildResultMessage(List<NlpResDTO.ConfirmResult> results) {
-        int totalCreated = results.stream()
+        int totalCreated = (int) results.stream()
                 .filter(NlpResDTO.ConfirmResult::success)
-                .mapToInt(NlpResDTO.ConfirmResult::count)
-                .sum();
+                .count();
 
         long failCount = results.stream()
                 .filter(r -> !r.success())
