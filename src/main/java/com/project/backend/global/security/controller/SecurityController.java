@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,8 +52,9 @@ public class SecurityController implements SecurityDocs {
         CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
         if (token != null) {
             token.getToken(); // 호출 시 쿠키가 Set-Cookie 로 내려감
+            return CustomResponse.onSuccess("OK", "CSRF 토큰이 쿠키로 발급되었습니다."+ token.getToken());
         }
+        return CustomResponse.onFailure("500", "500", "CSRF 오류");
 
-        return CustomResponse.onSuccess("OK", "CSRF 토큰이 쿠키로 발급되었습니다.");
     }
 }
