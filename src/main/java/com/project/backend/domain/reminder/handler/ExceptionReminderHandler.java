@@ -7,6 +7,7 @@ import com.project.backend.domain.reminder.service.command.ReminderCommandServic
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -16,6 +17,7 @@ public class ExceptionReminderHandler {
     private final ReminderCommandService reminderCommandService;
     private final ReminderSourceProvider reminderSourceProvider;
 
+    @Transactional
     public void handle(RecurrenceExceptionChanged rec) {
         ReminderSource rs = reminderSourceProvider
                 .getEventReminderSource(rec.eventId(), rec.title(), rec.occurrenceTime(), rec.isrRecurring());

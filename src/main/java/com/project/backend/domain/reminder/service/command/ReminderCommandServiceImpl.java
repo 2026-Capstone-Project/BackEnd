@@ -84,6 +84,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
+        log.info("2222222");
         ReminderSource source = ReminderConverter.toEventReminderSource(
                 eventId,
                 title,
@@ -91,6 +92,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                 false
         );
 
+        log.info("3333333");
         Reminder reminder = ReminderConverter.toReminderWithOccurrence(
                 source,
                 member,
@@ -99,6 +101,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                 ReminderRole.OVERRIDE
         );
 
+        log.info("4444444");
         reminderRepository.save(reminder);
     }
 
@@ -135,9 +138,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                         new RecurrenceGroupException(RecurrenceGroupErrorCode.RECURRENCE_EXCEPTION_NOT_FOUND));
 
         // 날짜가 바뀐 경우 -> 반복 + 일정에서 유일하게 수정된 일정에 대한 리마인더 생성
-        if (ex.getStartTime() != null &&
-                !ex.getStartTime().toLocalDate().equals(ex.getExceptionDate())) {
-
+        if (ex.getStartTime() != null && !ex.getStartTime().toLocalDate().equals(ex.getExceptionDate())) {
+            log.info("11111111");
             createSingleOverrideReminder(
                     rs.getTargetId(),
                     reminder.getMember().getId(),

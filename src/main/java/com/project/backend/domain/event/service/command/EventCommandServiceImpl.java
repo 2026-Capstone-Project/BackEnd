@@ -18,7 +18,6 @@ import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventRepository;
 import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
-import com.project.backend.domain.event.service.EventPublisher;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.event.validator.RecurrenceGroupValidator;
@@ -50,7 +49,6 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
     private final RecurrenceGroupValidator rgValidator;
-    private final EventPublisher eventPublisher;
     private final ReminderListener reminderListener;
 
     @Override
@@ -441,15 +439,6 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDate startDate,
             ChangeType changeType
     ) {
-//        eventPublisher.publish(EventConverter.toEventChanged(
-//                eventId,
-//                memberId,
-//                title,
-//                isRecurring,
-//                startTime,
-//                startDate,
-//                changeType
-//        ));
         reminderListener.onEvent(EventConverter.toEventChanged(
                 eventId,
                 memberId,
@@ -469,7 +458,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDateTime occurrenceTime,
             ExceptionChangeType changeType
     ) {
-        eventPublisher.publish(EventConverter.toRecurrenceExceptionChanged(
+        reminderListener.onEvent(EventConverter.toRecurrenceExceptionChanged(
                 exceptionId,
                 eventId,
                 memberId,
@@ -481,7 +470,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     private void handleRecurrenceEnded(Long eventId, LocalDateTime startTime) {
-        eventPublisher.publish(EventConverter.toEventRecurrenceEnded(eventId, startTime));
+        reminderListener.onEvent(EventConverter.toEventRecurrenceEnded(eventId, startTime));
     }
 
     private Event createEventWithNewRecurrenceGroup(

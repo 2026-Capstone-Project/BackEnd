@@ -55,12 +55,17 @@ public class ReminderConverter {
 
 
 
-    public static ReminderResDTO.DetailRes toDetailRes(Reminder reminder, int minutes, String message) {
+    public static ReminderResDTO.DetailRes toDetailRes(
+            Reminder reminder,
+            int minutes,
+            String title,
+            String message
+    ) {
         return ReminderResDTO.DetailRes.builder()
                 .id(reminder.getId())
-                .reminderTime(LocalTime.ofSecondOfDay(!(minutes >= 60) ? minutes : minutes / 60))
+                .reminderTime(LocalTime.of(minutes / 60, minutes % 60))
                 .time(reminder.getOccurrenceTime().toLocalTime())
-                .title(reminder.getTitle())
+                .title(title)
                 .message(message)
                 .build();
     }

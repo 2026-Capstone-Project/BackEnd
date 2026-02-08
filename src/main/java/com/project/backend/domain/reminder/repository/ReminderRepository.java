@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -16,15 +17,16 @@ import java.util.Optional;
 public interface ReminderRepository extends JpaRepository<Reminder, Long> {
 
     /**
-     * Reminder에 설정된 occurrenceTime이 currentTime 이후인 Reminder 가져오기
+     * Reminder에 설정된 occurrenceTime이 현재 날짜이며, 현재시간보다 이후안 Reminder 가져오기
      */
-    @Query("SELECT r " +
-            "FROM Reminder r " +
-            "WHERE r.member.id = :memberId " +
-            "AND r.occurrenceTime > :currentTime")
-    List<Reminder> findAllByMemberIdAndCurrentTime(
-            @Param("memberId") Long memberId,
-            @Param("currentTime") LocalDateTime currentTime);
+    List<Reminder> findByMemberIdAndLifecycleStatusAndOccurrenceTimeAfterAndOccurrenceTimeLessThanEqual(
+            Long memberId,
+            LifecycleStatus status,
+            LocalDateTime now,
+            LocalDateTime endOfToday
+    );
+
+
 
     /**
      * 라이프 사이클(활성, 비활성)에 따른 Reminder 가져오기

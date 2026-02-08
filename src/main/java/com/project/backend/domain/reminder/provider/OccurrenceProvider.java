@@ -1,4 +1,4 @@
-package com.project.backend.domain.reminder.service;
+package com.project.backend.domain.reminder.provider;
 
 import com.project.backend.domain.event.service.query.EventQueryService;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
@@ -18,7 +18,7 @@ public class OccurrenceProvider {
     public NextOccurrenceResult getNextOccurrence(Reminder reminder) {
 
         if (reminder.getTargetType() == TargetType.EVENT) {
-            return eventQueryService.calculateNextOccurrence(reminder);
+            return eventQueryService.calculateNextOccurrence(reminder.getTargetId(), reminder.getOccurrenceTime());
         }
 
         return todoService.calculateNextOccurrence(reminder);
