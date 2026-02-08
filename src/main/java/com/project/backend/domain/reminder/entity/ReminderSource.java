@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public interface ReminderSource {
     Long getTargetId();
     TargetType getTargetType();
-    LocalDateTime getNextOccurrence();
+    LocalDateTime getOccurrenceTime();
     String getTitle();
+    Boolean getIsRecurring();
 }

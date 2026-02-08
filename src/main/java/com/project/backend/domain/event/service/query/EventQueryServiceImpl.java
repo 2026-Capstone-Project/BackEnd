@@ -15,7 +15,6 @@ import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
-import com.project.backend.domain.reminder.entity.Reminder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -62,7 +61,7 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         // 익셉션 테이블 생성
         List<RecurrenceException> recurrenceExceptions =
-                recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+                recurrenceExceptionRepository.findAllByRecurrenceGroupId(event.getRecurrenceGroup().getId());
         log.info(recurrenceExceptions.toString());
 
         // 테이블이 있는 경우
@@ -154,42 +153,107 @@ public class EventQueryServiceImpl implements EventQueryService {
         return EventConverter.toEventsListRes(eventsListRes);
     }
 
+    /**
+     * 기존에 존재햇던 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+     **/
     @Override
-    public NextOccurrenceResult calculateNextOccurrence(Reminder reminder) {
-        Event event = eventRepository.findById(reminder.getTargetId())
+    public NextOccurrenceResult calculateNextOccurrence(Long eventId, LocalDateTime occurrenceTime) {
+
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        // 반복 그룹이 있는 일정일 경우
-        if (event.getRecurrenceGroup() != null) {
-            // 리마인더의 가장 최근 계산된 날짜
-            LocalDateTime occurrenceTime = reminder.getOccurrenceTime();
-            // 생성기에 최초로 들어갈 기준 시간
-            LocalDateTime current = event.getStartTime();
-            RecurrenceGroup rg = event.getRecurrenceGroup();
+        RecurrenceGroup rg = event.getRecurrenceGroup();
 
-            // 생성기 & 종료 조건 생성
-            Generator generator = generatorFactory.getGenerator(event.getRecurrenceGroup());
-            EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
+        if (rg == null) {
+            return NextOccurrenceResult.none();
+        }
 
-            int count = 1;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastOccurrence = occurrenceTime;
+        LocalDateTime current = event.getStartTime();
 
-            while (endCondition.shouldContinue(current, count, rg)) {
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
 
-                current = generator.next(current, rg);
+        int count = 1;
 
-                // 일정 정보가 들어간 리마인더의 occurrenceTime보다 이후일경우 바로 해당 시간 반환
-                if (current.isAfter(occurrenceTime)) {
-                    return NextOccurrenceResult.of(current);
+        while (endCondition.shouldContinue(current, count, rg)) {
+
+            // 다음 기본 occurrence 생성
+            current = generator.next(current, rg);
+
+            // 해당 날짜의 반복 예외 조회
+            Optional<RecurrenceException> exOpt =
+                    recurrenceExceptionRepository
+                            .findByRecurrenceGroupIdAndExceptionDate(
+                                    rg.getId(),
+                                    current.toLocalDate()
+                            );
+
+            if (exOpt.isPresent()) {
+                RecurrenceException ex = exOpt.get();
+
+                // SKIP, 날짜 수정이 아닌경우
+                if (ex.getExceptionType() == SKIP || ex.getStartTime() == null) {
+                    count++;
+                    continue;
                 }
+            }
 
-                count++;
+            // 리마인더에 설정된 날짜보다 이후인데, 현재시간보다 이후여야함
+            if (current.isAfter(lastOccurrence) && current.isAfter(now)) {
+                return NextOccurrenceResult.of(current);
+            }
 
-                if (count > 20_000) {
-                    break; // 안전장치
-                }
+
+            count++;
+
+            if (count > 20_000) {
+                break; // 안전장치
             }
         }
         return NextOccurrenceResult.none();
+    }
+
+
+    /**
+        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+     **/
+    @Override
+    public LocalDateTime findNextOccurrenceAfterNow(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (event.getRecurrenceGroup() == null) {
+            throw new EventException(EventErrorCode.NOT_RECURRING_EVENT);
+        }
+
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        LocalDateTime current = event.getStartTime();
+        LocalDateTime lastValid = null;
+
+        int count = 1;
+
+        // 현재 시간보다 가장 가까운 이후 날짜 찾기
+        while (endCondition.shouldContinue(current, count, rg)) {
+            current = generator.next(current, rg);
+            lastValid = current;
+            count++;
+
+            if (!current.isBefore(now)) {
+                break;
+            }
+
+            if (count > 20_000) break;
+        }
+
+        return lastValid;
     }
 
 
@@ -208,7 +272,7 @@ public class EventQueryServiceImpl implements EventQueryService {
             List<RecurrenceException> recurrenceExceptions = new ArrayList<>();
             if (event.getRecurrenceGroup() != null) {
                 recurrenceExceptions =
-                        recurrenceExceptionRepository.findByRecurrenceGroupId(event.getRecurrenceGroup().getId());
+                        recurrenceExceptionRepository.findAllByRecurrenceGroupId(event.getRecurrenceGroup().getId());
             }
             // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
             if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {

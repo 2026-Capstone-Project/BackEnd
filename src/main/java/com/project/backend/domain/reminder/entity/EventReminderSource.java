@@ -1,20 +1,23 @@
 package com.project.backend.domain.reminder.entity;
 
-import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.reminder.enums.TargetType;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 
+@Builder
 @RequiredArgsConstructor
 public class EventReminderSource implements ReminderSource{
 
-    private final Event event;
-    private final LocalDateTime nextOccurrence;
+    private final Long eventId;
+    private final String title;
+    private final LocalDateTime occurrenceTime;
+    private final Boolean isrRecurring;
 
     @Override
     public Long getTargetId() {
-        return event.getId();
+        return eventId;
     }
 
     @Override
@@ -23,12 +26,17 @@ public class EventReminderSource implements ReminderSource{
     }
 
     @Override
-    public LocalDateTime getNextOccurrence() {
-        return nextOccurrence;
+    public LocalDateTime getOccurrenceTime() {
+        return occurrenceTime;
     }
 
     @Override
     public String getTitle() {
-        return event.getTitle();
+        return title;
+    }
+
+    @Override
+    public Boolean getIsRecurring() {
+        return isrRecurring;
     }
 }

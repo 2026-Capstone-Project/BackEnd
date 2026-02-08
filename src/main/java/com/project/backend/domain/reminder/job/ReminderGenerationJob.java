@@ -17,6 +17,6 @@ public class ReminderGenerationJob {
 
     public void run() {
         List<Reminder> activeReminders = reminderCommandService.findActiveReminders();
-        activeReminders.forEach(reminderCommandService::refreshReminder);
+        activeReminders.forEach(reminderCommandService::refreshIfExpired);
     }
 }

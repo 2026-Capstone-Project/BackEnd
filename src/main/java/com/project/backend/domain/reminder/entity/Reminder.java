@@ -3,6 +3,7 @@ package com.project.backend.domain.reminder.entity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.reminder.enums.InteractionStatus;
 import com.project.backend.domain.reminder.enums.LifecycleStatus;
+import com.project.backend.domain.reminder.enums.ReminderRole;
 import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -43,6 +44,10 @@ public class Reminder extends BaseEntity {
     @Column(name = "lifecycle_status", nullable = false)
     private LifecycleStatus lifecycleStatus;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private ReminderRole role;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
@@ -51,7 +56,15 @@ public class Reminder extends BaseEntity {
         this.lifecycleStatus = LifecycleStatus.TERMINATED;
     }
 
+    public void inActive() {
+        this.lifecycleStatus = LifecycleStatus.INACTIVE;
+    }
+
     public void updateOccurrence(LocalDateTime time) {
         this.occurrenceTime = time;
+    }
+
+    public void updateTitle(String title) {
+        this.title = title;
     }
 }
