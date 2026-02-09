@@ -19,9 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -39,58 +38,56 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
         Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime today = LocalDateTime.now();
 
         // 브리핑 비활성화 시 or 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
-        if (!setting.getDailyBriefing() || now.isBefore(setting.getDailyBriefingTime().atDate(now.toLocalDate()))) {
-            return BriefingConverter.toUnavailable(now.toLocalDate());
+        if (!setting.getDailyBriefing() || today.isBefore(setting.getDailyBriefingTime().atDate(today.toLocalDate()))) {
+            return BriefingConverter.toUnavailable(today.toLocalDate());
         }
 
         // 현재시간보다 startTime이 이후가 아닌 일정/투두 조회
-        List<Event> events = eventRepository.findAllByMemberIdAndCurrentDate(
-                memberId,
-                now.toLocalDate().atTime(LocalTime.of(23,59, 59))
-                );
-        List<Todo> todos = todoRepository.findAllByMemberIdAndCurrentDate(
-                memberId,
-                now.toLocalDate()
-        );
+        List<Long> eventIds = eventRepository
+                .findAllByMemberIdAndCurrentDate(
+                        memberId, today.toLocalDate().atTime(23, 59, 59)
+                )
+                .stream()
+                .map(Event::getId)
+                .toList();
+
+        List<Long> todoIds = todoRepository
+                .findAllByMemberIdAndCurrentDate(memberId, today.toLocalDate())
+                .stream()
+                .map(Todo::getId)
+                .toList();
 
         // 일정과 할일이 없다면 빈 값 리턴
-        if (events.isEmpty() && todos.isEmpty()) {
-            return BriefingConverter.toEmpty(now.toLocalDate());
+        if (eventIds.isEmpty() && todoIds.isEmpty()) {
+            return BriefingConverter.toEmpty(today.toLocalDate());
         }
 
-        // 브리핑 대상 일정/할일 수집
-        List<BriefingResDTO.BriefInfoRes> eventBrief = occurrenceProvider.getTodayOccurrence(
-                TargetType.EVENT,
-                events.stream().map(Event::getId).toList(),
-                now.toLocalDate()
-        ).stream()
-                .filter(TodayOccurrenceResult::hasToday)
-                .map(BriefingConverter::toBriefInfoRes)
-                .toList();
+        List<BriefingResDTO.BriefInfoRes> eventBrief = toBriefInfos(TargetType.EVENT, eventIds, today.toLocalDate());
+        List<BriefingResDTO.BriefInfoRes> todoBrief  = toBriefInfos(TargetType.TODO,  todoIds,  today.toLocalDate());
 
-        List<BriefingResDTO.BriefInfoRes> todoBrief = occurrenceProvider.getTodayOccurrence(
-                TargetType.TODO,
-                todos.stream().map(Todo::getId).toList(),
-                now.toLocalDate()
-        ).stream()
-                .filter(TodayOccurrenceResult::hasToday)
-                .map(BriefingConverter::toBriefInfoRes)
-                .toList();
-
-        List<BriefingResDTO.BriefInfoRes> briefInfo = new ArrayList<>();
-
-        briefInfo.addAll(eventBrief);
-        briefInfo.addAll(todoBrief);
+        List<BriefingResDTO.BriefInfoRes> briefInfo =
+                java.util.stream.Stream.concat(eventBrief.stream(), todoBrief.stream())
+                        .sorted(java.util.Comparator.comparing(BriefingResDTO.BriefInfoRes::startTime))
+                        .toList();
 
         return BriefingConverter.toBriefingRes(
-                now.toLocalDate(),
+                today.toLocalDate(),
                 BriefingReason.AVAILABLE,
                 briefInfo,
                 eventBrief.size(),
                 todoBrief.size()
         );
+    }
+
+    private List<BriefingResDTO.BriefInfoRes> toBriefInfos(TargetType type, List<Long> ids, LocalDate date) {
+        if (ids.isEmpty()) return List.of();
+
+        return occurrenceProvider.getTodayOccurrence(type, ids, date).stream()
+                .filter(TodayOccurrenceResult::hasToday)
+                .map(BriefingConverter::toBriefInfoRes)
+                .toList();
     }
 }
