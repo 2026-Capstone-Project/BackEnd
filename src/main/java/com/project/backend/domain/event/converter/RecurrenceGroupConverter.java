@@ -6,6 +6,8 @@ import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.*;
+import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
+import com.project.backend.domain.event.exception.RecurrenceGroupException;
 import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -267,7 +269,21 @@ public class RecurrenceGroupConverter {
                 // DAILY는 추가 필드 없음
             }
 
-            case WEEKLY -> b.daysOfWeek(List.of(startTime.getDayOfWeek())); // startTime에 맞게 요일 보정
+            case WEEKLY -> {
+                List<DayOfWeek> daysOfWeek = req.daysOfWeek();
+
+                if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+                    daysOfWeek = List.of(startTime.getDayOfWeek());
+                }
+                // b.daysOfWeek(List.of(startTime.getDayOfWeek()));
+
+                daysOfWeek = daysOfWeek.stream()
+                        .distinct()
+                        .sorted()
+                        .toList();
+
+                b.daysOfWeek(daysOfWeek);
+            } // startTime에 맞게 요일 보정
 
             case MONTHLY -> {
                 MonthlyType monthlyType =
@@ -278,29 +294,62 @@ public class RecurrenceGroupConverter {
                 b.monthlyType(monthlyType);
 
                 if (monthlyType == MonthlyType.DAY_OF_MONTH) {
-                    b.daysOfMonth(List.of(startTime.getDayOfMonth()));
+                    List<Integer> daysOfMonth = req.daysOfMonth();
+
+                    if (daysOfMonth == null || daysOfMonth.isEmpty()) {
+                        daysOfMonth = List.of(startTime.getDayOfMonth());
+                    }
+
+                    daysOfMonth = daysOfMonth.stream()
+                            .distinct()
+                            .sorted()
+                            .toList();
+
+                    b.daysOfMonth(daysOfMonth);
+                    // b.daysOfMonth(List.of(startTime.getDayOfMonth()));
                 }
 
                 if (monthlyType == MonthlyType.DAY_OF_WEEK) {
-                    b.weekOfMonth(getWeekOfMonth(startTime));
+                    Integer weekOfMonth = req.weekOfMonth() != null ? req.weekOfMonth() : getWeekOfMonth(startTime);
+
+                    b.weekOfMonth(weekOfMonth);
 
                     MonthlyWeekdayRule rule =
                             req.weekdayRule() != null
                                     ? req.weekdayRule()
                                     : MonthlyWeekdayRule.SINGLE;
 
+                    // 주중, 주말 , 1주전체 처리 문제 때문에 임시 적용
+                    if (rule != MonthlyWeekdayRule.SINGLE) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_WEEKDAY_RULE_TEMPORARY);
+                    }
+
                     b.weekdayRule(rule);
 
-                    List<DayOfWeek> daysOfWeekInMonth =
-                            rule == MonthlyWeekdayRule.SINGLE
-                                    ? List.of(startTime.getDayOfWeek())
-                                    : null;  // TODO 주중, 주말, 1주전체에 대한 로직 필요
+//                    List<DayOfWeek> daysOfWeekInMonth =
+//                            rule == MonthlyWeekdayRule.SINGLE
+//                                    ? List.of(startTime.getDayOfWeek())
+//                                    : null;  // TODO 주중, 주말, 1주전체에 대한 로직 필요
+
+                    List<DayOfWeek> daysOfWeekInMonth = req.dayOfWeekInMonth();
+
+                    if (daysOfWeekInMonth == null || daysOfWeekInMonth.isEmpty()) {
+                        daysOfWeekInMonth = List.of(startTime.getDayOfWeek());
+                    } else {
+                        // 정규화 (그리고 정책상 1개만 허용이면 validator에서 size 체크)
+                        daysOfWeekInMonth = daysOfWeekInMonth.stream().distinct().sorted().toList();
+                    }
+
 
                     b.dayOfWeekInMonth(daysOfWeekInMonth);
                 }
             }
 
-            case YEARLY -> b.monthOfYear(startTime.getMonthValue());
+            case YEARLY ->  {
+                Integer monthOfYear = req.monthOfYear() != null ? req.monthOfYear() : startTime.getMonthValue();
+                b.monthOfYear(monthOfYear);
+                // b.monthOfYear(startTime.getMonthValue());
+            }
 
             default -> throw new IllegalArgumentException("Unsupported frequency");
         }
@@ -311,7 +360,7 @@ public class RecurrenceGroupConverter {
             RecurrenceGroupReqDTO.UpdateReq req,
             RecurrenceGroup rg,
             LocalDateTime startTime, // EventReqDTO.UpdateReq의 startTime or occurrenceDate (update로직 초반에 계산)
-            LocalDateTime updateStartTime // EventReqDTO.UpdateReq의 startTime
+            LocalDateTime updateStartTime // EventReqDTO.UpdateReq의 startTime (null일 수 있음)
     ) {
         RecurrenceFrequency frequency =
                 req.frequency() != null ? req.frequency() : rg.getFrequency();
@@ -339,9 +388,19 @@ public class RecurrenceGroupConverter {
 
         switch (frequency) {
             case WEEKLY -> {
+                List<DayOfWeek> days = req.daysOfWeek();
+
                 // daysOfWeek 없으면 startTime 기준 요일 자동 설정
-                List<DayOfWeek> days =
-                        updateStartTime != null ? List.of(updateStartTime.getDayOfWeek()) : req.daysOfWeek();
+                if (days == null || days.isEmpty()) {
+                    days = List.of(startTime.getDayOfWeek());
+                }
+
+                // 정규화(중복 제거 + 정렬)
+                days = days.stream()
+                        .distinct()
+                        .sorted()
+                        .toList();
+
                 b.daysOfWeek(days);
             }
 
@@ -357,41 +416,87 @@ public class RecurrenceGroupConverter {
                 b.monthlyType(monthlyType);
 
                 if (monthlyType == MonthlyType.DAY_OF_MONTH) {
-                    List<Integer> daysOfMonth =
-                            updateStartTime != null ? List.of(updateStartTime.getDayOfMonth()) : req.daysOfMonth();
+                    List<Integer> daysOfMonth = req.daysOfMonth();
+
+                    if (daysOfMonth == null || daysOfMonth.isEmpty()) {
+                        daysOfMonth = List.of(startTime.getDayOfMonth());
+                    }
+
+                    daysOfMonth = daysOfMonth.stream()
+                            .distinct()
+                            .sorted()
+                            .toList();
+
                     b.daysOfMonth(daysOfMonth);
                 }
 
                 if (monthlyType == MonthlyType.DAY_OF_WEEK) {
-                    Integer weekOfMonth =
-                            updateStartTime != null ? getWeekOfMonth(updateStartTime) : rg.getWeekOfMonth();
+                    Integer weekOfMonth = req.weekOfMonth() != null ? req.weekOfMonth() : getWeekOfMonth(startTime);
 
                     b.weekOfMonth(weekOfMonth);
 
                     MonthlyWeekdayRule rule =
-                            req.weekdayRule() != null ? req.weekdayRule() : rg.getMonthlyWeekdayRule();
+                            req.weekdayRule() != null
+                                    ? req.weekdayRule() :
+                                    (rg != null
+                                            ? rg.getMonthlyWeekdayRule()
+                                            : MonthlyWeekdayRule.SINGLE);
 
-                    List<DayOfWeek> daysOfWeekInMonth =
-                            updateStartTime != null && rule == MonthlyWeekdayRule.SINGLE
-                                    ? List.of(updateStartTime.getDayOfWeek())
-                                    : resolveDaysFromRule(
-                                            rule,
-                                            req.dayOfWeekInMonth(),
-                                            toDayOfWeekList(rg.getDayOfWeekInMonth()),
-                                            startTime
-                            );
+                    // 주중, 주말 , 1주전체 처리 문제 때문에 임시 적용
+                    if (rule != MonthlyWeekdayRule.SINGLE) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_WEEKDAY_RULE_TEMPORARY);
+                    }
+
+                    b.weekdayRule(rule);
+
+//                    List<DayOfWeek> daysOfWeekInMonth =
+//                            updateStartTime != null && rule == MonthlyWeekdayRule.SINGLE
+//                                    ? List.of(updateStartTime.getDayOfWeek())
+//                                    : resolveDaysFromRule(
+//                                            rule,
+//                                            req.dayOfWeekInMonth(),
+//                                            toDayOfWeekList(rg.getDayOfWeekInMonth()),
+//                                            startTime
+//                            );
+
+                    List<DayOfWeek> daysOfWeekInMonth = req.dayOfWeekInMonth();
+
+
+                    if (daysOfWeekInMonth == null || daysOfWeekInMonth.isEmpty()) {
+                        // rule이 SINGLE/null일 때만 startTime으로 채움
+                        daysOfWeekInMonth = List.of(startTime.getDayOfWeek());
+                    } else {
+                        // 정규화 (그리고 정책상 1개만 허용이면 validator에서 size 체크)
+                        daysOfWeekInMonth = daysOfWeekInMonth.stream().distinct().sorted().toList();
+                    }
+
+                    /**
+                    * 주중 주말 1주전체 문제 해결해야함
+                    * */
+//                    if (daysOfWeekInMonth == null || daysOfWeekInMonth.isEmpty()) {
+//                        daysOfWeekInMonth = (rule == MonthlyWeekdayRule.SINGLE)
+//                                ? List.of(startTime.getDayOfWeek())
+//                                : resolveDaysFromRule(
+//                                            rule,
+//                                            req.dayOfWeekInMonth(),
+//                                            toDayOfWeekList(rg.getDayOfWeekInMonth()),
+//                                            startTime
+//                        );
+//                    }
 
                     b.dayOfWeekInMonth(daysOfWeekInMonth);
                 }
             }
 
             case YEARLY -> {
-                Integer monthOfYear =
-                        req.monthOfYear() != null
-                                ? req.monthOfYear()
-                                : (rg.getMonthOfYear() != null
-                                ? rg.getMonthOfYear()
-                                : startTime.getMonthValue());
+//                Integer monthOfYear =
+//                        req.monthOfYear() != null
+//                                ? req.monthOfYear()
+//                                : (rg.getMonthOfYear() != null
+//                                ? rg.getMonthOfYear()
+//                                : startTime.getMonthValue());
+
+                Integer monthOfYear = req.monthOfYear() != null ? req.monthOfYear() : startTime.getMonthValue();
 
                 b.monthOfYear(monthOfYear);
             }

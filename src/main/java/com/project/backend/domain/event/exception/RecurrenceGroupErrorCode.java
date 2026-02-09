@@ -38,8 +38,9 @@ public enum RecurrenceGroupErrorCode implements BaseErrorCode {
             (HttpStatus.BAD_REQUEST, "RG400_17", "n년 간격 범위가 올바르지 않습니다.(1~99)"),
     FAIL_ADJUSTMENT_DAY_OF_WEEK(HttpStatus.BAD_REQUEST, "RG400_18", "매월 N째주 N요일 보정 실패"),
     FAIL_ADJUSTMENT_YEARLY(HttpStatus.BAD_REQUEST, "RG400_19", "연간 보정 실패"),
-    RECURRENCE_EXCEPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "RG404_1", "반복 예외를 찾을 수 없습니다.")
-
+    RECURRENCE_EXCEPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "RG404_1", "반복 예외를 찾을 수 없습니다."),
+    RECURRENCE_FREQUENCY_REQUIRED(HttpStatus.BAD_REQUEST, "RG400_20", "반복방식은 필수입니다."),
+    INVALID_WEEKDAY_RULE_TEMPORARY(HttpStatus.BAD_REQUEST, "RG400_21", "현재는 주중,주말,1주전체 선택 불가");
     ;
 
 

@@ -148,9 +148,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         switch (req.recurrenceUpdateScope()){
             case THIS_EVENT -> updateThisEventOnly(req, event, member);
             case THIS_AND_FOLLOWING_EVENTS -> {
-                if (req.startTime() == null && req.endTime() == null && req.recurrenceGroup() == null) {
-
-                }
                 updateThisAndFutureEvents(req, event, member, start, end);
             }
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
@@ -300,7 +297,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                     ChangeType.DELETED_ALL);
         }
 
-        // 새 일정 생성
+        // 새 일정 생성에 대한 리마인더 발생
         handleEventChanged(
                 newEvent.getId(),
                 member.getId(),

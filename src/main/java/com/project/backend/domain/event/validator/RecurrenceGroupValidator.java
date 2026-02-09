@@ -114,17 +114,19 @@ public class RecurrenceGroupValidator {
     }
 
     public void validateFrequencyRuleForCreate(RecurrenceGroupReqDTO.CreateReq req) {
+        if (req.frequency() == null) {
+            throw new RecurrenceGroupException(RecurrenceGroupErrorCode.RECURRENCE_FREQUENCY_REQUIRED);
+        }
+
         switch (req.frequency()) {
-            case NONE, DAILY -> {
+            case DAILY -> {
                 if (req.daysOfWeek() != null || req.daysOfMonth() != null
                         || req.weekOfMonth() != null || req.dayOfWeekInMonth() != null || req.monthlyType() != null) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
-                if (req.frequency() == RecurrenceFrequency.DAILY) {
-                    // 값이 범위를 벗어난 경우 (0 이하 또는 365 이상)
-                    if (req.intervalValue() != null && (req.intervalValue() <= 0 || req.intervalValue() >= 365)) {
-                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAILY_INTERVAL_VALUE);
-                    }
+                // 값이 범위를 벗어난 경우 (0 이하 또는 365 이상)
+                if (req.intervalValue() != null && (req.intervalValue() <= 0 || req.intervalValue() >= 365)) {
+                    throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAILY_INTERVAL_VALUE);
                 }
             }
             case WEEKLY -> {
