@@ -1,9 +1,12 @@
 package com.project.backend.domain.todo.service.query;
 
+import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.enums.TodoFilter;
 
 import java.time.LocalDate;
+import java.util.List;
+
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.entity.Reminder;
 
@@ -42,4 +45,9 @@ public interface TodoQueryService {
      * 할 일의 반복 여부 판단에 따른 리마인더 occurrenceTime 갱신
      */
     NextOccurrenceResult calculateNextOccurrence(Reminder reminder);
+
+    /**
+     * 할일이 오늘 브리핑 대상에 포함되는지 조회
+     */
+    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoId, LocalDate occurrence);
 }

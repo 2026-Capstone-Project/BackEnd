@@ -1,10 +1,16 @@
 package com.project.backend.domain.todo.service.query;
 
+import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.event.exception.EventErrorCode;
+import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
+import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
@@ -195,6 +201,38 @@ public class TodoQueryServiceImpl implements TodoQueryService {
             }
         }
         return NextOccurrenceResult.none();
+    }
+
+    @Override
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoIds, LocalDate date) {
+        List<TodayOccurrenceResult> result = new ArrayList<>();
+
+        for (Long id : todoIds) {
+            Todo todo = todoRepository.findById(id)
+                    .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+            // 1) 단일 할일
+            if (!todo.isRecurring()) {
+                if (todo.getStartDate().isEqual(date)) {
+                    LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+                    result.add(TodayOccurrenceResult.of(todo.getTitle(), dueTime, TargetType.TODO));
+                } else {
+                    result.add(TodayOccurrenceResult.none());
+                }
+                continue;
+            }
+
+            // 2) 반복 할일: "오늘을 포함한 가장 가까운 다음 occurrence"를 구하고, 그게 오늘이면 브리핑 대상임
+            LocalDate next = getNextOccurrence(todo, date);
+
+            if (next != null && next.isEqual(date)) {
+                result.add(TodayOccurrenceResult.of(todo.getTitle(), todo.getDueTime(), TargetType.TODO));
+            } else {
+                result.add(TodayOccurrenceResult.none());
+            }
+        }
+
+        return result;
     }
 
     // ===== Private Methods =====

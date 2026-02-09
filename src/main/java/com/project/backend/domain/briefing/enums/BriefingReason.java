@@ -1,4 +1,4 @@
-package com.project.backend.domain.notification.enums;
+package com.project.backend.domain.briefing.enums;
 
 public enum BriefingReason {
     AVAILABLE,

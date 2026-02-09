@@ -36,4 +36,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("endRange") LocalDateTime endRange);
 
     List<Event> findAllByMemberId(@Param("memberId") Long memberId);
+
+    @Query("SELECT e " +
+            "FROM Event e " +
+            "WHERE e.member.id = :memberId AND e.startTime <= :currentDate")
+    List<Event> findAllByMemberIdAndCurrentDate(
+            @Param("memberId") Long memberId,
+            @Param("currentDate") LocalDateTime currentDate
+    );
 }

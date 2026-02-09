@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.query;
 
+import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
@@ -15,6 +16,7 @@ import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -254,6 +256,75 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return lastValid;
+    }
+
+    /**
+     * 일정에 대한 반복을 진행해 계산된 일정의 startTime이 오늘인 일정 정보 조회
+     **/
+    @Override
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate date) {
+        List<TodayOccurrenceResult> result = new ArrayList<>();
+
+        for (Long id : eventId) {
+            Event event = eventRepository.findById(id)
+                    .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+            // 단일 일정인데
+            if (event.getRecurrenceGroup() == null) {
+                // startTime이 오늘 날짜와 일치한다면
+                if (event.getStartTime().toLocalDate().isEqual(date)) {
+                    result.add(TodayOccurrenceResult.of(
+                            event.getTitle(),
+                            event.getStartTime().toLocalTime(),
+                            TargetType.EVENT
+                    ));
+                } else {
+                    result.add(TodayOccurrenceResult.none());
+                }
+                continue;
+            }
+
+            RecurrenceGroup rg = event.getRecurrenceGroup();
+
+            Generator generator = generatorFactory.getGenerator(rg);
+            EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+            LocalDateTime current = event.getStartTime();
+
+            // 원본 일정의 startTime 검사
+            if (current.toLocalDate().isEqual(date)) {
+                result.add(TodayOccurrenceResult.of(event.getTitle(), current.toLocalTime(), TargetType.EVENT));
+                continue;
+            }
+
+            int count = 1;
+
+            // 현재 시간보다 가장 가까운 이후 날짜 찾기
+            while (endCondition.shouldContinue(current, count, rg)) {
+                current = generator.next(current, rg);
+                count++;
+
+                // 계산된 일정의 날짜가 오늘보다 이후일 경우
+                if (current.isAfter(date.atTime(LocalTime.MAX))) {
+                    result.add(TodayOccurrenceResult.none());
+                    break;
+                }
+
+                // 계산된 일정 날짜가 오늘과 일치한다면
+                if (current.toLocalDate().isEqual(date)) {
+                    result.add(TodayOccurrenceResult.of(
+                            event.getTitle(),
+                            current.toLocalTime(),
+                            TargetType.EVENT
+                    ));
+                    break;
+                }
+
+                if (count > 20_000) break;
+            }
+        }
+
+        return result;
     }
 
 

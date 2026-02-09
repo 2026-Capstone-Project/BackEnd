@@ -1,4 +1,4 @@
-package com.project.backend.domain.notification.exception;
+package com.project.backend.domain.briefing.exception;
 
 import com.project.backend.global.apiPayload.exception.CustomException;
 import lombok.Getter;
