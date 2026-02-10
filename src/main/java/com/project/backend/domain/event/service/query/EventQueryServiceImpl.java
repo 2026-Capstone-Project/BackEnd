@@ -15,6 +15,7 @@ import com.project.backend.domain.event.repository.RecurrenceExceptionRepository
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
+import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
@@ -44,16 +45,15 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
+    private final EventValidator eventValidator;
 
 
     @Override
-    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDateTime, Long memberId) {
-
+    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId) {
         Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        // 계산된 일정이 아닐 경우 occurrenceDateTime은 null로 들어오므로 eventId에 따른 일정의 startTime을 가져오기
-        LocalDateTime time = occurrenceDateTime != null ? occurrenceDateTime : event.getStartTime();
+        eventValidator.validateRead(event, time);
 
         // 찾고자 하는 것이 부모 이벤트인 경우
         if (event.getStartTime().isEqual(time)) {

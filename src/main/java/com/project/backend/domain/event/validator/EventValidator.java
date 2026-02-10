@@ -9,12 +9,16 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+// TODO static으로 바꾸기
 @Component
 public class EventValidator {
 
     public void validateCreate(EventReqDTO.CreateReq req) {
         validateTime(req.startTime(), req.endTime());
+    }
+    
+    public void validateRead(Event event, LocalDateTime time) {
+        validateMother(event, time);
     }
 
     public void validateUpdate(EventReqDTO.UpdateReq req, Event event) {
@@ -31,7 +35,6 @@ public class EventValidator {
         validateScope(event, occurrenceDate, scope);
     }
 
-
     public void validateTime(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             throw new EventException(EventErrorCode.INVALID_TIME);
@@ -39,6 +42,12 @@ public class EventValidator {
 
         if (start.isAfter(end)) {
             throw new EventException(EventErrorCode.INVALID_TIME_RANGE);
+        }
+    }
+
+    private void validateMother(Event event, LocalDateTime time) {
+        if (!event.isRecurring() && !event.getStartTime().isEqual(time)) {
+            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
         }
     }
 
