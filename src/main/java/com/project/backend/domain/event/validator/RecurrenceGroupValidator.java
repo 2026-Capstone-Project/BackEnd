@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+// TODO static으로 바꾸기
 @Slf4j
 @Component
 public class RecurrenceGroupValidator {
