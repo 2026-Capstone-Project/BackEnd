@@ -82,4 +82,8 @@ public class RecurrenceException {
     public int hashCode() {
         return Objects.hash(recurrenceGroup, exceptionDate);
     }
+
+    public void updateExceptionTypeToSKIP() {
+        this.exceptionType = ExceptionType.SKIP;
+    }
 }

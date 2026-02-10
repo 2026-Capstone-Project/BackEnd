@@ -1,21 +1,52 @@
 package com.project.backend.domain.event.strategy.generator.monthlyrule;
 
+import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.global.recurrence.RecurrenceRule;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.temporal.WeekFields;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Component
 public class DayOfWeekRule implements MonthlyRule {
 
     @Override
     public LocalDateTime next(LocalDateTime current, RecurrenceRule rule) {
 
-        // N 번째 주 판별
+        int interval = rule.getIntervalValue();
+        int weekOfMonth = rule.getWeekOfMonth();
+        List<DayOfWeek> targetDays =
+                RecurrenceUtils.parseDaysOfWeek(rule.getDayOfWeekInMonth());
+
+        // 기준은 current가 아니라 "기준 월(anchor)"
+        YearMonth baseMonth = YearMonth.from(current);
+
+        // 다음 occurrence index
+        int step = 1;
+
+        while (true) {
+            // interval만큼 월 점프
+            YearMonth targetMonth = baseMonth.plusMonths((long) interval * step);
+
+            Optional<LocalDate> date =
+                    RecurrenceUtils.calculateMonthlyNthWeekday(targetMonth, weekOfMonth, targetDays);
+
+            if (date.isPresent()) {
+                return LocalDateTime.of(date.get(), current.toLocalTime());
+            }
+
+            step++;
+        }
+
+        /*// N 번째 주 판별
         WeekFields wf = WeekFields.ISO;
 
         // 반복 주
@@ -69,6 +100,6 @@ public class DayOfWeekRule implements MonthlyRule {
         // 현재 시간이 N 주차를 만족할 때까지
         while (current.get(wf.weekOfMonth()) != weekOfMonth);
 
-        return current;
+        return current;*/
     }
 }

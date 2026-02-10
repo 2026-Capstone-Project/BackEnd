@@ -1,5 +1,7 @@
 package com.project.backend.domain.setting.enums;
 
+import java.time.LocalDateTime;
+
 /**
  * ReminderTiming (리마인더 타이밍)
  *
@@ -32,5 +34,9 @@ public enum ReminderTiming {
 
     public int getMinutes() {
         return minutes;
+    }
+
+    public LocalDateTime calculateReminderTime(LocalDateTime objectTime) {
+        return objectTime.minusMinutes(minutes);
     }
 }
