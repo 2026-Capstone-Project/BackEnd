@@ -32,114 +32,116 @@ public interface EventDocs {
     @Operation(
             summary = "일정 생성",
             description = """
-                    새로운 일정을 생성합니다.
-                    
-                    ## 일정(Event) 필수 파라미터
-                    
-                    - title (String)
-                      - 일정 제목
-                    - startTime (LocalDateTime)
-                      - 일정 시작 일시
-                      - ISO-8601 형식 (예: 2026-01-27T10:00:00)
-                    - endTime (LocalDateTime)
-                      - 일정 종료 일시
-                    
-                    ## 일정(Event) 선택 파라미터
-                    
-                    - content (String)
-                      - 일정 메모
-                    - location (String)
-                      - 장소 정보 (추후 지도 서비스 연동 예정)
-                    - isAllDay (Boolean)
-                      - 종일 일정 여부
-                      - 미전송 시 false 처리
-                    - color (EventColor)
-                      - 일정 색상
-                      - 미전송 시 기본값 BLUE 적용
-                      - 사용 가능 값:
-                        - BLUE
-                        - GREEN
-                        - PINK
-                        - PURPLE
-                        - GRAY
-                        - YELLOW
-                    
-                    - recurrenceGroup (RecurrenceGroup)
-                        - 반복
-                    
-                    ## 반복 일정 처리 규칙
-                    
-                    - 반복을 사용하지 않는 경우
-                      → recurrenceGroup 필드는 **아예 보내지 않습니다**
-                    - 반복을 사용하는 경우에만
-                      → recurrenceGroup 객체를 포함합니다
-                    
-                    ---
-                    ## 반복 간격(intervalValue) 규칙
-                    
-                    - intervalValue는 간격(n일,n월,n년 마다)을 의미합니다.
-                    - 반복 규칙을 **변경하지 않는 경우**:
-                      - intervalValue를 전달하지 않아도 됩니다.
-                      - 기존 반복 그룹의 intervalValue가 유지됩니다.
-                    
-                    - 반복 규칙을 **변경하는 경우** (frequency 변경 또는 단일 일정에서 반복그룹(recurrenceGroup)을 생성):
-                      - intervalValue을 1로 설정한다면 기본값이므로 전달하지 않아도 됩니다.
-                    
-                    ### frequency 별 intervalValue 허용 범위
-                    - DAILY   : 1 ~ 364
-                    - WEEKLY  : 1 (고정)
-                    - MONTHLY : 1 ~ 11
-                    - YEARLY  : 1 ~ 99
-                    
-                    ---
-                    ## 반복 일정 파라미터 (recurrenceGroup)
-                    
-                    ### 공통 필수 필드
-                    - frequency (RecurrenceFrequency)
-                      - DAILY / WEEKLY / MONTHLY / YEARLY
-                    
-                    - endType (RecurrenceEndType)
-                      - NEVER
-                      - END_BY_DATE
-                      - END_BY_COUNT
-                    
-                    ---
-                    ### WEEKLY (매주 반복)
-                    - daysOfWeek (List<DayOfWeek>)
-                      - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
-                    
-                    ---
-                    ### MONTHLY (매월 반복)
-                    
-                    - monthlyType (MonthlyType)
-                      - DAY_OF_MONTH : 매월 N일
-                      - DAY_OF_WEEK : 매월 N번째 X요일
-                    
-                    #### monthlyType = DAY_OF_MONTH
-                    - daysOfMonth (List<Integer>)
-                      - 예: [15]
-                    
-                    #### monthlyType = DAY_OF_WEEK
-                    - weekOfMonth (Integer)
-                      - 예: 2 (두 번째)
-                    - dayOfWeekInMonth (DayOfWeek)
-                      - 예: "MONDAY", "TUESDAY"
-                    
-                    ---
-                    ### YEARLY (매년 반복)
-                    - monthOfYear (Integer)
-                      - 1 ~ 12
-                    
-                    ---
-                    ## 🔚 반복 종료 조건
-                    
-                    - endType = NEVER
-                      - 종료 없음
-                    - endType = END_BY_DATE
-                      - endDate 필수
-                    - endType = END_BY_COUNT
-                      - occurrenceCount 필수
-                    """
+                새로운 일정을 생성합니다.
+                
+                ## 일정(Event) 필수 파라미터
+                - title (String) : 일정 제목
+                - startTime (LocalDateTime) : 일정 시작 일시
+                - endTime (LocalDateTime) : 일정 종료 일시
+                
+                ## 일정(Event) 선택 파라미터
+                - content (String) : 일정 메모
+                - location (String) : 장소
+                - isAllDay (Boolean) : 종일 여부 (미전송 시 false)
+                - color (EventColor) : 색상 (미전송 시 기본값 적용) [BLUE(기본값), GREEN, PINK, PURPLE, GRAY, YELLOW]
+                - recurrenceGroup (RecurrenceGroup) : 반복 설정 (없으면 단일 일정)
+                
+                ---
+                ## 🔄 반복 설정(recurrenceGroup) 입력 규칙
+                
+                - 반복을 사용하지 않는 경우 → recurrenceGroup 필드는 **아예 보내지 않습니다**
+                - 반복을 사용하는 경우에만 → recurrenceGroup 객체를 포함합니다
+                
+                ---
+                ## 🔁 반복 간격(intervalValue) 규칙
+                - intervalValue는 간격(n일/n월/n년마다)을 의미합니다.
+                - 반복 규칙을 생성하는 경우 intervalValue=1은 기본값이므로 생략 가능합니다.
+                
+                ### frequency 별 intervalValue 허용 범위
+                - DAILY   : 1 ~ 364
+                - WEEKLY  : 1 (고정)
+                - MONTHLY : 1 ~ 11
+                - YEARLY  : 1 ~ 99
+                
+                ---
+                ## 📌 recurrenceGroup 필드 (CreateReq 기준)
+                
+                ### 공통 필드
+                - frequency (RecurrenceFrequency) ✅
+                  - DAILY / WEEKLY / MONTHLY / YEARLY
+                
+                - intervalValue (Integer) ❌
+                  - 기본값 1 (생략 가능)
+                
+                - endType (RecurrenceEndType) ❌
+                  - NEVER / END_BY_DATE / END_BY_COUNT
+                  - null로 보내면 NEVER로 저장됩니다.
+                  - endType이 null인 경우 endDate, occurrenceCount도 반드시 null이어야 합니다.
+                
+                - endDate (LocalDate) 조건부
+                  - endType = END_BY_DATE 일 때 필수
+                
+                - occurrenceCount (Integer) 조건부
+                  - endType = END_BY_COUNT 일 때 필수 (1 이상)
+                
+                ---
+                ### DAILY (매일 반복)
+                - 추가 필드 없음
+                
+                ---
+                ### WEEKLY (매주 반복)
+                - daysOfWeek (List<DayOfWeek>) ❌
+                  - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
+                  - null로 보내면 일정의 startTime 기준 요일로 자동 설정됩니다.
+                
+                ---
+                ### MONTHLY (매월 반복)
+                - monthlyType (MonthlyType) ❌
+                  - DAY_OF_MONTH : 매월 N일
+                  - DAY_OF_WEEK  : 매월 N번째 X요일
+                  - null로 보내면 DAY_OF_MONTH로 저장됩니다.
+                
+                - weekdayRule (MonthlyWeekdayRule) ❌
+                  - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
+                  - null로 보내면 SINGLE로 저장됩니다.
+                
+                #### monthlyType = DAY_OF_MONTH (매월 N일)
+                - daysOfMonth (List<Integer>) ❌
+                  - 1~31
+                  - null이면 startTime 기준 '일'로 자동 설정됩니다.
+                  - 예: [15], [15, 30]
+                
+                #### monthlyType = DAY_OF_WEEK (매월 N번째 X요일)
+                - weekOfMonth (Integer) ✅
+                  - 1~5
+                  - null이면 startTime 기준 주차로 자동 설정됩니다.
+                
+                - dayOfWeekInMonth (List<DayOfWeek>) ✅
+                  - 예: ["TUESDAY"]
+                  - **요일은 하나만 입력 가능합니다.** (리스트 길이 1만 허용)
+                  - null이면 startTime 기준 요일로 자동 설정됩니다.
+                
+                ✅ 추가 제한 사항(중요)
+                - 현재 리마인더 문제로 인해 weekdayRule에 WEEKDAY / WEEKEND / ALL_DAYS 값을 입력하여 일정 생성 시 오류가 발생합니다.
+                - 따라서 현재는 weekdayRule을 **SINGLE 또는 null**로 보내서 생성해야 합니다.
+                
+                ---
+                ### YEARLY (매년 반복)
+                - monthOfYear (Integer) ❌
+                  - 1~12
+                  - null이면 startTime 기준 월로 자동 설정됩니다.
+                
+                ---
+                ## ✅ 반복 일정 생성 규칙 (규칙 필드 우선 + 기본값은 startTime)
+                
+                - startTime은 생성 시 필수입니다.
+                - 반복 관련 필드(요일/일/주/월)가 **전달된 경우**, 해당 값이 **우선 적용**되며 startTime은 그 값에 맞춰 **보정하지 않습니다.**
+                - 반복 관련 필드가 **비어 있거나 누락된 경우에만**, startTime을 기준으로 기본값이 자동 채워집니다.
+                  - WEEKLY: daysOfWeek가 없으면 startTime의 요일 1개로 설정
+                  - MONTHLY(DAY_OF_MONTH): daysOfMonth가 없으면 startTime의 일로 설정
+                  - MONTHLY(DAY_OF_WEEK): weekOfMonth / dayOfWeekInMonth / weekdayRule이 없으면 startTime 기준으로 설정
+                  - YEARLY: monthOfYear가 없으면 startTime의 월로 설정
+                """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "일정 생성 요청",
@@ -284,7 +286,8 @@ public interface EventDocs {
                                                 "frequency": "MONTHLY",
                                                 "intervalValue": 3,
                                                 "monthlyType": "DAY_OF_WEEK",
-                                                "weekOfMonth": 1
+                                                "weekOfMonth": 1,
+                                                "weekdayRule": "WEEKDAY"
                                               }
                                             }
                                             """
@@ -431,13 +434,13 @@ public interface EventDocs {
                                     ),
 
                                     @ExampleObject(
-                                            name = "RG400_11",
-                                            summary = "유효하지 않은 MonthlyType 값이 전달된 경우",
+                                            name = "RG400_4",
+                                            summary = "weekdayRule이 SINGLE or null이 아닌데, 개별 요일 선택한 경우",
                                             value = """
                                                     {
                                                       "isSuccess": false,
-                                                      "code": "RG400_11",
-                                                      "message": "잘못된 월간 타입입니다"
+                                                      "code": "RG400_9",
+                                                      "message": "주중, 주말, 모든 날 선택 시 개별 요일 선택을 사용할 수 없습니다."
                                                     }
                                                     """
                                     ),
@@ -531,9 +534,9 @@ public interface EventDocs {
             @Parameter(
                     description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DDThh-mm)",
                     example = "2026-02-06T14:00",
-                    required = true
+                    required = false
             )
-            @RequestParam LocalDateTime occurrenceDate
+            @RequestParam (required = false) LocalDateTime occurrenceDate
     );
 
     @Operation(
@@ -583,108 +586,94 @@ public interface EventDocs {
     @Operation(
             summary = "일정 수정",
             description = """
-                    선택한 일정을 수정합니다. (PATCH)
-                    
-                    이 API는 **부분 수정(PATCH)** 방식으로 동작하며,
-                    전달된 필드만 변경되고 나머지 필드는 유지됩니다.
-                    
-                    ---
-                    ## 공통 규칙
-                    
-                    - eventId는 **항상 필수**입니다.
-                    - 전달되지 않은 필드는 기존 값이 유지됩니다.
-                    - PATCH 요청이므로 값 비교가 아닌 **필드 존재 여부**로 변경 여부를 판단합니다.
-                    - 변경 의도가 없는 경우에도 기존 일정 정보를 그대로 반환합니다.
-                    
-                    ---
-                    
-                    - occurrenceDate는 **캘린더 화면에서 사용자가 선택한 실제 발생 일정의 날짜**입니다.
-                    - 반복 일정의 경우:
-                      - occurrenceDate는 반복 규칙에 의해 **실제로 발생하는 날짜여야 합니다**.
-                      - 반복 규칙에 존재하지 않는 날짜를 전달하면 오류가 발생합니다.
-                        (예: 매달 15일 반복인데 14일 전달)
-                    
-                    - 단일 일정의 경우:
-                      - occurrenceDate는 전달하지 않습니다.
-                    - 반복을 가진 원본 일정인 경우:
-                      - occurrenceDate는 전달하지 않습니다.
-                    
-                    - **반복을 통해 계산된 일정인 경우**:
-                      - **occurrenceDate에 계산된 객체의 startTime을 넣어 전달해야합니다.**
-                    
-                    ---
-                    ## 반복 간격(intervalValue) 규칙
-                    
-                    - intervalValue는 간격(n일,n월,n년 마다)을 의미합니다.
-                    - 반복 규칙을 **변경하지 않는 경우**:
-                      - intervalValue를 전달하지 않아도 됩니다.
-                      - 기존 반복 그룹의 intervalValue가 유지됩니다.
-                    
-                    - 반복 규칙을 **변경하는 경우** (frequency 변경 또는 단일 일정에서 반복그룹(recurrenceGroup)을 생성):
-                      - intervalValue을 1로 설정한다면 기본값이므로 전달하지 않아도 됩니다.
-                    
-                    ### frequency 별 intervalValue 허용 범위
-                    - DAILY   : 1 ~ 364
-                    - WEEKLY  : 1 (고정)
-                    - MONTHLY : 1 ~ 11
-                    - YEARLY  : 1 ~ 99
-                    
-                    ---
-                    ## 단일 일정 수정 (반복 없음)
-                    
-                    - recurrenceUpdateScope, recurrenceGroup을 전달하지 않습니다.
-                    - 전달된 필드만 단일 일정에 적용됩니다.
-                    
-                    ---
-                    ## 반복 일정 수정
-                    
-                    반복 일정인 경우 **recurrenceUpdateScope는 필수**입니다.
-                    
-                    ### 수정 범위 (recurrenceUpdateScope)
-                    
-                    #### THIS_EVENT
-                    - 선택한 occurrenceDate의 일정만 수정합니다.
-                    - 기존 반복 그룹에는 예외(RecurrenceException)가 추가됩니다.
-                    - 해당 일정은 반복 규칙에서 분리되지 않습니다.
-                    
-                    #### THIS_AND_FOLLOWING_EVENTS
-                    - 선택한 occurrenceDate과 이후의 일정들을 수정합니다.
-                    - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
-                    - 이후 일정들은 새로운 반복 그룹으로 재생성됩니다.
-                    
-                    #### ALL_EVENTS
-                    - 반복 일정 전체를 수정합니다.
-                    - 기존 반복 그룹과 실제 일정은 제거됩니다.
-                    - 새로운 반복 규칙으로 전체 일정이 재생성되고, 수정한 일정이 새 일정으로 생성됩니다.
-                    - **반복을 가진 일정을 변경할 때, 선택한 일정이 계산된 일정이 아닌 원본 일정일 경우 ALL_EVENTS만 가능합니다.**
-                    
-                    ---
-                    ## 시간(startTime / endTime) 처리 규칙
-                    
-                    - startTime 또는 endTime이 전달되면 해당 값으로 수정됩니다.
-                    - 시간 필드가 전달되지 않은 경우:
-                      - occurrenceDate + 기존 일정의 시간 규칙으로 start/end가 재계산됩니다.
-                    - endTime이 전달되지 않은 경우:
-                      - startTime + durationMinutes 기준으로 계산됩니다.
-                    - startTime,occurrenceDate 혹은 endTime,occurrenceDate 가 전달되지 않은 경우:
-                      - eventId에 해당하는 db에 저장된 최초 일정의 startTime과 endTime을 사용합니다.
-                    
-                    ---
-                    ## 반복 규칙 수정 (recurrenceGroup)
-                    
-                    - 반복 규칙을 수정하는 경우에만 recurrenceGroup을 포함합니다.
-                    - recurrenceGroup 내부 필드 역시 **변경할 항목만 전달**합니다.
-                    
-                    ---
-                    ## 유효성 규칙
-                    
-                    - 반복이 없는 일정에 recurrenceUpdateScope, occurrenceDate를 지정하면 오류가 발생합니다.
-                    - 반복 일정인데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
-                    - recurrenceGroup을 전달했는데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
-                    - recurrenceGroup 필드가 frequency와 맞지 않으면 오류가 발생합니다.
-                    """
+                선택한 일정을 수정합니다. (PATCH)
+                
+                이 API는 **부분 수정(PATCH)** 방식으로 동작하며,
+                전달된 필드만 변경되고 나머지 필드는 유지됩니다.
+                
+                ---
+                ## ✅ 공통 규칙
+                
+                - eventId는 **항상 필수**입니다.
+                - 전달되지 않은 필드는 기존 값이 유지됩니다.
+                - PATCH 요청이므로 값 비교가 아닌 **필드 존재 여부**로 변경 여부를 판단합니다.
+                - 변경 의도가 없는 경우에도 기존 일정 정보를 그대로 반환합니다.
+                
+                ---
+                ## 📌 occurrenceDate 규칙 (업데이트)
+                
+                - occurrenceDate는 **캘린더 화면에서 사용자가 선택한 실제 발생 일정의 날짜/시간**입니다.
+                - ✅ **단일 일정 / 반복 일정(원본/계산된 회차) 구분 없이 occurrenceDate는 항상 필수입니다.**
+                - 🔁 반복 일정인 경우:
+                  - occurrenceDate는 반복 규칙에 의해 **실제로 발생하는 날짜여야 합니다**.
+                  - 반복 규칙에 존재하지 않는 날짜를 전달하면 오류가 발생합니다.
+                    (예: 매달 15일 반복인데 14일 전달)
+                
+                ---
+                ## 🔁 반복 일정 수정 (recurrenceUpdateScope)
+                
+                - 🔁 반복 일정인 경우 **recurrenceUpdateScope는 필수**입니다.
+                - ✅ 사용 가능 값:
+                  - THIS_EVENT
+                  - THIS_AND_FOLLOWING_EVENTS
+                - ❌ **ALL_EVENTS는 더 이상 사용하지 않습니다.**
+                
+                ### 🧩 수정 범위
+                
+                #### ✅ THIS_EVENT
+                - 선택한 occurrenceDate의 일정만 수정합니다.
+                - 기존 반복 그룹에는 예외(RecurrenceException)가 추가됩니다.
+                - 해당 일정은 반복 규칙에서 분리되지 않습니다.
+                
+                #### ✅ THIS_AND_FOLLOWING_EVENTS
+                - 선택한 occurrenceDate와 이후의 일정들을 수정합니다.
+                - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
+                - ⭐ occurrenceDate가 **새 반복의 기준점(base)** 이 됩니다.
+                - 이후 일정들은 새로운 반복 그룹으로 재생성됩니다.
+                
+                ---
+                ## ⏱️ 시간(startTime / endTime) 처리 규칙 (업데이트)
+                
+                - startTime 또는 endTime이 전달되면 해당 값으로 수정됩니다.
+                
+                - 🕒 startTime이 전달되지 않은 경우:
+                  - 선택한 occurrenceDate의 날짜를 기준으로,
+                    기존 startTime의 '시간(HH:mm)'을 유지한 값으로 startTime이 자동 보정됩니다.
+                
+                - 🕒 endTime이 전달되지 않은 경우:
+                  - 선택한 occurrenceDate의 날짜를 기준으로,
+                    기존 종료 시간 규칙(또는 durationMinutes)을 유지하여 endTime이 자동 보정됩니다.
+                
+                ---
+                ## 🔄 반복 규칙 수정 (recurrenceGroup)
+                
+                - 반복 규칙을 수정하는 경우에만 recurrenceGroup을 포함합니다.
+                - recurrenceGroup 내부 필드 역시 **변경할 항목만 전달**합니다.
+                
+                ---
+                - 🗓️ occurrenceDate는 수정 대상 회차의 날짜이며, 원본/계산된 일정 구분 없이 항상 전달해야 합니다.
+                
+                - ⏱️ startTime을 변경하는 경우
+                  - startTime은 사용자가 전달한 값이 우선 적용됩니다.
+                  - 반복 규칙 필드(요일/일/주/월)를 함께 전달하지 않았다면,
+                    startTime을 기준으로 필요한 기본값만 자동 채워집니다.
+                  - 반복 규칙 필드를 함께 전달했다면,
+                    전달된 반복 규칙이 우선 적용되며 startTime은 반복 규칙에 맞춰 보정됩니다.
+                
+                - 🧩 반복 규칙만 변경하는 경우 (startTime 미전송 시)
+                  - 시간은 기존 일정의 시간을 그대로 유지한 채, **선택한 occurrenceDate 회차를 기준점**으로 반복 규칙이 적용됩니다.
+                  - 이때도 반복 규칙 필드가 비어 있으면 기본값만 자동으로 채웁니다.
+                    - EX) 매주 반복에서 2026-02-02 일정을 변경할때, 반복변경으로 startTime입력안한 상태에서 기존 반복인 매주 목요일에서
+                      매주 수요일로 변경한다면, 이 일정의 startTime은 2026-02-04(수)로 변경되어 적용됩니다.
+                
+                ---
+                ## ⚠️ 유효성 규칙
+                
+                - 🔁 반복 일정인데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
+                - 🔁 recurrenceGroup을 전달했는데 recurrenceUpdateScope가 없으면 오류가 발생합니다.
+                - 🔁 recurrenceGroup 필드가 frequency와 맞지 않으면 오류가 발생합니다.
+                """
     )
-
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "일정 수정 요청 (PATCH)",
             required = true,
@@ -714,6 +703,7 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
+                                              "occurrenceDate": "2026-02-10",
                                               "title": "팀 회의 (변경)",
                                               "location": "회의실 B"
                                             }
@@ -732,6 +722,7 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
+                                              "occurrenceDate": "2026-02-10",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
                                                 "daysOfWeek": ["MONDAY", "WEDNESDAY"],
@@ -813,47 +804,6 @@ public interface EventDocs {
                                             }
                                             """
                             ),
-
-                            // 6. 반복 일정 - 전체 수정 1
-                            @ExampleObject(
-                                    name = "반복 일정 - 전체 수정",
-                                    description = """
-                                            반복 일정 전체의 반복 규칙을 수정합니다.
-                                            해당 예시는 원본일정인 경우입니다. (occurrenceDate가 없기 때문에)
-                                            """,
-                                    value = """
-                                            {
-                                              "recurrenceUpdateScope": "ALL_EVENTS",
-                                              "recurrenceGroup": {
-                                                "frequency": "MONTHLY",
-                                                "monthlyType": "DAY_OF_WEEK",
-                                                "weekOfMonth": 2,
-                                                "dayOfWeekInMonth": ["TUESDAY"],
-                                                "endType": "NEVER"
-                                              }
-                                            }
-                                            """
-                            ),
-                            // 7. 반복 일정 - 전체 수정 2
-                            @ExampleObject(
-                                    name = "반복 일정 - 전체 수정 (intervalValue 포함)",
-                                    description = """
-                                            반복 일정 전체의 반복 규칙을 수정합니다.
-                                            해당 예시는 원본일정인 경우입니다. (occurrenceDate가 없기 때문에)
-                                            상황:
-                                            - 반복 타입이 YEARLY가 아닌 같은 타입을 가진 원본 일정을 대상으로 반복 객체를 수정하는 상황입니다.
-                                            """,
-                                    value = """
-                                            {
-                                              "recurrenceUpdateScope": "ALL_EVENTS",
-                                              "recurrenceGroup": {
-                                                "frequency": "YEARLY",
-                                                "intervalValue": 2
-                                              }
-                                            }
-                                            """
-                            )
-
                     }
             )
     )
@@ -1075,66 +1025,48 @@ public interface EventDocs {
             summary = "일정 삭제",
             description = """
                 선택한 일정을 삭제합니다.
-        
+                
                 ---
-                ## 요청 파라미터
-        
-                ### Path Variable
+                ## 🧾 요청 파라미터 (업데이트)
+                
+                ### 🧷 Path Variable
                 - eventId (필수)
                   - 삭제할 일정의 ID
-        
-                ### Query Parameters
-                - occurrenceDate (선택)
+                
+                ### 🔎 Query Parameters
+                - occurrenceDate (필수)
                   - 캘린더에서 사용자가 선택한 **실제 발생 날짜**
-                  - 반복 일정에서 계산된 일정(분신 일정)을 삭제할 때 사용됩니다.
-                  - 단일 일정(반복 없음) 또는 실제 저장된 일정(엄마 일정) 삭제 시에는 전달하지 않습니다.
-        
-                - scope (선택)
+                  - ✅ **단일 일정 / 반복 일정(원본/계산된 회차) 구분 없이 occurrenceDate는 항상 필수입니다.**
+                
+                - scope (필수)
                   - 반복 일정 삭제 범위
-                  - 사용 가능 값:
+                  - ✅ 사용 가능 값:
                     - THIS_EVENT
                     - THIS_AND_FOLLOWING_EVENTS
-                    - ALL_EVENTS
-                       - 계산된 일정이 아닌, 실제 일정을 선택해서 삭제 진행시, ALL_EVENTS만 가능하다.
-                         **때문에 ALL_EVENTS인 경우, occurrenceDate에 값이 있다면 계산된 일정, 없다면 실제 일정이다.**
-        
+                  - ❌ **ALL_EVENTS는 더 이상 사용하지 않습니다.**
+                
                 ---
-                ## 삭제 시나리오별 동작
-        
-                ### 단일 일정 삭제 (반복 없음)
-                - eventId만 전달
-                - occurrenceDate ❌
-                - scope ❌
-                - 해당 일정이 즉시 삭제됩니다.
-        
+                ## 🗑️ 삭제 시나리오별 동작
+                
+                ### ✅ THIS_EVENT
+                - 선택한 occurrenceDate의 일정만 삭제됩니다.
+                - 🔁 반복 일정인 경우:
+                  - 실제 Event는 유지되고, 해당 날짜는 반복 예외(RecurrenceException)로 처리됩니다.
+                - 📌 단일 일정인 경우:
+                  - 해당 일정이 즉시 삭제됩니다.
+                
                 ---
-                ### 반복 일정 - 이 일정만 삭제
-                - occurrenceDate 필수
-                - scope = THIS_EVENT
-                - 선택한 날짜의 일정만 삭제됩니다.
-                - 실제 Event는 유지되고, 해당 날짜는 반복 예외(RecurrenceException)로 처리됩니다.
-        
+                ### ✅ THIS_AND_FOLLOWING_EVENTS
+                - 선택한 occurrenceDate와 그 이후의 일정이 삭제됩니다.
+                - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
+                - occurrenceDate 이후의 모든 계산된 일정이 삭제됩니다.
+                
                 ---
-                ### 반복 일정 - 이 일정 포함 이후 삭제
-                - occurrenceDate 필수
-                - scope = THIS_AND_FOLLOWING_EVENTS
-                - occurrenceDate 이전까지만 반복 일정이 유지됩니다.
-                - occurrenceDate 이후의 모든 일정이 삭제됩니다.
-        
-                ---
-                ### 반복 일정 - 전체 삭제
-                - scope = ALL_EVENTS
-                - **occurrenceDate가 없다면, 실제 일정이 아닌, 계산된 일정을 선택한 것이고,**
-                  **occurrenceDate가 있다면, 계산된 일정을 선택한 것이다.**
-                - 반복 그룹과 모든 일정이 완전히 삭제됩니다.
-        
-                ---
-                ## 유효성 규칙
-        
-                - 반복 일정인데 scope가 없는 경우 → 오류
-                - occurrenceDate가 있는데 scope가 없는 경우 → 오류
-                - 반복이 없는 일정인데 scope가 전달된 경우 → 오류
-                - 실제(엄마) 일정 삭제 시 scope가 ALL_EVENTS가 아닌 경우 → 오류
+                ## ⚠️ 유효성 규칙 (업데이트)
+                
+                - scope가 없으면 오류가 발생합니다.
+                - occurrenceDate가 없으면 오류가 발생합니다.
+                - 🔁 반복 일정에서 occurrenceDate가 실제 발생 날짜가 아니면 오류가 발생합니다.
                 """
     )
 

@@ -1,10 +1,16 @@
 package com.project.backend.domain.todo.service.query;
 
+import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.event.exception.EventErrorCode;
+import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
+import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
@@ -16,6 +22,8 @@ import com.project.backend.domain.todo.exception.TodoErrorCode;
 import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
+import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.reminder.entity.Reminder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -156,6 +164,75 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         }
 
         return isValidOccurrenceDate(todo, occurrenceDate);
+    }
+
+    public NextOccurrenceResult calculateNextOccurrence(Reminder reminder) {
+        Todo todo = todoRepository.findById(reminder.getTargetId())
+                .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+        // 반복 그룹이 있는 일정일 경우
+        if (todo.getTodoRecurrenceGroup() != null) {
+            // 리마인더의 가장 최근 계산된 날짜
+            LocalDateTime occurrenceTime = reminder.getOccurrenceTime();
+            // 생성기에 최초로 들어갈 기준 시간
+            LocalDateTime current = todo.getStartDate().atTime(todo.getDueTime());
+            TodoRecurrenceGroup rg = todo.getTodoRecurrenceGroup();
+
+            // 생성기 & 종료 조건 생성
+            Generator generator = generatorFactory.getGenerator(todo.getTodoRecurrenceGroup());
+            EndCondition endCondition = endConditionFactory.getEndCondition(todo.getTodoRecurrenceGroup());
+
+            int count = 1;
+
+            while (endCondition.shouldContinue(current, count, rg)) {
+
+                current = generator.next(current, rg);
+
+                // 일정 정보가 들어간 리마인더의 occurrenceTime보다 이후일경우 바로 해당 시간 반환
+                if (current.isAfter(occurrenceTime)) {
+                    return NextOccurrenceResult.of(current);
+                }
+
+                count++;
+
+                if (count > 20_000) {
+                    break; // 안전장치
+                }
+            }
+        }
+        return NextOccurrenceResult.none();
+    }
+
+    @Override
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoIds, LocalDate date) {
+        List<TodayOccurrenceResult> result = new ArrayList<>();
+
+        for (Long id : todoIds) {
+            Todo todo = todoRepository.findById(id)
+                    .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+            // 1) 단일 할일
+            if (!todo.isRecurring()) {
+                if (todo.getStartDate().isEqual(date)) {
+                    LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+                    result.add(TodayOccurrenceResult.of(todo.getTitle(), dueTime, TargetType.TODO));
+                } else {
+                    result.add(TodayOccurrenceResult.none());
+                }
+                continue;
+            }
+
+            // 2) 반복 할일: "오늘을 포함한 가장 가까운 다음 occurrence"를 구하고, 그게 오늘이면 브리핑 대상임
+            LocalDate next = getNextOccurrence(todo, date);
+
+            if (next != null && next.isEqual(date)) {
+                result.add(TodayOccurrenceResult.of(todo.getTitle(), todo.getDueTime(), TargetType.TODO));
+            } else {
+                result.add(TodayOccurrenceResult.none());
+            }
+        }
+
+        return result;
     }
 
     // ===== Private Methods =====

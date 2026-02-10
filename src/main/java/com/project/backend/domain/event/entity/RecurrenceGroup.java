@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.entity;
 
 import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
@@ -50,7 +51,11 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
     @Column(name = "week_of_month")
     private Integer weekOfMonth;
 
-    @Column(name = "day_of_week_in_month", length = 10)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "monthly_weekday_rule", length = 20)
+    private MonthlyWeekdayRule monthlyWeekdayRule;
+
+    @Column(name = "day_of_week_in_month", length = 60)
     private String dayOfWeekInMonth;
 
     @Column(name = "month_of_year")
@@ -115,11 +120,6 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
                 .createdCount(createdCount)
                 .build();
     }
-
-
-    public void setEvent(Event event) {
-        this.event = event;
-    }
   
     public void addExceptionDate(RecurrenceException exceptionDate) {
         exceptionDates.add(exceptionDate);
@@ -128,6 +128,10 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
     public void updateEndDateTime(LocalDateTime endDate) {
         this.endType = RecurrenceEndType.END_BY_DATE;
         this.endDate = endDate.toLocalDate().minusDays(1);
+    }
+
+    public void updateEvent(Event event) {
+        this.event = event;
     }
 
     public List<String> getDaysOfWeekAsList() {
@@ -145,6 +149,10 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
     public List<String> getDayOfWeekInMonthAsList() {
         if (dayOfWeekInMonth == null) return null;
         return List.of(dayOfWeekInMonth.split(","));
+    }
+
+    public void attachEvent(Event event) {
+        this.event = event;
     }
 
 }

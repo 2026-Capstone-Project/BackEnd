@@ -1,5 +1,8 @@
 package com.project.backend.domain.event.converter;
 
+import com.project.backend.domain.event.dto.EventChanged;
+import com.project.backend.domain.event.dto.RecurrenceEnded;
+import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
@@ -8,14 +11,20 @@ import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
+import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.ExceptionChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventConverter {
 
@@ -43,12 +52,12 @@ public class EventConverter {
                 .build();
     }
 
-    public static EventSpec from(EventReqDTO.CreateReq req) {
+    public static EventSpec from(EventReqDTO.CreateReq req, LocalDateTime start, LocalDateTime end) {
         return EventSpec.builder()
                 .title(req.title())
                 .content(req.content())
-                .startTime(req.startTime())
-                .endTime(req.endTime())
+                .startTime(start)
+                .endTime(end)
                 .location(req.location())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
@@ -152,6 +161,53 @@ public class EventConverter {
     public static EventResDTO.EventsListRes toEventsListRes(List<EventResDTO.DetailRes> details) {
         return EventResDTO.EventsListRes.builder()
                 .details(details)
+                .build();
+    }
+
+    public static EventChanged toEventChanged(
+            Long targetId,
+            Long memberId,
+            String title,
+            Boolean isRecurring,
+            LocalDateTime occurrenceTime,
+            LocalDate occurrenceDate,
+            ChangeType changeType) {
+        return EventChanged.builder()
+                .eventId(targetId)
+                .memberId(memberId)
+                .title(title)
+                .isrRecurring(isRecurring)
+                .occurrenceTime(occurrenceTime)
+                .occurrenceDate(occurrenceDate)
+                .changeType(changeType)
+                .build();
+    }
+
+    public static RecurrenceExceptionChanged toRecurrenceExceptionChanged (
+            Long exceptionId,
+            Long eventId,
+            Long memberId,
+            String title,
+            Boolean isRecurring,
+            LocalDateTime occurrenceTime,
+            ExceptionChangeType changeType
+    ) {
+        return RecurrenceExceptionChanged.builder()
+                .exceptionId(exceptionId)
+                .eventId(eventId)
+                .memberId(memberId)
+                .title(title)
+                .isrRecurring(isRecurring)
+                .occurrenceTime(occurrenceTime)
+                .changeType(changeType)
+                .build();
+    }
+
+    public static RecurrenceEnded toEventRecurrenceEnded(Long eventId, LocalDateTime startTime) {
+        return RecurrenceEnded.builder()
+                .targetId(eventId)
+                .targetType(TargetType.EVENT)
+                .startTime(startTime)
                 .build();
     }
 }

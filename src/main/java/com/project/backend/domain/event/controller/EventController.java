@@ -38,7 +38,7 @@ public class EventController implements EventDocs {
     public CustomResponse<EventResDTO.DetailRes> getEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
-            @RequestParam LocalDateTime occurrenceDate
+            @RequestParam(required = false) LocalDateTime occurrenceDate
     ){
         EventResDTO.DetailRes resDTO = eventQueryService.getEventDetail(
                 eventId,
