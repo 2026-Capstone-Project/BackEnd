@@ -120,6 +120,10 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
                 .createdCount(createdCount)
                 .build();
     }
+
+    public void setEvent(Event event) {
+        this.event = event;
+    }
   
     public void addExceptionDate(RecurrenceException exceptionDate) {
         exceptionDates.add(exceptionDate);

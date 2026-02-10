@@ -38,7 +38,7 @@ public class EventController implements EventDocs {
     public CustomResponse<EventResDTO.DetailRes> getEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
-            @RequestParam(required = false) LocalDateTime occurrenceDate
+            @RequestParam LocalDateTime occurrenceDate
     ){
         EventResDTO.DetailRes resDTO = eventQueryService.getEventDetail(
                 eventId,
@@ -75,7 +75,7 @@ public class EventController implements EventDocs {
     public CustomResponse<Void> deleteEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
-            @RequestParam(required = false) LocalDate occurrenceDate,
+            @RequestParam LocalDate occurrenceDate,
             @RequestParam(required = false) RecurrenceUpdateScope scope
     ){
         eventCommandService.deleteEvent(eventId, occurrenceDate, scope, customUserDetails.getId());
