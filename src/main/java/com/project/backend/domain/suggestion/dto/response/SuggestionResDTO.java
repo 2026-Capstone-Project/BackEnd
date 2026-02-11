@@ -1,5 +1,7 @@
 package com.project.backend.domain.suggestion.dto.response;
 
+import lombok.Builder;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +27,19 @@ public class SuggestionResDTO {
 
     public record LlmRecurrenceGroupSuggestion(
             Long recurrenceGroupId,
+            String content
+    ) {
+    }
+
+    @Builder
+    public record SuggestionListRes(
+            List<SuggestionDetailRes> details
+    ) {
+    }
+
+    @Builder
+    public record SuggestionDetailRes(
+            Long id,
             String content
     ) {
     }

@@ -93,5 +93,34 @@ public class SuggestionConverter {
                 .build();
     }
 
+    public static SuggestionResDTO.SuggestionDetailRes toSuggestionDetailRes(Suggestion suggestion) {
+        return switch(suggestion.getStatus()) {
+            case PRIMARY -> toPrimary(suggestion);
+            case SECONDARY -> toSecondary(suggestion);
+            default -> null;
+        };
+    }
+
+    public static SuggestionResDTO.SuggestionListRes toSuggestionListRes(List<SuggestionResDTO.SuggestionDetailRes> suggestionListRes) {
+        return SuggestionResDTO.SuggestionListRes.builder()
+                .details(suggestionListRes)
+                .build();
+    }
+
+    private static SuggestionResDTO.SuggestionDetailRes toPrimary(Suggestion suggestion) {
+        return SuggestionResDTO.SuggestionDetailRes.builder()
+                .id(suggestion.getId())
+                .content(suggestion.getPrimaryContent())
+                .build();
+    }
+
+    private static SuggestionResDTO.SuggestionDetailRes toSecondary(Suggestion suggestion) {
+        return SuggestionResDTO.SuggestionDetailRes.builder()
+                .id(suggestion.getId())
+                .content(suggestion.getSecondaryContent())
+                .build();
+    }
+
+
 
 }
