@@ -1,6 +1,7 @@
 package com.project.backend.domain.suggestion.entity;
 
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
@@ -40,8 +41,12 @@ public class Suggestion extends BaseEntity {
     private Member member;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "previous_event", nullable = false)
+    @JoinColumn(name = "previous_event")
     private Event previousEvent;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurrence_group")
+    private RecurrenceGroup recurrenceGroup;
 
     // TODO : 이것이 최선인가?
     @Embedded

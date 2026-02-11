@@ -16,4 +16,16 @@ public class SuggestionResDTO {
             String secondaryContent
     ) {
     }
+
+    public record LlmRecurrenceGroupSuggestionRes(
+            long suggestionResCnt,
+            List<LlmRecurrenceGroupSuggestion> llmRecurrenceGroupSuggestionList
+    ) {
+    }
+
+    public record LlmRecurrenceGroupSuggestion(
+            Long recurrenceGroupId,
+            String content
+    ) {
+    }
 }

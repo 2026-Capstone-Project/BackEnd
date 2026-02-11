@@ -15,15 +15,24 @@ import java.nio.charset.StandardCharsets;
 public class SuggestionPromptTemplate {
 
     @Value("classpath:prompts/suggestion-prompt.txt")
-    private Resource systemPromptResource;
+    private Resource systemSuggestionPromptResource;
 
-    private String systemPromptTemplate;
+    @Value("classpath:prompts/recurrence-suggestion-prompt.txt")
+    private Resource recurrenceSuggestionPromptResource;
+
+    private String systemSuggestionPromptTemplate;
+    private String recurrenceSuggestionPromptTemplate;
+
 
     @PostConstruct
     public void init() {
         try {
-            systemPromptTemplate = new String(
-                    systemPromptResource.getInputStream().readAllBytes(),
+            systemSuggestionPromptTemplate = new String(
+                    systemSuggestionPromptResource.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8
+            );
+            recurrenceSuggestionPromptTemplate = new String(
+                    recurrenceSuggestionPromptResource.getInputStream().readAllBytes(),
                     StandardCharsets.UTF_8
             );
             log.debug("시스템 프롬프트 로드 완료");
@@ -34,8 +43,10 @@ public class SuggestionPromptTemplate {
     }
 
     public String getSuggestionPrompt() {
-        return systemPromptTemplate;
+        return systemSuggestionPromptTemplate;
     }
+
+    public String getRecurrenceSuggestionPrompt() { return recurrenceSuggestionPromptTemplate; }
 
     public String getUserSuggestionPrompt(String userInput) {
         return String.format("""

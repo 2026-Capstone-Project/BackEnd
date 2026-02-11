@@ -30,4 +30,12 @@ public class SuggestionController {
                 suggestionCommandService.createSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("선제적 제안 생성", null);
     }
+
+    @PostMapping("/recurrences")
+    public CustomResponse<?> createRecurrenceSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
+        return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
+    }
 }

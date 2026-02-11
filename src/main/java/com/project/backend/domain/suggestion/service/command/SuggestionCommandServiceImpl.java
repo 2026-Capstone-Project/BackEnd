@@ -1,7 +1,16 @@
 package com.project.backend.domain.suggestion.service.command;
 
+import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceException;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.factory.EndConditionFactory;
+import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
+import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
+import com.project.backend.domain.event.strategy.endcondition.EndCondition;
+import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -27,11 +36,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
 
 @Slf4j
 @Service
@@ -47,11 +62,16 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final ObjectMapper objectMapper;
     private final LlmSuggestionResponseParser llmSuggestionResponseParser;
     private final RecurrencePatternDetector detector;
+    private final RecurrenceGroupRepository recurrenceGroupRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final GeneratorFactory generatorFactory;
+    private final EndConditionFactory endConditionFactory;
 
     @Override
     public Map<SuggestionKey, List<SuggestionCandidate>> createSuggestion(Long memberId) {
 
         LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 3, 31);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusDays(1);
@@ -107,6 +127,102 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return eventMap;
     }
 
+    @Override
+    public void createRecurrenceSuggestion(Long memberId) {
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 3, 31);
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        List<RecurrenceGroup> recurrenceGroups =
+                recurrenceGroupRepository.findCandidateRecurrenceGroups(memberId, now);
+
+        List<SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail> llmSuggestionReq = new ArrayList<>();
+
+        Map<Long, RecurrenceGroup> baseRecurrenceGroupMap = new HashMap<>();
+
+        for (RecurrenceGroup rg : recurrenceGroups) {
+
+            LocalDateTime last = calculateLastVisibleOccurrence(rg);
+            if (last == null) continue; // 실제 남는 occurrence가 없음(전부 SKIP 등)
+
+            if (!last.isBefore(now.atStartOfDay().minusDays(7))) {
+                log.info("last title = {}, last = {}", rg.getEvent().getTitle(), last);
+                llmSuggestionReq.add(SuggestionConverter.toLlmRecurrenceGroupSuggestionDetail(rg, last));
+
+                baseRecurrenceGroupMap.put(rg.getId(), rg);
+            }
+        }
+        SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq =
+                SuggestionConverter.toLlmRecurrenceGroupSuggestionReq(llmSuggestionReq.size(), llmSuggestionReq);
+
+        SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes = getLlmResponse(llmReq);
+        log.info("llmRes = {}", llmRes.toString());
+
+        saveAllSuggestion(baseRecurrenceGroupMap, llmRes, member);
+
+
+    }
+
+    private LocalDateTime calculateLastVisibleOccurrence(RecurrenceGroup rg) {
+
+        Event baseEvent = rg.getEvent();
+        if (baseEvent == null) return null;
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        List<RecurrenceException> exList =
+                recurrenceExceptionRepository.findByRecurrenceGroupId(rg.getId());
+
+        Map<LocalDate, RecurrenceException> exMap = exList.stream()
+                .collect(Collectors.toMap(
+                        RecurrenceException::getExceptionDate,
+                        ex -> ex
+                ));
+
+        LocalDateTime current = baseEvent.getStartTime();
+        int count = 1;
+
+        LocalDateTime last = resolveEffectiveStart(current, exMap.get(current.toLocalDate()));
+
+        // expandEvents랑 동일한 count 흐름:
+        // base(1) 처리 후, while에서 next를 만들고 count++ 해서 2,3,... 진행
+        while (endCondition.shouldContinue(current, count, rg)) {
+
+            current = generator.next(current, rg);
+
+            if (rg.getEndDate() != null && current.toLocalDate().isAfter(rg.getEndDate())) {
+                break;
+            }
+            if (count > 20000) {
+                break; // 안전장치
+            }
+            // 모든 정지 조건을 탈출했다면 갱신
+            if (!exMap.isEmpty()) {
+                LocalDateTime effective = resolveEffectiveStart(current, exMap.get(current.toLocalDate()));
+                if (effective != null) {
+                log.info("title = {}, effective = {}", rg.getEvent().getTitle(), effective);
+                    last = effective;
+                }
+            } else {
+                last = current;
+            }
+            count++;
+        }
+
+        // 전부 스킵이면 null 가능
+        return last;
+    }
+
+    private LocalDateTime resolveEffectiveStart(LocalDateTime current, RecurrenceException ex) {
+        if (ex == null) return current;
+        if (ex.getExceptionType() == SKIP) return null;
+        if (ex.getExceptionType() == OVERRIDE) return ex.getStartTime();
+        return current;
+    }
+
     private SuggestionResDTO.LlmRes getLlmResponse(SuggestionReqDTO.LlmSuggestionReq llmReq) {
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
         log.info("llm request json = {}",llmReqJson);
@@ -115,7 +231,18 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
         log.info("llm response json = {}",llmSuggestionRes);
-        return llmSuggestionResponseParser.parse(llmSuggestionRes);
+        return llmSuggestionResponseParser.parseSuggestion(llmSuggestionRes);
+    }
+
+    private SuggestionResDTO.LlmRecurrenceGroupSuggestionRes getLlmResponse(SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq) {
+        String llmReqJson = objectMapper.writeValueAsString(llmReq);
+        log.info("llm request json = {}",llmReqJson);
+
+        String suggestionPrompt = suggestionPromptTemplate.getRecurrenceSuggestionPrompt();
+        String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
+        String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
+        log.info("llm response json = {}",llmSuggestionRes);
+        return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 
     private void saveAllSuggestion(
@@ -133,6 +260,24 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                     return eventRepository.findById(base.id())
                             .map(e -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, e))
                             .stream();
+                })
+                .toList();
+        suggestionRepository.saveAll(suggestions);
+    }
+
+    private void saveAllSuggestion(
+            Map<Long, RecurrenceGroup> baseRecurrenceGroupMap,
+            SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes,
+            Member member
+    ) {
+        List<Suggestion> suggestions = llmRes.llmRecurrenceGroupSuggestionList().stream()
+                .flatMap(llmRecurrenceGroupSuggestion -> {
+                    RecurrenceGroup base = baseRecurrenceGroupMap.get(llmRecurrenceGroupSuggestion.recurrenceGroupId());
+                    if (base == null) {
+                        log.warn("baseRG가 존재하지 않음. rgId={}", llmRecurrenceGroupSuggestion.recurrenceGroupId());
+                        return Stream.empty();
+                    }
+                    return Stream.of(SuggestionConverter.toSuggestion(base, llmRecurrenceGroupSuggestion, member));
                 })
                 .toList();
         suggestionRepository.saveAll(suggestions);

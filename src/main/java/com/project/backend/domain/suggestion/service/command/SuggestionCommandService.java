@@ -8,4 +8,6 @@ import java.util.Map;
 
 public interface SuggestionCommandService {
     Map<SuggestionKey, List<SuggestionCandidate>> createSuggestion(Long memberId);
+
+    void createRecurrenceSuggestion(Long memberId);
 }

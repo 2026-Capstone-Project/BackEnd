@@ -17,10 +17,21 @@ public class LlmSuggestionResponseParser {
 
     private final ObjectMapper objectMapper;
 
-    public SuggestionResDTO.LlmRes parse(String llmResponse) {
+    public SuggestionResDTO.LlmRes parseSuggestion(String llmResponse) {
         try {
             String jsonStr = extractJson(llmResponse);
             return objectMapper.readValue(jsonStr, SuggestionResDTO.LlmRes.class);
+
+        } catch (JsonProcessingException e) {
+            log.error("LLM 응답 파싱 실패: {}", llmResponse, e);
+            throw new NlpException(NlpErrorCode.LLM_PARSE_ERROR);
+        }
+    }
+
+    public SuggestionResDTO.LlmRecurrenceGroupSuggestionRes parseRecurrenceGroupSuggestion(String llmResponse) {
+        try {
+            String jsonStr = extractJson(llmResponse);
+            return objectMapper.readValue(jsonStr, SuggestionResDTO.LlmRecurrenceGroupSuggestionRes.class);
 
         } catch (JsonProcessingException e) {
             log.error("LLM 응답 파싱 실패: {}", llmResponse, e);

@@ -6,6 +6,7 @@ import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.suggestion.enums.StableType;
 import lombok.Builder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -30,6 +31,23 @@ public class SuggestionReqDTO {
     public record LlmSuggestionReq(
             long suggestionReqCnt,
             List<LlmSuggestionDetail> suggestionDetailList
+    ) {
+    }
+
+    @Builder
+    public record LlmRecurrenceGroupSuggestionReq(
+            long suggestionReqCnt,
+            List<LlmRecurrenceGroupSuggestionDetail> recurrenceGroupSuggestionDetails
+    ) {
+    }
+
+    @Builder
+    public record LlmRecurrenceGroupSuggestionDetail(
+            Long recurrenceGroupId,
+            String title,
+            LocalDateTime lastStartTime,
+            LocalDate endDate,
+            Integer occurrenceCount
     ) {
     }
 }
