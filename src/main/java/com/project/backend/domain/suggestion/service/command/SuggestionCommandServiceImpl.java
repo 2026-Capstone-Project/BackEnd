@@ -72,8 +72,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public Map<SuggestionKey, List<SuggestionCandidate>> createSuggestion(Long memberId) {
 
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 1, 31);
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 1, 31);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusDays(1);
@@ -151,8 +151,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
     @Override
     public void createRecurrenceSuggestion(Long memberId) {
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 2, 16);
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 2, 16);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
