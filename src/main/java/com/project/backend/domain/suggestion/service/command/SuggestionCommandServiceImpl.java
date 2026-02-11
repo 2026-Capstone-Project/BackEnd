@@ -1,6 +1,5 @@
 package com.project.backend.domain.suggestion.service.command;
 
-import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
@@ -29,7 +28,6 @@ import com.project.backend.domain.suggestion.llm.LlmSuggestionResponseParser;
 import com.project.backend.domain.suggestion.llm.SuggestionPromptTemplate;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.util.SuggestionAnchorUtil;
-import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionKey;
 import jakarta.transaction.Transactional;
@@ -38,12 +36,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,7 +66,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final EndConditionFactory endConditionFactory;
 
     @Override
-    public Map<SuggestionKey, List<SuggestionCandidate>> createSuggestion(Long memberId) {
+    public void createSuggestion(Long memberId) {
 
         LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
 //        LocalDate now = LocalDate.of(2026, 1, 31);
@@ -145,8 +141,6 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             log.info("llmRes = {}", llmRes.toString());
             saveAllSuggestion(baseCandidateMap, llmRes, member);
         }
-
-        return eventMap;
     }
 
     @Override

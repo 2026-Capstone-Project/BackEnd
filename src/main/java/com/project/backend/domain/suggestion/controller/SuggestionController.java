@@ -25,9 +25,7 @@ public class SuggestionController {
     public CustomResponse<Map<SuggestionKey, List<SuggestionCandidate>>> createSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        // TODO : 테스트용 코드
-        Map<SuggestionKey, List<SuggestionCandidate>> resDTO =
-                suggestionCommandService.createSuggestion(customUserDetails.getId());
+        suggestionCommandService.createSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("선제적 제안 생성", null);
     }
 
