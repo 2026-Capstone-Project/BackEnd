@@ -9,10 +9,7 @@ import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +45,15 @@ public class SuggestionController {
         SuggestionResDTO.SuggestionListRes resDTO =
                 suggestionQueryService.getSuggestions(customUserDetails.getId());
         return CustomResponse.onSuccess("선제적 제안 목록 조회 성공", resDTO);
+    }
+
+    @PostMapping("/{suggestionId}")
+    public CustomResponse<String> acceptSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable("suggestionId") Long suggestionId
+    ) {
+        suggestionCommandService.acceptSuggestion(customUserDetails.getId(), suggestionId);
+        return CustomResponse.onSuccess("선제적 제안 수락", null);
     }
 
 }

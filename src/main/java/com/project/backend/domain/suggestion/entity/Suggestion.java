@@ -97,4 +97,11 @@ public class Suggestion extends BaseEntity {
             @AttributeOverride(name = "dayOfMonthSet", column = @Column(name = "secondary_day_of_month_set"))
     })
     private SuggestionPattern secondaryPattern;
+
+    // Update 메서드
+
+    public void accept() {
+        this.status = Status.ACCEPTED;
+        this.active = false;
+    }
 }

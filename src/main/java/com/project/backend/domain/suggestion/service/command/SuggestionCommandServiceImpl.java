@@ -24,6 +24,9 @@ import com.project.backend.domain.suggestion.detector.vo.RecurrencePreprocessRes
 import com.project.backend.domain.suggestion.dto.request.SuggestionReqDTO;
 import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import com.project.backend.domain.suggestion.entity.Suggestion;
+import com.project.backend.domain.suggestion.enums.Status;
+import com.project.backend.domain.suggestion.exception.SuggestionErrorCode;
+import com.project.backend.domain.suggestion.exception.SuggestionException;
 import com.project.backend.domain.suggestion.llm.LlmSuggestionResponseParser;
 import com.project.backend.domain.suggestion.llm.SuggestionPromptTemplate;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
@@ -180,6 +183,18 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
             saveAllSuggestion(baseRecurrenceGroupMap, llmRes, member);
         }
+    }
+
+    // TODO : 락 구현하기?
+    @Override
+    public void acceptSuggestion(Long memberId, Long suggestionId) {
+
+        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
+                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+
+        suggestion.accept();
+
+        // 생성 로직 구현하기
     }
 
     private LocalDateTime calculateLastVisibleOccurrence(RecurrenceGroup rg) {

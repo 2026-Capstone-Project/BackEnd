@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
 
@@ -15,4 +16,7 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     void deleteAllByMemberId(@Param("memberId") Long memberId);
 
     List<Suggestion> findByMemberIdAndActiveIsTrueOrderByIdDesc(Long memberId);
+
+
+    Optional<Suggestion> findByIdAndActiveIsTrue(Long suggestionId);
 }
