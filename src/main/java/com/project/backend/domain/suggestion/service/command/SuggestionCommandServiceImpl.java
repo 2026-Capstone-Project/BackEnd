@@ -28,6 +28,8 @@ import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.llm.LlmSuggestionResponseParser;
 import com.project.backend.domain.suggestion.llm.SuggestionPromptTemplate;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.suggestion.util.SuggestionAnchorUtil;
+import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionKey;
 import jakarta.transaction.Transactional;
@@ -70,8 +72,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public Map<SuggestionKey, List<SuggestionCandidate>> createSuggestion(Long memberId) {
 
-        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-//        LocalDate now = LocalDate.of(2026, 3, 31);
+//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate now = LocalDate.of(2026, 1, 31);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusDays(1);
@@ -104,6 +106,25 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             DetectionResult dr = drOpt.get();
 
             SuggestionReqDTO.LlmSuggestionDetail detail = LlmSuggestionConverter.toLlmSuggestionDetail(baseCandidate, dr);
+
+            LocalDate anchorDate = SuggestionAnchorUtil.computeAnchorDate(
+                    baseCandidate.start(),
+                    detail.patternType(),
+                    detail.primaryPattern()
+            );
+
+            log.info("anchorDate = {}", anchorDate);
+            // 제안으로 생성될 객체의 시작 시간으로부터 7일 전 (dayDiff가 7일 미만인 경우 dayDiff가 leadDays)
+            Integer leadDays = SuggestionAnchorUtil.computeLeadDays(detail.patternType(), detail.primaryPattern());
+            log.info("leadDay = {}", leadDays);
+            if (anchorDate == null || leadDays == null) {
+                continue;
+            }
+
+            if (!anchorDate.equals(now.plusDays(leadDays))) {
+                continue;
+            }
+
             llmSuggestionReq.add(detail);
 
             baseCandidateMap.put(baseCandidate.id(),
@@ -113,24 +134,25 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                             detail.patternType()
                     )
             );
-
             suggestionReqCnt++;
         }
 
         SuggestionReqDTO.LlmSuggestionReq llmReq =
-                SuggestionConverter.toLlmSuggestionReq(suggestionReqCnt, llmSuggestionReq);
+                SuggestionConverter.toLlmSuggestionReq(llmSuggestionReq.size(), llmSuggestionReq);
         // llm 결과
-        SuggestionResDTO.LlmRes llmRes = getLlmResponse(llmReq);
-        log.info("llmRes = {}", llmRes.toString());
-        saveAllSuggestion(baseCandidateMap, llmRes, member);
+        if (!llmSuggestionReq.isEmpty()) {
+            SuggestionResDTO.LlmRes llmRes = getLlmResponse(llmReq);
+            log.info("llmRes = {}", llmRes.toString());
+            saveAllSuggestion(baseCandidateMap, llmRes, member);
+        }
 
         return eventMap;
     }
 
     @Override
     public void createRecurrenceSuggestion(Long memberId) {
-        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-//        LocalDate now = LocalDate.of(2026, 3, 31);
+//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate now = LocalDate.of(2026, 2, 16);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -147,7 +169,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             LocalDateTime last = calculateLastVisibleOccurrence(rg);
             if (last == null) continue; // 실제 남는 occurrence가 없음(전부 SKIP 등)
 
-            if (!last.isBefore(now.atStartOfDay().minusDays(7))) {
+            // 마지막 반복이 시작되는 날로부터 7일전
+            if (last.toLocalDate().isEqual(now.plusDays(7))) {
                 log.info("last title = {}, last = {}", rg.getEvent().getTitle(), last);
                 llmSuggestionReq.add(SuggestionConverter.toLlmRecurrenceGroupSuggestionDetail(rg, last));
 
@@ -157,12 +180,12 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq =
                 SuggestionConverter.toLlmRecurrenceGroupSuggestionReq(llmSuggestionReq.size(), llmSuggestionReq);
 
-        SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes = getLlmResponse(llmReq);
-        log.info("llmRes = {}", llmRes.toString());
+        if (!llmSuggestionReq.isEmpty()) {
+            SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes = getLlmResponse(llmReq);
+            log.info("llmRes = {}", llmRes.toString());
 
-        saveAllSuggestion(baseRecurrenceGroupMap, llmRes, member);
-
-
+            saveAllSuggestion(baseRecurrenceGroupMap, llmRes, member);
+        }
     }
 
     private LocalDateTime calculateLastVisibleOccurrence(RecurrenceGroup rg) {

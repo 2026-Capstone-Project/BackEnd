@@ -9,6 +9,8 @@ import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.StableType;
 import com.project.backend.domain.suggestion.enums.Status;
+import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
+import com.project.backend.domain.suggestion.util.TargetKeyHashUtil;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -37,6 +39,7 @@ public class SuggestionConverter {
             Member member,
             Event previousEvent
     ) {
+        final String targetKey = SuggestionTargetKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation());
         return Suggestion.builder()
                 .primaryPattern(baseCandidate.primary())
                 .secondaryPattern(baseCandidate.secondary())
@@ -44,6 +47,8 @@ public class SuggestionConverter {
                 .secondaryContent(llmSuggestion.secondaryContent())
                 .category(Category.EVENT)
                 .status(Status.PRIMARY)
+                .targetKey(targetKey)
+                .targetKeyHash(TargetKeyHashUtil.sha256(targetKey))
                 .member(member)
                 .previousEvent(previousEvent)
                 .build();
@@ -55,8 +60,11 @@ public class SuggestionConverter {
             SuggestionResDTO.LlmRecurrenceGroupSuggestion llmRecurrenceGroupSuggestion,
             Member member
     ) {
+        final String targetKey = SuggestionTargetKeyUtil.rgKey(baseRG.getId());
         return Suggestion.builder()
                 .primaryContent(llmRecurrenceGroupSuggestion.content())
+                .targetKey(targetKey)
+                .targetKeyHash(TargetKeyHashUtil.sha256(targetKey))
                 .recurrenceGroup(baseRG)
                 .member(member)
                 .category(Category.EVENT)
