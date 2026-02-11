@@ -197,6 +197,18 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         // 생성 로직 구현하기
     }
 
+    // TODO : 락 구현하기?
+    @Override
+    public void rejectSuggestion(Long memberId, Long suggestionId) {
+
+        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
+                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+
+        suggestion.reject();
+
+        // 생성 로직 구현하기
+    }
+
     private LocalDateTime calculateLastVisibleOccurrence(RecurrenceGroup rg) {
 
         Event baseEvent = rg.getEvent();

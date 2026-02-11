@@ -104,4 +104,15 @@ public class Suggestion extends BaseEntity {
         this.status = Status.ACCEPTED;
         this.active = false;
     }
+
+    public void reject() {
+        if (this.status.equals(Status.PRIMARY) && this.secondaryContent != null) {
+            this.status = Status.SECONDARY;
+        }
+        else {
+            this.status = Status.REJECTED;
+            this.active = false;
+        }
+
+    }
 }

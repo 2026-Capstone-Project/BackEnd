@@ -47,13 +47,22 @@ public class SuggestionController {
         return CustomResponse.onSuccess("선제적 제안 목록 조회 성공", resDTO);
     }
 
-    @PostMapping("/{suggestionId}")
+    @PostMapping("/{suggestionId}/acceptance")
     public CustomResponse<String> acceptSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable("suggestionId") Long suggestionId
     ) {
         suggestionCommandService.acceptSuggestion(customUserDetails.getId(), suggestionId);
         return CustomResponse.onSuccess("선제적 제안 수락", null);
+    }
+
+    @PostMapping("{suggestionId}/rejection")
+    public CustomResponse<String> rejectSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable("suggestionId") Long suggestionId
+    ) {
+        suggestionCommandService.rejectSuggestion(customUserDetails.getId(), suggestionId);
+        return CustomResponse.onSuccess("선제적 제안 거절", null);
     }
 
 }
