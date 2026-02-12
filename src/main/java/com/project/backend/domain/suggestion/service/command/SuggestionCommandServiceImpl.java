@@ -106,6 +106,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
     @Override
     public void createTodoSuggestion(Long memberId) {
+
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
         // TODO : todo일때 날짜인데, event는 시간까지 있어서 플러스 데이를 한 것인데, 이거 통일하기
         LocalDate now = LocalDate.of(2026, 2, 5);
@@ -128,6 +129,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
     @Override
     public void createRecurrenceSuggestion(Long memberId) {
+
         LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
 //        LocalDate now = LocalDate.of(2026, 2, 16);
 
@@ -147,20 +149,21 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
     @Override
     public void createTodoRecurrenceSuggestion(Long memberId) {
+
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate now = LocalDate.of(2026, 2, 16);
 
         List<TodoRecurrenceGroup> todoRecurrenceGroups =
                 todoRecurrenceGroupRepository.findCandidateTodoRecurrenceGroups(memberId, now);
 
-        Map<Long, RecurrenceSuggestionCandidate> rgMap = todoRecurrenceGroups.stream()
+        Map<Long, RecurrenceSuggestionCandidate> trgMap = todoRecurrenceGroups.stream()
                 .map(RecurrenceSuggestionCandidate::from)
                 .collect(Collectors.toMap(
                         RecurrenceSuggestionCandidate::id,
                         candidate -> candidate
                 ));
 
-        List<Suggestion> suggestions = generateRecurrenceSuggestion(rgMap, memberId, now);
+        List<Suggestion> suggestions = generateRecurrenceSuggestion(trgMap, memberId, now);
         saveAllSuggestion(suggestions, memberId);
     }
 
@@ -188,12 +191,15 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         // 생성 로직 구현하기
     }
 
-    private List<Suggestion> generateSuggestion(Map<SuggestionKey, List<SuggestionCandidate>> allCandidateMap, Long memberId, LocalDate now) {
-
+    private List<Suggestion> generateSuggestion(
+            Map<SuggestionKey, List<SuggestionCandidate>> allCandidateMap,
+            Long memberId,
+            LocalDate now
+    ) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         // 제안 객체 생성을 위한 정보 저장 맵
-        Map<Long, SuggestionCandidate> baseCandidateMap = new HashMap<>();
+        Map<Long, SuggestionCandidate> baseCandidateMap = new LinkedHashMap<>();
         // LLM 응답 정보 저장 리스트
         List<SuggestionReqDTO.LlmSuggestionDetail> llmSuggestionReq = new ArrayList<>();
         // 같은 규칙으로 묶인 객체 순회
@@ -277,31 +283,38 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     ) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        List<SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail> llmSuggestionReq = new ArrayList<>();
-
+        // 제안 객체 생성을 위한 정보 저장 맵
         Map<Long, RecurrenceSuggestionCandidate> baseRecurrenceGroupMap = new HashMap<>();
+        // LLM 응답 정보 저장 리스트
+        List<SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail> llmSuggestionReq = new ArrayList<>();
         // 같은 규칙으로 묶인 객체 순회
         for (Map.Entry<Long, RecurrenceSuggestionCandidate> entry : allCandidateMap.entrySet()) {
             RecurrenceSuggestionCandidate candidate = entry.getValue();
-
+            // 해당 반복 객체에서 발생할 수 있는 가장 마지막 날 반환
             LocalDateTime last = calcLastStart(candidate);
-            if (last == null) continue; // 실제 남는 occurrence가 없음(전부 SKIP 등)
-
-            // 마지막 반복이 시작되는 날로부터 7일전
-            if (last.toLocalDate().isEqual(now.plusDays(7))) {
-                llmSuggestionReq.add(SuggestionConverter.toLlmRecurrenceGroupSuggestionDetail(candidate, last));
-
-                baseRecurrenceGroupMap.put(candidate.id(), candidate);
+            // 마지막 날이 안나옴 -> 전부 SKIP 등
+            if (last == null) {
+                continue;
             }
+            // 마지막 반복이 시작되는 날로부터 7일전이 아니면 생성할 시점이 아님
+            if (!last.toLocalDate().isEqual(now.plusDays(7))) {
+                continue;
+            }
+            // LLM 요청 바디에 추가
+            llmSuggestionReq.add(SuggestionConverter.toLlmRecurrenceGroupSuggestionDetail(candidate, last));
+            // 제안 객체 생성을 위한 정보 추가
+            baseRecurrenceGroupMap.put(candidate.id(), candidate);
         }
-
+        // LLM 요청 바디를 List 형식의 DTO로 변환
         SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq =
                 SuggestionConverter.toLlmRecurrenceGroupSuggestionReq(llmSuggestionReq.size(), llmSuggestionReq);
-
+        // 요청 바디가 비어있다면 빈 리스트 반환
+        if (llmSuggestionReq.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // LLM 응답 바디를 DTO로 변환
         SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes = getLlmResponse(llmReq);
-        log.info("llmRes = {}", llmRes.toString());
-
+        // LLM 응답 바디와 제안 객체 생성을 위해 저장한 baseCandidate를 활용하여 List<Suggestion> 타입으로 반환
         return llmRes.llmRecurrenceGroupSuggestionList().stream()
                 .flatMap(llmRecurrenceGroupSuggestion -> {
                     RecurrenceSuggestionCandidate base = baseRecurrenceGroupMap.get(llmRecurrenceGroupSuggestion.id());
@@ -323,32 +336,32 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     }
 
     private LocalDateTime calcLastStart(RecurrenceSuggestionCandidate candidate) {
-
+        // 생성기, 종료 조건 초기화
         Generator generator = generatorFactory.getGenerator(candidate);
         EndCondition endCondition = endConditionFactory.getEndCondition(candidate);
 
         LocalDateTime current = candidate.startDate();
-
+        // 반복 예외 가져오기
         Map<LocalDate, RecurrenceSuggestionException> exMap = getExMap(candidate);
-
-        int count = 1;
-
+        // 맨 처음이 반복 예외인 경우 SKIP, OVERRIDE 처리
         LocalDateTime last = resolveExceptionStart(current, exMap.get(current.toLocalDate()));
 
-        // expandEvents랑 동일한 count 흐름:
-        // base(1) 처리 후, while에서 next를 만들고 count++ 해서 2,3,... 진행
+        int count = 1;
+        // 반복 조건에 따라 반복
         while (endCondition.shouldContinue(current, count, candidate)) {
-
+            // 다음 시간
             current = generator.next(current, candidate);
-
+            // 반복 객체의 종료 시간을 넘어선 경우
             if (candidate.getEndDate() != null && current.toLocalDate().isAfter(candidate.getEndDate())) {
                 break;
             }
+            // 무한 반복 방지
             if (count > 20000) {
-                break; // 안전장치
+                break;
             }
-            // 모든 정지 조건을 탈출했다면 갱신
+            // 반복 예외가 있다면
             if (!exMap.isEmpty()) {
+                // SKIP, OVERRIDE 적용
                 LocalDateTime start = resolveExceptionStart(current, exMap.get(current.toLocalDate()));
                 // SKIP or Exception 없음
                 if (start != null) {
@@ -365,7 +378,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return last;
     }
 
+    // candidate의 카테고리에 따라 알맞은 반복 예외를 반환
     private Map<LocalDate, RecurrenceSuggestionException> getExMap(RecurrenceSuggestionCandidate candidate) {
+
         return switch (candidate.category()) {
             case EVENT -> {
                 List<RecurrenceException> exList =
@@ -390,7 +405,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         };
     }
 
+    // 반복 예외 처리기
     private LocalDateTime resolveExceptionStart(LocalDateTime current, RecurrenceSuggestionException ex) {
+
         if (ex == null) return current;
         if (ex.exceptionType() == SKIP) return null;
         if (ex.exceptionType() == OVERRIDE) return ex.startTime();
@@ -398,6 +415,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     }
 
     private SuggestionResDTO.LlmRes getLlmResponse(SuggestionReqDTO.LlmSuggestionReq llmReq) {
+
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
         log.info("llm request json = {}",llmReqJson);
 
@@ -409,6 +427,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     }
 
     private SuggestionResDTO.LlmRecurrenceGroupSuggestionRes getLlmResponse(SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq) {
+
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
         log.info("llm request json = {}",llmReqJson);
 
@@ -419,7 +438,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 
+    // 중복된 제안을 해시를 통해 비교 후, 걸러낸 List<Suggestion>을 한 번에 저장
     private void saveAllSuggestion(List<Suggestion> suggestions, Long memberId) {
+
         List<byte[]> hashes = suggestions.stream()
                 .map(Suggestion::getTargetKeyHash)
                 .toList();
@@ -442,7 +463,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
     private Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndLocation(List<Event> events) {
 
-        Map<SuggestionKey, List<SuggestionCandidate>> eventMap = new HashMap<>();
+        Map<SuggestionKey, List<SuggestionCandidate>> eventMap = new LinkedHashMap<>();
 
         for (Event event : events) {
             // title + location 조합의 키
@@ -452,13 +473,12 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                     .computeIfAbsent(key, k -> new ArrayList<>())
                     .add(SuggestionCandidate.from(event));
         }
-        eventMap.values()
-                .forEach(list -> list.sort(Comparator.comparing(SuggestionCandidate::start)));
         return eventMap;
     }
 
     private Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndMemo(List<Todo> todos) {
-        Map<SuggestionKey, List<SuggestionCandidate>> todoMap = new HashMap<>();
+
+        Map<SuggestionKey, List<SuggestionCandidate>> todoMap = new LinkedHashMap<>();
 
         for (Todo todo : todos) {
             // title + memo 조합의 키
@@ -468,8 +488,6 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                     .computeIfAbsent(key, k -> new ArrayList<>())
                     .add(SuggestionCandidate.from(todo));
         }
-        todoMap.values()
-                .forEach(list -> list.sort(Comparator.comparing(SuggestionCandidate::start)));
         return todoMap;
     }
 
