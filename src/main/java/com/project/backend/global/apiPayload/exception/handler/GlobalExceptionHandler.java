@@ -207,7 +207,7 @@ public class GlobalExceptionHandler {
     // 그 외의 정의되지 않은 모든 예외 처리
     @ExceptionHandler({Exception.class})
     public ResponseEntity<CustomResponse<String>> handleAllException(Exception ex, HttpServletRequest request) {
-        log.error("[WARNING] Internal Server Error : {} ", ex.getMessage());
+        log.error("[WARNING] Internal Server Error : {} ", ex.getMessage(), ex);
         BaseErrorCode errorCode = GeneralErrorCode.INTERNAL_SERVER_ERROR_500;
         CustomResponse<String> errorResponse = CustomResponse.onFailure(
                 errorCode.getCode(),
