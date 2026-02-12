@@ -5,6 +5,8 @@ public interface SuggestionCommandService {
 
     void createRecurrenceSuggestion(Long memberId);
 
+    void createTodoSuggestion(Long memberId);
+
     void acceptSuggestion(Long memberId, Long suggestionId);
 
     void rejectSuggestion(Long memberId, Long suggestionId);

@@ -11,8 +11,12 @@ public final class SuggestionTargetKeyUtil {
     }
 
     // 단발성: title+location
-    public static String eventKey(String title, String location) {
-        return "E|" + norm(title) + "|" + norm(location);
+    public static String eventKey(String title, String identifier) {
+        return "E|" + norm(title) + "|" + norm(identifier);
+    }
+
+    public static String todoKey(String title, String identifier) {
+        return "T|" + norm(title) + "|" + norm(identifier);
     }
 
     // 반복그룹: rgId

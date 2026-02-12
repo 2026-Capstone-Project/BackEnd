@@ -22,7 +22,7 @@ public class SuggestionController {
     private final SuggestionCommandService suggestionCommandService;
     private final SuggestionQueryService suggestionQueryService;
 
-    @PostMapping()
+    @PostMapping("/events")
     public CustomResponse<Map<SuggestionKey, List<SuggestionCandidate>>> createSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
@@ -36,6 +36,14 @@ public class SuggestionController {
     ) {
         suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
+    }
+
+    @PostMapping("/todo")
+    public CustomResponse<String> createTodoSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        suggestionCommandService.createTodoSuggestion(customUserDetails.getId());
+        return CustomResponse.onSuccess("투두 선제적 제안 생성 완료", null);
     }
 
     @GetMapping()

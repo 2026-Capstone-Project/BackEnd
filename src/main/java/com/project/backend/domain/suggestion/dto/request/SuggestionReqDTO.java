@@ -14,7 +14,7 @@ public class SuggestionReqDTO {
 
     @Builder
     public record LlmSuggestionDetail(
-            Long eventId,
+            Long id,
             String title,
             LocalDateTime start,
             Category category,

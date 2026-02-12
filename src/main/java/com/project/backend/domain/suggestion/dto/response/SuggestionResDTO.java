@@ -13,7 +13,7 @@ public class SuggestionResDTO {
     ) {
     }
     public record LlmSuggestion(
-            Long eventId,
+            Long id,
             String primaryContent,
             String secondaryContent
     ) {

@@ -12,6 +12,7 @@ import com.project.backend.domain.suggestion.enums.Status;
 import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
 import com.project.backend.domain.suggestion.util.TargetKeyHashUtil;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
+import com.project.backend.domain.todo.entity.Todo;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -37,20 +38,29 @@ public class SuggestionConverter {
             SuggestionCandidate baseCandidate,
             SuggestionResDTO.LlmSuggestion llmSuggestion,
             Member member,
-            Event previousEvent
+            Event previousEvent,
+            Todo previousTodo
     ) {
-        final String targetKey = SuggestionTargetKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation());
+        String targetKey = null;
+        if (previousEvent != null) {
+            targetKey = SuggestionTargetKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation());
+        }
+        if (previousTodo != null) {
+            targetKey = SuggestionTargetKeyUtil.todoKey(previousTodo.getTitle(), previousTodo.getMemo());
+        }
+
         return Suggestion.builder()
                 .primaryPattern(baseCandidate.primary())
                 .secondaryPattern(baseCandidate.secondary())
                 .primaryContent(llmSuggestion.primaryContent())
                 .secondaryContent(llmSuggestion.secondaryContent())
-                .category(Category.EVENT)
+                .category(baseCandidate.category())
                 .status(Status.PRIMARY)
                 .targetKey(targetKey)
                 .targetKeyHash(TargetKeyHashUtil.sha256(targetKey))
                 .member(member)
                 .previousEvent(previousEvent)
+                .previousTodo(previousTodo)
                 .build();
     }
 

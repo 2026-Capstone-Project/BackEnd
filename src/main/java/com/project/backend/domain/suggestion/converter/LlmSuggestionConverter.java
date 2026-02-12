@@ -30,10 +30,10 @@ public class LlmSuggestionConverter {
             DetectionResult dr
     ) {
         return SuggestionReqDTO.LlmSuggestionDetail.builder()
-                .eventId(baseCandidate.id())
+                .id(baseCandidate.id())
                 .title(baseCandidate.title())
                 .start(baseCandidate.start())
-                .category(Category.EVENT)
+                .category(baseCandidate.category())
                 .patternType(dr.patternType())
                 .stableType(dr.stableType());
     }

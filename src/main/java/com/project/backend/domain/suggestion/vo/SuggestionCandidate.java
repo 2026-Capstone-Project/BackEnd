@@ -3,58 +3,89 @@ package com.project.backend.domain.suggestion.vo;
 import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.enums.EventColor;
+import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.enums.Priority;
 
 import java.time.LocalDateTime;
 
 public record SuggestionCandidate(
+        // 공통
         Long id,
         String title,
-        String location,
-        String content,
+        String content, // TODO : todo 에서는 메모
         LocalDateTime start,
-        LocalDateTime end,
-        Integer durationMinutes,
         Boolean isAllDay,
         SuggestionPattern primary,
         SuggestionPattern secondary,
-        RecurrencePatternType patternType,
-        EventColor color,
-        RecurrenceGroupResDTO.DetailRes recurrenceGroup
+        Category category,
+
+        // Event
+        EventInfo eventInfo,
+
+        // Todo
+        TodoInfo todoInfo
 ) {
     public static SuggestionCandidate from(Event event) {
         return new SuggestionCandidate(
                 event.getId(),
-                event.getLocation(),
                 event.getTitle(),
                 event.getContent(),
                 event.getStartTime(),
-                event.getEndTime(),
-                event.getDurationMinutes(),
                 event.getIsAllDay(),
                 null,
                 null,
-                null,
-                event.getColor(),
+                Category.EVENT,
+                new EventInfo(
+                        event.getEndTime(),
+                        event.getDurationMinutes(),
+                        event.getLocation(),
+                        event.getColor()),
                 null
         );
     }
 
-    public SuggestionCandidate withPattern(SuggestionPattern primary, SuggestionPattern secondary, RecurrencePatternType patternType) {
+    public static SuggestionCandidate from(Todo todo) {
+        return new SuggestionCandidate(
+                todo.getId(),
+                todo.getTitle(),
+                todo.getMemo(),
+                todo.getStartDate().atTime(todo.getDueTime()),
+                todo.getIsAllDay(),
+                null,
+                null,
+                Category.TODO,
+                null,
+                new TodoInfo(todo.getPriority())
+        );
+    }
+
+    public SuggestionCandidate withPattern(SuggestionPattern primary, SuggestionPattern secondary) {
         return new SuggestionCandidate(
                 this.id,
                 this.title,
-                this.location,
                 this.content,
                 this.start,
-                this.end,
-                this.durationMinutes,
                 this.isAllDay,
                 primary,
                 secondary,
-                patternType,
-                this.color,
-                this.recurrenceGroup
+                this.category,
+                this.eventInfo,
+                this.todoInfo
         );
+    }
+
+    public record EventInfo(
+            LocalDateTime end,
+            Integer durationMinutes,
+            String location,
+            EventColor color
+    ) {
+    }
+
+    public record TodoInfo(
+            Priority priority
+    ) {
     }
 }

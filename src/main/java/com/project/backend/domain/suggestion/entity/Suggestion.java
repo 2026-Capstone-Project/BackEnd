@@ -3,6 +3,7 @@ package com.project.backend.domain.suggestion.entity;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
+import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.enums.Category;
@@ -69,9 +70,13 @@ public class Suggestion extends BaseEntity {
     private Member member;
 
     // 시간이 지나면 같은 이전 이벤트/그룹으로 여러 Suggestion 히스토리가 생길 수 있음 -> 나중에 개발을 위해
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "previous_event")
     private Event previousEvent;
+
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "previous_todo")
+    private Todo previousTodo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recurrence_group")

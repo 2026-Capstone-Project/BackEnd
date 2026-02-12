@@ -33,6 +33,8 @@ import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.util.SuggestionAnchorUtil;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionKey;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.repository.TodoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,12 +70,13 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
+    private final TodoRepository todoRepository;
 
     @Override
     public void createSuggestion(Long memberId) {
 
-        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-//        LocalDate now = LocalDate.of(2026, 1, 31);
+//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate now = LocalDate.of(2026, 1, 31);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusDays(1);
@@ -84,8 +88,6 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         List<Event> events = eventRepository.findByMemberIdAndInRangeAndRecurrenceGroupIsNull(memberId, from, to);
         // 최근 1년간의 Event 객체를 (이름 + 장소)로 그룹핑
         Map<SuggestionKey, List<SuggestionCandidate>> eventMap = groupByTitleAndLocation(events);
-        // 제안 요청 개수
-        int suggestionReqCnt = 0;
         // llm res 매핑용
         Map<Long, SuggestionCandidate> baseCandidateMap = new HashMap<>();
 
@@ -129,11 +131,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             baseCandidateMap.put(baseCandidate.id(),
                     baseCandidate.withPattern(
                             detail.primaryPattern(),
-                            detail.secondaryPattern(),
-                            detail.patternType()
+                            detail.secondaryPattern()
                     )
             );
-            suggestionReqCnt++;
         }
 
         SuggestionReqDTO.LlmSuggestionReq llmReq =
@@ -144,6 +144,80 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             log.info("llmRes = {}", llmRes.toString());
             saveAllSuggestion(baseCandidateMap, llmRes, member);
         }
+    }
+
+    @Override
+    public void createTodoSuggestion(Long memberId) {
+//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        // TODO : todo일때 날짜인데, event는 시간까지 있어서 플러스 데이를 한 것인데, 이거 통일하기
+        LocalDate now = LocalDate.of(2026, 2, 5);
+        LocalDate from = now.minusYears(1);
+        LocalDate to = now.plusDays(0);
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        // 최근 1년 간의 Event 객체
+        List<Todo> todos = todoRepository.findByMemberIdAndInRangeAndRecurrenceGroupIsNull(memberId, from, to);
+
+        // 최근 1년간의 Todo 객체를 (이름 + 메모)로 그룹핑
+        Map<SuggestionKey, List<SuggestionCandidate>> todoMap = groupByTitleAndMemo(todos);
+
+        Map<Long, SuggestionCandidate> baseCandidateMap = new HashMap<>();
+
+        List<SuggestionReqDTO.LlmSuggestionDetail> llmSuggestionReq = new ArrayList<>();
+
+        for (Map.Entry<SuggestionKey, List<SuggestionCandidate>> entry : todoMap.entrySet()) {
+            List<SuggestionCandidate> candidateList = entry.getValue();
+            SuggestionCandidate baseCandidate = candidateList.getLast();
+
+            RecurrencePreprocessResult result = RecurrencePreprocessor.preprocess(candidateList);
+
+            Optional<DetectionResult> drOpt = detector.detect(result);
+
+            if (drOpt.isEmpty()) {
+                continue;
+            }
+            DetectionResult dr = drOpt.get();
+
+            SuggestionReqDTO.LlmSuggestionDetail detail = LlmSuggestionConverter.toLlmSuggestionDetail(baseCandidate, dr);
+
+            LocalDate anchorDate = SuggestionAnchorUtil.computeAnchorDate(
+                    baseCandidate.start(),
+                    detail.patternType(),
+                    detail.primaryPattern()
+            );
+
+            log.info("anchorDate = {}", anchorDate);
+            // 제안으로 생성될 객체의 시작 시간으로부터 7일 전 (dayDiff가 7일 미만인 경우 dayDiff가 leadDays)
+            Integer leadDays = SuggestionAnchorUtil.computeLeadDays(detail.patternType(), detail.primaryPattern());
+            log.info("leadDay = {}", leadDays);
+            if (anchorDate == null || leadDays == null) {
+                continue;
+            }
+
+            if (!anchorDate.equals(now.plusDays(leadDays))) {
+                continue;
+            }
+
+            llmSuggestionReq.add(detail);
+
+            baseCandidateMap.put(baseCandidate.id(),
+                    baseCandidate.withPattern(
+                            detail.primaryPattern(),
+                            detail.secondaryPattern()
+                    )
+            );
+        }
+        SuggestionReqDTO.LlmSuggestionReq llmReq =
+                SuggestionConverter.toLlmSuggestionReq(llmSuggestionReq.size(), llmSuggestionReq);
+        // llm 결과
+        if (!llmSuggestionReq.isEmpty()) {
+            SuggestionResDTO.LlmRes llmRes = getLlmResponse(llmReq);
+            log.info("llmRes = {}", llmRes.toString());
+            saveAllSuggestion(baseCandidateMap, llmRes, member);
+        }
+
     }
 
     @Override
@@ -296,14 +370,20 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     ) {
         List<Suggestion> suggestions = llmRes.llmSuggestionList().stream()
                 .flatMap(llmSuggestion -> {
-                    SuggestionCandidate base = baseCandidateMap.get(llmSuggestion.eventId());
+                    SuggestionCandidate base = baseCandidateMap.get(llmSuggestion.id());
                     if (base == null) {
-                        log.warn("baseCandidate가 존재하지 않음. eventId={}", llmSuggestion.eventId());
+                        log.warn("baseCandidate가 존재하지 않음. event/todoId={}", llmSuggestion.id());
                         return Stream.empty();
                     }
-                    return eventRepository.findById(base.id())
-                            .map(e -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, e))
-                            .stream();
+                    return switch (base.category()) {
+                        case EVENT -> eventRepository.findById(base.id())
+                                .map(e -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, e, null))
+                                .stream();
+
+                        case TODO -> todoRepository.findById(base.id())
+                                .map(t -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, null, t))
+                                .stream();
+                    };
                 })
                 .toList();
         suggestionRepository.saveAll(suggestions);
@@ -342,5 +422,21 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         eventMap.values()
                 .forEach(list -> list.sort(Comparator.comparing(SuggestionCandidate::start)));
         return eventMap;
+    }
+
+    private Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndMemo(List<Todo> todos) {
+        Map<SuggestionKey, List<SuggestionCandidate>> todoMap = new HashMap<>();
+
+        for (Todo todo : todos) {
+            // title + memo 조합의 키
+            SuggestionKey key = SuggestionKey.from(todo);
+            // 추가
+            todoMap
+                    .computeIfAbsent(key, k -> new ArrayList<>())
+                    .add(SuggestionCandidate.from(todo));
+        }
+        todoMap.values()
+                .forEach(list -> list.sort(Comparator.comparing(SuggestionCandidate::start)));
+        return todoMap;
     }
 }

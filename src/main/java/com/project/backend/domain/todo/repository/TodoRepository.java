@@ -37,4 +37,19 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Modifying
     @Query("DELETE FROM Todo t WHERE t.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
+
+    /**
+     * 회원의 반복하지 않는 할 일 조회
+     */
+    @Query("SELECT t " +
+            "FROM Todo t " +
+            "WHERE t.member.id = :memberId " +
+            "AND t.startDate >= :from " +
+            "AND t.startDate <= :to " +
+            "AND t.todoRecurrenceGroup IS NULL " +
+            "ORDER BY t.startDate")
+    List<Todo> findByMemberIdAndInRangeAndRecurrenceGroupIsNull(
+            @Param("memberId") Long memberId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }
