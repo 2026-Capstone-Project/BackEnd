@@ -33,6 +33,9 @@ public enum AuthErrorCode implements BaseErrorCode {
 
     // 공통 - OAuth 통합
     UNSUPPORTED_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH402", "지원하지 않는 OAuth Provider입니다."),
+
+    // 재가입 제한
+    REJOIN_RESTRICTED(HttpStatus.FORBIDDEN, "AUTH403", "탈퇴 후 3개월간 재가입이 제한됩니다."),
     ;
 
     private final HttpStatus httpStatus;
