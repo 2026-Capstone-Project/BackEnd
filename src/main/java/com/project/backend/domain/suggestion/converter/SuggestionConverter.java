@@ -11,8 +11,10 @@ import com.project.backend.domain.suggestion.enums.StableType;
 import com.project.backend.domain.suggestion.enums.Status;
 import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
 import com.project.backend.domain.suggestion.util.TargetKeyHashUtil;
+import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
 import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -66,30 +68,33 @@ public class SuggestionConverter {
 
     // TODO : 오버로딩 처리
     public static Suggestion toSuggestion(
-            RecurrenceGroup baseRG,
+            RecurrenceSuggestionCandidate baseCandidate,
             SuggestionResDTO.LlmRecurrenceGroupSuggestion llmRecurrenceGroupSuggestion,
-            Member member
+            Member member,
+            RecurrenceGroup rg,
+            TodoRecurrenceGroup trg
     ) {
-        final String targetKey = SuggestionTargetKeyUtil.rgKey(baseRG.getId());
+        final String targetKey = SuggestionTargetKeyUtil.rgKey(baseCandidate.id());
         return Suggestion.builder()
                 .primaryContent(llmRecurrenceGroupSuggestion.content())
                 .targetKey(targetKey)
                 .targetKeyHash(TargetKeyHashUtil.sha256(targetKey))
-                .recurrenceGroup(baseRG)
+                .recurrenceGroup(rg)
+                .todoRecurrenceGroup(trg)
                 .member(member)
                 .category(Category.EVENT)
                 .status(Status.PRIMARY)
                 .build();
     }
 
-    public static SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail toLlmRecurrenceGroupSuggestionDetail(RecurrenceGroup rg, LocalDateTime last) {
+    public static SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail toLlmRecurrenceGroupSuggestionDetail(RecurrenceSuggestionCandidate candidate, LocalDateTime last) {
         return SuggestionReqDTO.LlmRecurrenceGroupSuggestionDetail.builder()
-                .recurrenceGroupId(rg.getId())
+                .id(candidate.id())
                 // TODO : 중간에 익셉션이 이름을 수정했다면? 그것도 패턴이 유지되었다고 보아야하는가?
-                .title(rg.getEvent().getTitle())
+                .title(candidate.title())
                 .lastStartTime(last)
-                .endDate(rg.getEndDate() != null ? rg.getEndDate() : null)
-                .occurrenceCount(rg.getOccurrenceCount() != null ? rg.getOccurrenceCount() : null)
+                .endDate(candidate.endDate() != null ? candidate.endDate() : null)
+                .occurrenceCount(candidate.occurrenceCount() != null ? candidate.occurrenceCount() : null)
                 .build();
     }
 

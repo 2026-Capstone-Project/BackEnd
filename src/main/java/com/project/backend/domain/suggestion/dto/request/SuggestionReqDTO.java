@@ -43,7 +43,7 @@ public class SuggestionReqDTO {
 
     @Builder
     public record LlmRecurrenceGroupSuggestionDetail(
-            Long recurrenceGroupId,
+            Long id,
             String title,
             LocalDateTime lastStartTime,
             LocalDate endDate,

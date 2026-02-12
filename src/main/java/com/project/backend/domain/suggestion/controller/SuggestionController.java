@@ -30,20 +30,28 @@ public class SuggestionController {
         return CustomResponse.onSuccess("선제적 제안 생성", null);
     }
 
-    @PostMapping("/recurrences")
-    public CustomResponse<?> createRecurrenceSuggestion(
+    @PostMapping("/events/recurrences")
+    public CustomResponse<String> createRecurrenceSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
     }
 
-    @PostMapping("/todo")
+    @PostMapping("/todos")
     public CustomResponse<String> createTodoSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         suggestionCommandService.createTodoSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("투두 선제적 제안 생성 완료", null);
+    }
+
+    @PostMapping("/todos/recurrences")
+    public CustomResponse<String> createRecurrenceTodoSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        suggestionCommandService.createTodoRecurrenceSuggestion(customUserDetails.getId());
+        return CustomResponse.onSuccess("투두 반복 그룹에 대한 선제적 제안 생성 완료", null);
     }
 
     @GetMapping()

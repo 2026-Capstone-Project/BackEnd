@@ -4,6 +4,7 @@ import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.enums.Category;
@@ -78,9 +79,13 @@ public class Suggestion extends BaseEntity {
     @JoinColumn(name = "previous_todo")
     private Todo previousTodo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "recurrence_group")
     private RecurrenceGroup recurrenceGroup;
+
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "todo_recurrence_group")
+    private TodoRecurrenceGroup todoRecurrenceGroup;
 
     // TODO : 이것이 최선인가?
     @Embedded

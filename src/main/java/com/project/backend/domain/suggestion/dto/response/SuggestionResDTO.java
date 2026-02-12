@@ -26,7 +26,7 @@ public class SuggestionResDTO {
     }
 
     public record LlmRecurrenceGroupSuggestion(
-            Long recurrenceGroupId,
+            Long id,
             String content
     ) {
     }
