@@ -3,6 +3,7 @@ package com.project.backend.domain.member.service;
 import com.project.backend.domain.event.repository.EventRepository;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.member.converter.MemberConverter;
+import com.project.backend.domain.member.dto.response.MemberResDTO;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -43,6 +44,17 @@ public class MemberService {
         Setting setting = SettingConverter.toSetting(member);
         member.updateSetting(setting);
         return memberRepository.save(member);
+    }
+
+    /**
+     * 현재 로그인한 사용자 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public MemberResDTO.MyInfo getMyInfo(Long memberId) {
+        Member member = memberRepository.findActiveByIdWithAuth(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        return MemberConverter.toMyInfo(member);
     }
 
     // 회원 탈퇴
