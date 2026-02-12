@@ -26,4 +26,19 @@ public interface AuthRepository extends JpaRepository<Auth, Long> {
             @Param("provider") Provider provider,
             @Param("providerId") String providerId
     );
+
+    /**
+     * 탈퇴한 회원의 Auth 조회 (재가입 제한 검증용)
+     */
+    @Query("""
+        SELECT a FROM Auth a
+        JOIN FETCH a.member m
+        WHERE a.provider = :provider
+          AND a.providerId = :providerId
+          AND m.deletedAt IS NOT NULL
+    """)
+    Optional<Auth> findDeletedByProviderAndProviderId(
+            @Param("provider") Provider provider,
+            @Param("providerId") String providerId
+    );
 }

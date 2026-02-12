@@ -46,10 +46,17 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     public void loginOrSignup(HttpServletRequest request, HttpServletResponse response, AuthResDTO.UserAuth userAuth) {
 
         Auth auth = authRepository
-                .findByProviderAndProviderId(userAuth.provider(), userAuth.providerId())
+                .findByProviderAndProviderIdWithMember(userAuth.provider(), userAuth.providerId())
                 .orElseGet(() -> signup(userAuth));
 
-        CustomUserDetails userDetails = new CustomUserDetails(auth.getMember().getId(), userAuth.provider(), userAuth.providerId(), userAuth.email(), Role.ROLE_USER);
+        // 탈퇴 회원 복구 (3개월 제한은 OAuthService에서 이미 검증됨)
+        Member member = auth.getMember();
+        if (member.isDeleted()) {
+            member.restore();
+            log.info("탈퇴 회원 복구 완료: memberId={}, email={}", member.getId(), member.getEmail());
+        }
+
+        CustomUserDetails userDetails = new CustomUserDetails(member.getId(), userAuth.provider(), userAuth.providerId(), userAuth.email(), Role.ROLE_USER);
         String accessToken = jwtUtil.createJwtAccessToken(userDetails);
         String refreshToken = jwtUtil.createJwtRefreshToken(userDetails);
 

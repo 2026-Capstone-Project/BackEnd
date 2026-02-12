@@ -17,6 +17,11 @@ public class WeeklyGenerator implements Generator {
         // 반복 요일
         List<DayOfWeek> targetDays = RecurrenceUtils.parseDaysOfWeek(rule.getDaysOfWeek());
 
+        // 반복 요일이 비어있으면 시작일의 요일을 기본값으로 사용
+        if (targetDays.isEmpty()) {
+            targetDays = List.of(current.getDayOfWeek());
+        }
+
         // 다음 날짜 리턴
         return nearestDate(current, targetDays);
     }
