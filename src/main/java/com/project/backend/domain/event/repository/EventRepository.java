@@ -14,6 +14,10 @@ import java.util.Optional;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Modifying
+    @Query("UPDATE Event e SET e.recurrenceGroup = NULL WHERE e.member.id = :memberId")
+    void clearRecurrenceGroupByMemberId(@Param("memberId") Long memberId);
+
+    @Modifying
     @Query("DELETE FROM Event e WHERE e.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
 

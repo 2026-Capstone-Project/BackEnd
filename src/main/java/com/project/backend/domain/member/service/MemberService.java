@@ -12,6 +12,8 @@ import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.setting.repository.SettingRepository;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
+import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.utils.CookieUtil;
@@ -35,6 +37,8 @@ public class MemberService {
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventRepository eventRepository;
+    private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+    private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
     private final TodoRepository todoRepository;
     private final SuggestionRepository suggestionRepository;
     private final SettingRepository settingRepository;
@@ -73,10 +77,16 @@ public class MemberService {
             throw new MemberException(MemberErrorCode.MEMBER_ALREADY_DELETED);
         }
 
-        // 3. 연관 데이터 Hard Delete (RecurrenceException → RecurrenceGroup → Event → Todo, Suggestion, Setting)
+        // 3. 연관 데이터 Hard Delete
+        // Event ↔ RecurrenceGroup 양방향 FK 순환 참조를 끊기 위해 먼저 NULL 처리
+        eventRepository.clearRecurrenceGroupByMemberId(memberId);
         recurrenceExceptionRepository.deleteAllByMemberId(memberId);
         recurrenceGroupRepository.deleteAllByMemberId(memberId);
         eventRepository.deleteAllByMemberId(memberId);
+        // Todo ↔ TodoRecurrenceGroup 양방향 FK 순환 참조를 끊기 위해 먼저 NULL 처리
+        todoRepository.clearTodoRecurrenceGroupByMemberId(memberId);
+        todoRecurrenceExceptionRepository.deleteAllByMemberId(memberId);
+        todoRecurrenceGroupRepository.deleteAllByMemberId(memberId);
         todoRepository.deleteAllByMemberId(memberId);
         suggestionRepository.deleteAllByMemberId(memberId);
         settingRepository.deleteByMemberId(memberId);
