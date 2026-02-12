@@ -37,6 +37,7 @@ import com.project.backend.domain.todo.repository.TodoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -89,7 +90,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             return;
         }
 
-        suggestionRepository.saveAll(suggestions);
+        saveAllSuggestion(suggestions, memberId);
     }
 
     @Override
@@ -111,8 +112,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             return;
         }
 
-        suggestionRepository.saveAll(suggestions);
-
+        saveAllSuggestion(suggestions, memberId);
     }
 
     @Override
@@ -216,7 +216,6 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         }
         // LLM 응답 바디를 DTO로 변환
         SuggestionResDTO.LlmRes llmRes = getLlmResponse(llmReq);
-        log.info("llmRes = {}", llmRes.toString());
         // LLM 응답 바디와 제안 객체 생성을 위해 저장한 baseCandidate를 활용하여 List<Suggestion> 타입으로 반환
         return llmRes.llmSuggestionList().stream()
                 .flatMap(llmSuggestion -> {
@@ -342,6 +341,27 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 
+    private void saveAllSuggestion(List<Suggestion> suggestions, Long memberId) {
+        List<byte[]> hashes = suggestions.stream()
+                .map(Suggestion::getTargetKeyHash)
+                .toList();
+        Set<String> existingHexHash = suggestionRepository.findExistingActiveTargetKeyHashes(memberId, hashes)
+                .stream()
+                .map(this::getHexHash)
+                .collect(Collectors.toSet());
+        List<Suggestion> toSave = suggestions.stream()
+                .filter(s -> !existingHexHash.contains(getHexHash(s.getTargetKeyHash())))
+                .toList();
+        if (toSave.isEmpty()) {
+            return;
+        }
+        try {
+            suggestionRepository.saveAll(suggestions);
+        } catch (DataIntegrityViolationException e) {
+            log.error("Suggestion 중복 저장 memberId = {}", memberId);
+        }
+    }
+
     private void saveAllSuggestion(
             Map<Long, RecurrenceGroup> baseRecurrenceGroupMap,
             SuggestionResDTO.LlmRecurrenceGroupSuggestionRes llmRes,
@@ -391,5 +411,10 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         todoMap.values()
                 .forEach(list -> list.sort(Comparator.comparing(SuggestionCandidate::start)));
         return todoMap;
+    }
+
+    // 해시 메서드
+    private String getHexHash(byte[] bytes) {
+        return HexFormat.of().formatHex(bytes);
     }
 }
