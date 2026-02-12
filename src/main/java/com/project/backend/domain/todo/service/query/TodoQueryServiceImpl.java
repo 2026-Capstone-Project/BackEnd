@@ -71,12 +71,14 @@ public class TodoQueryServiceImpl implements TodoQueryService {
         todoListItems = applyFilter(todoListItems, filter, today);
 
         if (filter == TodoFilter.PRIORITY) {
-            return TodoResDTO.TodoListRes.builder()
-                    .todos(todoListItems)
-                    .build();
+            // 완료된 할 일을 맨 뒤로, 같은 완료 상태 내에서는 우선순위순
+            todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::isCompleted)
+                    .thenComparing(TodoResDTO.TodoListItem::priority,
+                            Comparator.comparingInt(p -> p == Priority.HIGH ? 0 : p == Priority.MEDIUM ? 1 : 2)));
         } else {
-            // 날짜순 정렬
-            todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::occurrenceDate));
+            // 완료된 할 일을 맨 뒤로, 같은 완료 상태 내에서는 날짜순
+            todoListItems.sort(Comparator.comparing(TodoResDTO.TodoListItem::isCompleted)
+                    .thenComparing(TodoResDTO.TodoListItem::occurrenceDate));
         }
 
         return TodoResDTO.TodoListRes.builder()
