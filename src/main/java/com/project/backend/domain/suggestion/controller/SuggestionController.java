@@ -22,20 +22,21 @@ public class SuggestionController {
     private final SuggestionCommandService suggestionCommandService;
     private final SuggestionQueryService suggestionQueryService;
 
+    @GetMapping()
+    public CustomResponse<SuggestionResDTO.SuggestionListRes> getSuggestions(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        SuggestionResDTO.SuggestionListRes resDTO =
+                suggestionQueryService.getSuggestions(customUserDetails.getId());
+        return CustomResponse.onSuccess("선제적 제안 목록 조회 성공", resDTO);
+    }
+
     @PostMapping("/events")
     public CustomResponse<Map<SuggestionKey, List<SuggestionCandidate>>> createSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         suggestionCommandService.createSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("선제적 제안 생성", null);
-    }
-
-    @PostMapping("/events/recurrences")
-    public CustomResponse<String> createRecurrenceSuggestion(
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
-        suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
-        return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
     }
 
     @PostMapping("/todos")
@@ -46,21 +47,20 @@ public class SuggestionController {
         return CustomResponse.onSuccess("투두 선제적 제안 생성 완료", null);
     }
 
+    @PostMapping("/events/recurrences")
+    public CustomResponse<String> createRecurrenceSuggestion(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
+        return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
+    }
+
     @PostMapping("/todos/recurrences")
     public CustomResponse<String> createRecurrenceTodoSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         suggestionCommandService.createTodoRecurrenceSuggestion(customUserDetails.getId());
         return CustomResponse.onSuccess("투두 반복 그룹에 대한 선제적 제안 생성 완료", null);
-    }
-
-    @GetMapping()
-    public CustomResponse<SuggestionResDTO.SuggestionListRes> getSuggestions(
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
-        SuggestionResDTO.SuggestionListRes resDTO =
-                suggestionQueryService.getSuggestions(customUserDetails.getId());
-        return CustomResponse.onSuccess("선제적 제안 목록 조회 성공", resDTO);
     }
 
     @PostMapping("/{suggestionId}/acceptance")

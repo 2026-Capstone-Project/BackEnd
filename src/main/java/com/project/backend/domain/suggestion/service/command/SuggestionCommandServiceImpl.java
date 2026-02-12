@@ -63,21 +63,24 @@ import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
 @Transactional
 public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
-    private final EventRepository eventRepository;
     private final SuggestionRepository suggestionRepository;
     private final MemberRepository memberRepository;
-    private final LlmClient llmClient;
-    private final SuggestionPromptTemplate suggestionPromptTemplate;
-    private final ObjectMapper objectMapper;
-    private final LlmSuggestionResponseParser llmSuggestionResponseParser;
-    private final RecurrencePatternDetector detector;
+    private final EventRepository eventRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
-    private final GeneratorFactory generatorFactory;
-    private final EndConditionFactory endConditionFactory;
     private final TodoRepository todoRepository;
     private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+
+    private final LlmClient llmClient;
+    private final SuggestionPromptTemplate suggestionPromptTemplate;
+    private final LlmSuggestionResponseParser llmSuggestionResponseParser;
+    private final ObjectMapper objectMapper;
+
+    private final RecurrencePatternDetector detector;
+
+    private final GeneratorFactory generatorFactory;
+    private final EndConditionFactory endConditionFactory;
 
     @Override
     public void createSuggestion(Long memberId) {
@@ -161,6 +164,30 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         saveAllSuggestion(suggestions, memberId);
     }
 
+    // TODO : 락 구현하기?
+    @Override
+    public void acceptSuggestion(Long memberId, Long suggestionId) {
+
+        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
+                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+
+        suggestion.accept();
+
+        // 생성 로직 구현하기
+    }
+
+    // TODO : 락 구현하기?
+    @Override
+    public void rejectSuggestion(Long memberId, Long suggestionId) {
+
+        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
+                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+
+        suggestion.reject();
+
+        // 생성 로직 구현하기
+    }
+
     private List<Suggestion> generateSuggestion(Map<SuggestionKey, List<SuggestionCandidate>> allCandidateMap, Long memberId, LocalDate now) {
 
         Member member = memberRepository.findById(memberId)
@@ -240,30 +267,6 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                     };
                 })
                 .toList();
-    }
-
-    // TODO : 락 구현하기?
-    @Override
-    public void acceptSuggestion(Long memberId, Long suggestionId) {
-
-        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
-                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
-
-        suggestion.accept();
-
-        // 생성 로직 구현하기
-    }
-
-    // TODO : 락 구현하기?
-    @Override
-    public void rejectSuggestion(Long memberId, Long suggestionId) {
-
-        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
-                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
-
-        suggestion.reject();
-
-        // 생성 로직 구현하기
     }
 
     private List<Suggestion> generateRecurrenceSuggestion(
