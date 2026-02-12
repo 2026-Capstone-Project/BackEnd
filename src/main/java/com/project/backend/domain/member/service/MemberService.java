@@ -1,6 +1,8 @@
 package com.project.backend.domain.member.service;
 
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
+import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.member.converter.MemberConverter;
 import com.project.backend.domain.member.dto.response.MemberResDTO;
@@ -30,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventRepository eventRepository;
     private final TodoRepository todoRepository;
     private final SuggestionRepository suggestionRepository;
@@ -69,7 +73,9 @@ public class MemberService {
             throw new MemberException(MemberErrorCode.MEMBER_ALREADY_DELETED);
         }
 
-        // 3. 연관 데이터 Hard Delete (Event, Todo, Suggestion, Setting)
+        // 3. 연관 데이터 Hard Delete (RecurrenceException → RecurrenceGroup → Event → Todo, Suggestion, Setting)
+        recurrenceExceptionRepository.deleteAllByMemberId(memberId);
+        recurrenceGroupRepository.deleteAllByMemberId(memberId);
         eventRepository.deleteAllByMemberId(memberId);
         todoRepository.deleteAllByMemberId(memberId);
         suggestionRepository.deleteAllByMemberId(memberId);
