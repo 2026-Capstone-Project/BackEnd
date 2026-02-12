@@ -51,6 +51,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -461,38 +462,36 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         }
     }
 
-    private Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndLocation(List<Event> events) {
-
-        Map<SuggestionKey, List<SuggestionCandidate>> eventMap = new LinkedHashMap<>();
-
-        for (Event event : events) {
-            // title + location 조합의 키
-            SuggestionKey key = SuggestionKey.from(event);
-            // 추가
-            eventMap
-                    .computeIfAbsent(key, k -> new ArrayList<>())
-                    .add(SuggestionCandidate.from(event));
-        }
-        return eventMap;
-    }
-
-    private Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndMemo(List<Todo> todos) {
-
-        Map<SuggestionKey, List<SuggestionCandidate>> todoMap = new LinkedHashMap<>();
-
-        for (Todo todo : todos) {
-            // title + memo 조합의 키
-            SuggestionKey key = SuggestionKey.from(todo);
-            // 추가
-            todoMap
-                    .computeIfAbsent(key, k -> new ArrayList<>())
-                    .add(SuggestionCandidate.from(todo));
-        }
-        return todoMap;
-    }
-
     // 해시 메서드
     private String getHexHash(byte[] bytes) {
         return HexFormat.of().formatHex(bytes);
+    }
+
+    // 헬퍼 메서드
+    private <T> Map<SuggestionKey, List<SuggestionCandidate>> groupBy(
+             List<T> items,
+             Function<T, SuggestionKey> keyExtractor,
+             Function<T, SuggestionCandidate> candidateMapper
+    ) {
+        Map<SuggestionKey, List<SuggestionCandidate>> map = new LinkedHashMap<>();
+
+        for (T item : items) {
+            SuggestionKey key = keyExtractor.apply(item);
+            map.computeIfAbsent(key, k -> new ArrayList<>())
+                    .add(candidateMapper.apply(item));
+        }
+        return map;
+    }
+
+    private  Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndLocation(
+             List<Event> events
+    ) {
+        return groupBy(events, SuggestionKey::from, SuggestionCandidate::from);
+    }
+
+    private  Map<SuggestionKey, List<SuggestionCandidate>> groupByTitleAndMemo(
+             List<Todo> todos
+    ) {
+        return groupBy(todos, SuggestionKey::from, SuggestionCandidate::from);
     }
 }
