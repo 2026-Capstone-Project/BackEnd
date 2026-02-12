@@ -65,6 +65,7 @@ public class OAuthController implements OAuthDocs {
             String errorRedirectUrl = UriComponentsBuilder.fromUriString(FRONTEND_LOGIN_ERROR_URL)
                     .queryParam("error", e.getCode().getCode())
                     .queryParam("message", e.getCode().getMessage())
+                    .encode()
                     .build()
                     .toUriString();
 
