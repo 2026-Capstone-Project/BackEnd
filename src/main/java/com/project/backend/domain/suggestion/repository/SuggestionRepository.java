@@ -48,7 +48,7 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     @Query("""
         update Suggestion s
            set s.status = com.project.backend.domain.suggestion.enums.Status.ACCEPTED,
-               s.active = false
+               s.active = NULL
          where s.id = :id
            and s.member.id = :memberId
            and s.active = true
@@ -79,7 +79,7 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     @Query("""
         update Suggestion s
            set s.status = com.project.backend.domain.suggestion.enums.Status.REJECTED,
-               s.active = false
+               s.active = NULL
          where s.id = :suggestionId
            and s.member.id = :memberId
            and s.active = true

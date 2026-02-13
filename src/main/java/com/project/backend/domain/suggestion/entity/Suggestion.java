@@ -54,19 +54,10 @@ public class Suggestion extends BaseEntity {
     @Column(name = "suggestion_type", nullable = false, length = 30)
     private SuggestionType suggestionType;
 
-    /**
-     * status랑 별개로 "현재 유효/노출/수락 가능한 row인지"를 DB 유니크와 조회에 쓰는 스위치
-     */
     @Builder.Default
-    @Column(name = "active", nullable = false)
-    private boolean active = true;
+    @Column(name = "active")
+    private Boolean active = true;
 
-    /**
-     * 유니크 타겟 키(단발성/반복그룹/투두 모두 통일)
-     * - 단발성(이벤트 그룹): "E|{normalizedTitle}|{normalizedLocation}"
-     * - 반복그룹 연장      : "RG|{recurrenceGroupId}"
-     * - 투두(추후)         : "T|{normalizedTitle}"
-     */
     @Column(name = "target_key", nullable = false, length = 300)
     private String targetKey;
 
@@ -100,22 +91,4 @@ public class Suggestion extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "todo_recurrence_group")
     private TodoRecurrenceGroup todoRecurrenceGroup;
-
-    // Update 메서드
-
-    public void accept() {
-        this.status = Status.ACCEPTED;
-        this.active = false;
-    }
-
-    public void reject() {
-        if (this.status.equals(Status.PRIMARY) && this.secondaryContent != null) {
-            this.status = Status.SECONDARY;
-        }
-        else {
-            this.status = Status.REJECTED;
-            this.active = false;
-        }
-
-    }
 }
