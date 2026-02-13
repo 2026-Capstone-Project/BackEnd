@@ -14,6 +14,10 @@ import java.util.Optional;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Modifying
+    @Query("UPDATE Event e SET e.recurrenceGroup = NULL WHERE e.member.id = :memberId")
+    void clearRecurrenceGroupByMemberId(@Param("memberId") Long memberId);
+
+    @Modifying
     @Query("DELETE FROM Event e WHERE e.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
 
@@ -48,4 +52,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("to") LocalDateTime to);
 
     boolean existsByMemberIdAndTitleAndLocationAndStartTime(Long memberId, String title, String location, LocalDateTime startTime);
+  
+    List<Event> findAllByMemberId(@Param("memberId") Long memberId);
+
+    @Query("SELECT e " +
+            "FROM Event e " +
+            "WHERE e.member.id = :memberId AND e.startTime <= :currentDate")
+    List<Event> findAllByMemberIdAndCurrentDate(
+            @Param("memberId") Long memberId,
+            @Param("currentDate") LocalDateTime currentDate
+    );
 }

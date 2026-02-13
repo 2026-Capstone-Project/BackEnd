@@ -1,5 +1,6 @@
 package com.project.backend.domain.todo.repository;
 
+import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.todo.entity.Todo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -8,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
+
 import java.util.List;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
@@ -36,6 +39,10 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
      * 회원의 모든 할 일 삭제
      */
     @Modifying
+    @Query("UPDATE Todo t SET t.todoRecurrenceGroup = NULL WHERE t.member.id = :memberId")
+    void clearTodoRecurrenceGroupByMemberId(@Param("memberId") Long memberId);
+
+    @Modifying
     @Query("DELETE FROM Todo t WHERE t.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
 
@@ -54,5 +61,22 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
 
+    
+    /**
+     * 오늘보다 startTime이 이후가 아닌 할일 조회
+     */
+    @Query("SELECT t " +
+            "FROM Todo t " +
+            "WHERE t.member.id = :memberId " +
+            "AND t.startDate <= :currentDate")
+    List<Todo> findAllByMemberIdAndCurrentDate(
+            @Param("memberId") Long memberId,
+            @Param("currentDate") LocalDate currentDate
+    );
+  
+    /**
+     * 이미 존재하는 Todo 인가
+     */
     boolean existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(Long memberId, String title, String memo, LocalDate startDate, LocalTime dueTime);
+
 }

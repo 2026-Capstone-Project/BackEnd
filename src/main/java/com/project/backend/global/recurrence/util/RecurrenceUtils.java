@@ -4,10 +4,10 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -98,5 +98,67 @@ public class RecurrenceUtils {
                 .map(String::trim)
                 .map(Integer::parseInt)
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
+     * MONTHLY - DAY_OF_WEEK 규칙에 따라
+     * 특정 월에서 "n번째 주차"에 해당하는 요일을 계산한다.
+
+     * 주차 정의:
+     *  - 해당 달의 "1일이 속한 주"를 1주차로 간주한다.
+     *  - 주의 시작 요일은 ISO 기준(MONDAY)이다.
+
+     * 동작 방식:
+     *  1. 해당 달의 1일을 기준으로,
+     *     그 날짜가 속한 주의 월요일을 1주차 시작일로 계산한다.
+     *  2. weekOfMonth 값만큼 주차를 이동하여 대상 주의 시작일을 구한다.
+     *  3. 해당 주(월~일) 범위 안에서,
+     *     targetDays에 포함된 요일 중 "해당 월에 속한 날짜"만 선택한다.
+
+     * 반환 규칙 (SKIP 정책):
+     *  - 해당 주차에 targetDays가 존재하면 → 해당 날짜 반환
+     *  - 존재하지 않으면 → Optional.empty()
+
+     * 예시:
+     *  - 2026년 4월, weekOfMonth=1, targetDays=[FRIDAY]
+     *    → 2026-04-03 반환
+     *  - 2026년 2월, weekOfMonth=5, targetDays=[FRIDAY]
+     *    → Optional.empty() (5주차 자체가 없음)
+     *
+     * @param month       대상 연-월
+     * @param weekOfMonth 주차 (1부터 시작)
+     * @param targetDays  허용된 요일 목록
+     * @return 조건을 만족하는 날짜 (없으면 Optional.empty())
+     */
+    public static Optional<LocalDate> calculateMonthlyNthWeekday(
+            YearMonth month,
+            int weekOfMonth,
+            List<DayOfWeek> targetDays
+    ) {
+        // 해당 달의 1일
+        LocalDate firstDayOfMonth = month.atDay(1);
+
+        // 1주차 시작 = 그 주의 월요일 (ISO)
+        LocalDate startOfFirstWeek =
+                firstDayOfMonth.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        // n주차 시작
+        LocalDate startOfTargetWeek =
+                startOfFirstWeek.plusWeeks(weekOfMonth - 1);
+
+        LocalDate endOfTargetWeek = startOfTargetWeek.plusDays(6);
+
+        // 그 주 안에서 target 요일 찾기 (단, 반드시 해당 월에 속해야 함)
+        for (LocalDate d = startOfTargetWeek;
+             !d.isAfter(endOfTargetWeek);
+             d = d.plusDays(1)) {
+
+            if (d.getMonth() == month.getMonth()
+                    && targetDays.contains(d.getDayOfWeek())) {
+                return Optional.of(d);
+            }
+        }
+
+        return Optional.empty();
     }
 }

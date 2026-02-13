@@ -3,6 +3,7 @@ package com.project.backend.domain.todo.repository;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +16,7 @@ public interface TodoRecurrenceGroupRepository extends JpaRepository<TodoRecurre
      * 회원의 모든 반복 할 일 그룹 조회
      */
     List<TodoRecurrenceGroup> findByMemberId(Long memberId);
+
 
     /**
      * 현재 활성화된 반복 그룹 조회
@@ -35,4 +37,8 @@ public interface TodoRecurrenceGroupRepository extends JpaRepository<TodoRecurre
             @Param("memberId") Long memberId,
             @Param("today") LocalDate today
     );
+
+    @Modifying
+    @Query("DELETE FROM TodoRecurrenceGroup trg WHERE trg.member.id = :memberId")
+    void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

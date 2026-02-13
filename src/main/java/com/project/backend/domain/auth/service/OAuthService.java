@@ -2,9 +2,11 @@ package com.project.backend.domain.auth.service;
 
 import com.project.backend.domain.auth.dto.OAuthTokenResult;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
+import com.project.backend.domain.auth.entity.Auth;
 import com.project.backend.domain.auth.enums.Provider;
 import com.project.backend.domain.auth.exception.AuthErrorCode;
 import com.project.backend.domain.auth.exception.AuthException;
+import com.project.backend.domain.auth.repository.AuthRepository;
 import com.project.backend.domain.auth.service.command.AuthCommandService;
 import com.project.backend.domain.auth.strategy.OAuthStrategy;
 import jakarta.annotation.PostConstruct;
@@ -18,10 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * OAuth 소셜 로그인 통합 서비스
@@ -34,6 +38,9 @@ public class OAuthService {
 
     private final List<OAuthStrategy> strategies;
     private final AuthCommandService authCommandService;
+    private final AuthRepository authRepository;
+
+    private static final int REJOIN_RESTRICTION_MONTHS = 3;
 
     private Map<Provider, OAuthStrategy> strategyMap;
 
@@ -82,6 +89,9 @@ public class OAuthService {
         // 사용자 정보 조회
         AuthResDTO.UserAuth userAuth = strategy.fetchUserAuth(tokenResult);
 
+        // 재가입 제한 검증 (탈퇴 후 3개월 이내인지 확인)
+        validateRejoinRestriction(userAuth);
+
         // 로그인 또는 회원가입 처리
         authCommandService.loginOrSignup(request, response, userAuth);
     }
@@ -125,5 +135,27 @@ public class OAuthService {
 
         // 사용된 state 삭제 (재사용 방지)
         session.removeAttribute(sessionKey);
+    }
+
+    /**
+     * 재가입 제한 검증
+     * - 탈퇴한 회원이 3개월 이내에 재가입 시도하면 예외 발생
+     * - 3개월 초과 시 정상 진행 (회원 복구는 loginOrSignup에서 처리)
+     */
+    private void validateRejoinRestriction(AuthResDTO.UserAuth userAuth) {
+        Optional<Auth> deletedAuth = authRepository.findDeletedByProviderAndProviderId(
+                userAuth.provider(),
+                userAuth.providerId()
+        );
+
+        if (deletedAuth.isPresent()) {
+            LocalDateTime deletedAt = deletedAuth.get().getMember().getDeletedAt();
+            LocalDateTime rejoinAllowedAt = deletedAt.plusMonths(REJOIN_RESTRICTION_MONTHS);
+
+            if (LocalDateTime.now().isBefore(rejoinAllowedAt)) {
+                throw new AuthException(AuthErrorCode.REJOIN_RESTRICTED);
+            }
+            // 3개월 초과 시 정상 진행 - 회원 복구 로직은 authCommandService에서 처리
+        }
     }
 }

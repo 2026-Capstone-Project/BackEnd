@@ -15,6 +15,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -131,17 +132,40 @@ public class NlpConverter {
 
         return NlpReqDTO.RecurrenceRule.builder()
                 .frequency(parseFrequency(llmRule.frequency()))
-                .interval(llmRule.interval())
-                .daysOfWeek(llmRule.daysOfWeek())
-                .monthlyType(MonthlyType.DAY_OF_MONTH)
-                .daysOfMonth(null)
-                .weekOfMonth(null)
-                .dayOfWeekInMonth(null)
-                .monthOfYear(null)
-                .endType(llmRule.endDate() != null ? RecurrenceEndType.END_BY_DATE : RecurrenceEndType.NEVER)
+                .intervalValue(llmRule.intervalValue())
+                .daysOfWeek(convertDaysOfWeek(llmRule.daysOfWeek()))
+                .monthlyType(parseMonthlyType(llmRule.monthlyType()))
+                .daysOfMonth(llmRule.daysOfMonth())
+                .weekOfMonth(llmRule.weekOfMonth())
+                .dayOfWeekInMonth(convertDayOfWeek(llmRule.dayOfWeekInMonth()))
+                .monthOfYear(llmRule.monthOfYear())
+                .endType(parseEndType(llmRule.endType(), llmRule.endDate()))
                 .endDate(parseDate(llmRule.endDate()))
-                .occurrenceCount(null)
+                .occurrenceCount(llmRule.occurrenceCount())
                 .build();
+    }
+
+    private static MonthlyType parseMonthlyType(String monthlyType) {
+        if (monthlyType == null || monthlyType.isBlank()) {
+            return null;
+        }
+        try {
+            return MonthlyType.valueOf(monthlyType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static RecurrenceEndType parseEndType(String endType, String endDate) {
+        if (endType != null && !endType.isBlank()) {
+            try {
+                return RecurrenceEndType.valueOf(endType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 파싱 실패 시 아래 로직으로 폴백
+            }
+        }
+        // endType이 없으면 endDate 유무로 추론 (하위 호환)
+        return endDate != null ? RecurrenceEndType.END_BY_DATE : RecurrenceEndType.NEVER;
     }
 
     private static RecurrenceFrequency parseFrequency(String frequency) {
@@ -156,6 +180,44 @@ public class NlpConverter {
             case "YEARLY" -> RecurrenceFrequency.YEARLY;
             default -> null;
         };
+    }
+
+    // 3글자 → 전체 이름 매핑
+    private static final Map<String, String> DAY_SHORT_TO_FULL = Map.of(
+            "MON", "MONDAY",
+            "TUE", "TUESDAY",
+            "WED", "WEDNESDAY",
+            "THU", "THURSDAY",
+            "FRI", "FRIDAY",
+            "SAT", "SATURDAY",
+            "SUN", "SUNDAY"
+    );
+
+    /**
+     * 요일 문자열 리스트를 전체 이름(MONDAY 등)으로 정규화.
+     * 3글자(MON)와 전체(MONDAY) 둘 다 지원.
+     */
+    private static List<String> convertDaysOfWeek(List<String> daysOfWeek) {
+        if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+            return null;
+        }
+
+        return daysOfWeek.stream()
+                .map(NlpConverter::convertDayOfWeek)
+                .filter(day -> day != null)
+                .toList();
+    }
+
+    /**
+     * 단일 요일 문자열을 전체 이름(MONDAY 등)으로 정규화.
+     * 3글자(MON)와 전체(MONDAY) 둘 다 지원.
+     */
+    private static String convertDayOfWeek(String day) {
+        if (day == null || day.isBlank()) {
+            return null;
+        }
+        String upper = day.toUpperCase();
+        return DAY_SHORT_TO_FULL.getOrDefault(upper, upper);
     }
 
     private static List<NlpResDTO.AmbiguousOption> toAmbiguousOptions(List<LlmResDTO.LlmAmbiguousOption> options) {
