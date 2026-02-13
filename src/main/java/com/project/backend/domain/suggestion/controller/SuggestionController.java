@@ -31,37 +31,45 @@ public class SuggestionController {
         return CustomResponse.onSuccess("선제적 제안 목록 조회 성공", resDTO);
     }
 
-    @PostMapping("/events")
-    public CustomResponse<Map<SuggestionKey, List<SuggestionCandidate>>> createSuggestion(
+    @PostMapping()
+    public CustomResponse<String> createSuggestion(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        suggestionCommandService.createEventSuggestion(customUserDetails.getId());
-        return CustomResponse.onSuccess("선제적 제안 생성", null);
+        suggestionCommandService.createSuggestion(customUserDetails.getId());
+        return CustomResponse.onSuccess("선제적 제안 생성 완료", null);
     }
 
-    @PostMapping("/todos")
-    public CustomResponse<String> createTodoSuggestion(
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
-        suggestionCommandService.createTodoSuggestion(customUserDetails.getId());
-        return CustomResponse.onSuccess("투두 선제적 제안 생성 완료", null);
-    }
-
-    @PostMapping("/events/recurrences")
-    public CustomResponse<String> createRecurrenceSuggestion(
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
-        suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
-        return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
-    }
-
-    @PostMapping("/todos/recurrences")
-    public CustomResponse<String> createRecurrenceTodoSuggestion(
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
-        suggestionCommandService.createTodoRecurrenceSuggestion(customUserDetails.getId());
-        return CustomResponse.onSuccess("투두 반복 그룹에 대한 선제적 제안 생성 완료", null);
-    }
+//    @PostMapping("/events")
+//    public CustomResponse<Map<SuggestionKey, List<SuggestionCandidate>>> createSuggestion(
+//            @AuthenticationPrincipal CustomUserDetails customUserDetails
+//    ) {
+//        suggestionCommandService.createEventSuggestion(customUserDetails.getId());
+//        return CustomResponse.onSuccess("선제적 제안 생성", null);
+//    }
+//
+//    @PostMapping("/todos")
+//    public CustomResponse<String> createTodoSuggestion(
+//            @AuthenticationPrincipal CustomUserDetails customUserDetails
+//    ) {
+//        suggestionCommandService.createTodoSuggestion(customUserDetails.getId());
+//        return CustomResponse.onSuccess("투두 선제적 제안 생성 완료", null);
+//    }
+//
+//    @PostMapping("/events/recurrences")
+//    public CustomResponse<String> createRecurrenceSuggestion(
+//            @AuthenticationPrincipal CustomUserDetails customUserDetails
+//    ) {
+//        suggestionCommandService.createRecurrenceSuggestion(customUserDetails.getId());
+//        return CustomResponse.onSuccess("반복 그룹에 대한 선제적 제안 생성 완료", null);
+//    }
+//
+//    @PostMapping("/todos/recurrences")
+//    public CustomResponse<String> createRecurrenceTodoSuggestion(
+//            @AuthenticationPrincipal CustomUserDetails customUserDetails
+//    ) {
+//        suggestionCommandService.createTodoRecurrenceSuggestion(customUserDetails.getId());
+//        return CustomResponse.onSuccess("투두 반복 그룹에 대한 선제적 제안 생성 완료", null);
+//    }
 
     @PostMapping("/{suggestionId}/acceptance")
     public CustomResponse<String> acceptSuggestion(
@@ -79,6 +87,14 @@ public class SuggestionController {
     ) {
         suggestionCommandService.rejectSuggestion(customUserDetails.getId(), suggestionId);
         return CustomResponse.onSuccess("선제적 제안 거절", null);
+    }
+
+    @DeleteMapping()
+    public CustomResponse<String> deleteAllSuggestions(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        suggestionCommandService.delete(customUserDetails.getId());
+        return CustomResponse.onSuccess("모든 선제적 제안 삭제 완료", null);
     }
 
 }

@@ -213,6 +213,19 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         throw new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND);
     }
 
+    @Override
+    public void delete(Long memberId) {
+        suggestionRepository.deleteAllByMemberId(memberId);
+    }
+
+    @Override
+    public void createSuggestion(Long memberId) {
+        createEventSuggestion(memberId);
+        createTodoSuggestion(memberId);
+        createRecurrenceSuggestion(memberId);
+        createTodoRecurrenceSuggestion(memberId);
+    }
+
     private List<Suggestion> generateSuggestion(
             Map<SuggestionKey, List<SuggestionCandidate>> allCandidateMap,
             Long memberId,

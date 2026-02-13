@@ -12,4 +12,9 @@ public interface SuggestionCommandService {
     void acceptSuggestion(Long memberId, Long suggestionId);
 
     void rejectSuggestion(Long memberId, Long suggestionId);
+
+    // 프론트 전용 메서드
+    void delete(Long memberId);
+
+    void createSuggestion(Long memberId);
 }
