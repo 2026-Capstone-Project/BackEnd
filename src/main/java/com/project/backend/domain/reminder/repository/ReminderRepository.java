@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +24,6 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
             LocalDateTime now,
             LocalDateTime endOfToday
     );
-
-
 
     /**
      * 라이프 사이클(활성, 비활성)에 따른 Reminder 가져오기
@@ -61,20 +58,32 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     void deleteByLifecycleStatus(@Param("status") LifecycleStatus status);
 
     /**
-     * 타겟id와 타겟타입을 통해 Reminder 삭제
+     * occurrenceTime와 일치하는 날짜값을 가진 Reminder 삭제
      */
-    @Modifying
-    @Query("DELETE FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :targetType")
-    void deleteByTargetIdAndTargetType(@Param("eventId") Long targetId, @Param("targetType") TargetType targetType);
-
     @Modifying
     @Query("DELETE FROM Reminder r " +
             "WHERE r.targetId = :eventId " +
             "AND r.targetType = :type " +
             "AND r.occurrenceTime >= :occurrenceTime")
-    void deleteByTargetIDAndTargetTypeAndOccurrenceTime(
+    void deleteByTargetIdAndTargetTypeAndOccurrenceTime(
             @Param("eventId") Long eventId,
             @Param("type") TargetType type,
             @Param("occurrenceTime") LocalDateTime occurrenceTime
     );
+
+    /**
+     * occurrenceTime보다 이후 날짜값을 가진 Reminder 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM Reminder r " +
+            "WHERE r.targetId = :eventId " +
+            "AND r.targetType = :type " +
+            "AND r.occurrenceTime >= :occurrenceTime")
+    void deleteRemindersFromOccurrenceTime(
+            @Param("eventId") Long eventId,
+            @Param("type") TargetType type,
+            @Param("occurrenceTime") LocalDateTime occurrenceTime
+    );
+
+    Optional<Reminder> findByRecurrenceExceptionId(Long id);
 }

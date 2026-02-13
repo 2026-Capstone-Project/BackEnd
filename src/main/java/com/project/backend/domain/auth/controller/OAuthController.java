@@ -23,7 +23,7 @@ public class OAuthController implements OAuthDocs {
     private final OAuthService oAuthService;
 
     // TODO: 프론트 배포 후 설정 파일로 분리
-    private static final String FRONTEND_LOGIN_SUCCESS_URL = "http://localhost:5173/";
+    // private static final String FRONTEND_LOGIN_SUCCESS_URL = "http://localhost:5173/";
 
     @Override
     @GetMapping("/{provider}")
@@ -49,6 +49,6 @@ public class OAuthController implements OAuthDocs {
 
         // CORB 방지용 헤더 설정
         response.setContentType("text/html;charset=UTF-8");
-        response.sendRedirect(FRONTEND_LOGIN_SUCCESS_URL);
+        // response.sendRedirect(FRONTEND_LOGIN_SUCCESS_URL);
     }
 }

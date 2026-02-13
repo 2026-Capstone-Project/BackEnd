@@ -18,6 +18,7 @@ import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventRepository;
 import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
+import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.event.validator.RecurrenceGroupValidator;
@@ -26,16 +27,19 @@ import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.reminder.listener.ReminderListener;
+import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -50,6 +54,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventValidator eventValidator;
     private final RecurrenceGroupValidator rgValidator;
     private final ReminderListener reminderListener;
+    private final EventOccurrenceResolver eventOccurrenceResolver;
+    private final ReminderCommandService reminderCommandService;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -79,29 +85,30 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.getTitle(),
                 recurrenceGroup != null,
                 event.getStartTime(),
-                null,
                 ChangeType.CREATED
         );
         return EventConverter.toCreateRes(event);
     }
 
     @Override
-    public void updateEvent(EventReqDTO.UpdateReq req, Long eventId, Long memberId) {
-        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
-                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
-
-        eventValidator.validateUpdate(req, event);
-
-        // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = calStartTime(req, event);
-        LocalDateTime end = calEndTime(req, event, start);
-
-        eventValidator.validateTime(start, end);
-
+    public void updateEvent(EventReqDTO.UpdateReq req, Long eventId, Long memberId, LocalDateTime occurrenceDate) {
         // 변경 사항 전혀 없음
         if (!hasEventChanged(req) && !hasRecurrenceGroupChanged(req.recurrenceGroup())) {
             return;
         }
+
+        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        eventValidator.validateUpdate(req, event, occurrenceDate);
+        // occurrenceDate가 존재하는 일정의 계산된 날짜인지
+        eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
+
+        // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
+        LocalDateTime start = calStartTime(req, event, occurrenceDate);
+        LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
+
+        eventValidator.validateTime(start, end);
 
         Member member = event.getMember();
 
@@ -123,7 +130,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                         event.getTitle(),
                         true,
                         start,
-                        null,
                         ChangeType.UPDATE_ADD_RECURRENCE
                 );
             } else{
@@ -134,7 +140,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                         event.getTitle(),
                         false,
                         start,
-                        null,
                         ChangeType.UPDATE_SINGLE);
             }
             return;
@@ -146,16 +151,20 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 수정범위가 있는 수정일 때
         switch (req.recurrenceUpdateScope()){
-            case THIS_EVENT -> updateThisEventOnly(req, event, member);
+            case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
             case THIS_AND_FOLLOWING_EVENTS -> {
-                updateThisAndFutureEvents(req, event, member, start, end);
+                updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             }
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
     }
 
     @Override
-    public void deleteEvent(Long eventId, LocalDate occurrenceDate, RecurrenceUpdateScope scope, Long memberId) {
+    public void deleteEvent(
+            Long eventId,
+            LocalDateTime occurrenceDate,
+            RecurrenceUpdateScope scope, Long memberId
+    ) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
@@ -164,16 +173,18 @@ public class EventCommandServiceImpl implements EventCommandService {
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
             eventRepository.delete(event);
-            handleEventChanged(
+            handleReminderDeleted(
                     eventId,
                     memberId,
-                    null,
-                    false,
-                    event.getStartTime(),
-                    null,
-                    ChangeType.DELETED_SINGLE);
+                    occurrenceDate,
+                    eventId,
+                    TargetType.EVENT,
+                    DeletedType.DELETED_SINGLE);
             return;
         }
+
+        // occurrenceDate가 존재하는 일정의 계산된 날짜인지
+        eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
 
         // 반복 그룹을 가진 일정일 경우
         switch (scope) {
@@ -200,6 +211,18 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
     }
 
+    private void updateRecurrenceException(EventReqDTO.UpdateReq req, RecurrenceException re) {
+        re.updateForUpdate(
+                req.title(),
+                req.content(),
+                req.startTime(),
+                req.endTime(),
+                req.location(),
+                req.color(),
+                req.isAllDay()
+        );
+    }
+
     private RecurrenceGroup updateToRecurrenceEvent(
             EventReqDTO.UpdateReq eventReq,
             RecurrenceGroupReqDTO.UpdateReq rgReq,
@@ -213,14 +236,41 @@ public class EventCommandServiceImpl implements EventCommandService {
     private void updateThisEventOnly(
             EventReqDTO.UpdateReq req,
             Event event,
-            Member member
+            Member member,
+            LocalDateTime occurrenceDate
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
-        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(req, rg);
+
+        // 만약 이미 수정된 일정을 또 수정하는 경우
+        Optional<RecurrenceException> re = recurrenceExRepository
+                .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                        rg.getId(),
+                        occurrenceDate,
+                        ExceptionType.OVERRIDE
+                );
+
+        if (re.isPresent()) {
+            RecurrenceException ex = re.get();
+            updateRecurrenceException(req, ex);
+            handleExceptionChanged(
+                    ex.getId(),
+                    event.getId(),
+                    member.getId(),
+                    ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
+                    ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
+                    ExceptionChangeType.UPDATE_THIS_AGAIN
+            );
+            return;
+        }
+
+        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(req, rg, occurrenceDate);
         recurrenceExRepository.save(ex);
         rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
 
-        if (ex.getStartTime() != null || ex.getTitle() != null) {
+        LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
+
+        // startTime이 현재보다 이후라면 리마인더 생성
+        if ((ex.getStartTime() != null || ex.getTitle() != null) && !startTime.isBefore(LocalDateTime.now())) {
             // 해당 일정만 수정했을 때 리스너 수정 로직 실행
             handleExceptionChanged(
                     ex.getId(),
@@ -233,11 +283,36 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우
-    private void deleteThisEventOnly(Event event, LocalDate start, Long memberId) {
+    private void deleteThisEventOnly(Event event, LocalDateTime occurrenceDate, Long memberId) {
+        // THIS_EVENT로 수정된 일정을 삭제하는 경우
+        Optional<RecurrenceException> r = recurrenceExRepository
+                .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+        );
+
+        if (r.isPresent()) {
+            RecurrenceException ex = r.get();
+            ex.updateExceptionTypeToSKIP();
+            LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
+            if (startTime.isAfter(LocalDateTime.now())) {
+                handleReminderDeleted(
+                        ex.getId(),
+                        memberId,
+                        startTime,
+                        event.getId(),
+                        TargetType.EVENT,
+                        DeletedType.DELETED_SINGLE
+                );
+            }
+            return;
+        }
+        log.info("4444444");
         RecurrenceGroup rg = event.getRecurrenceGroup();
         RecurrenceException ex =
                 recurrenceExRepository.
-                        findByRecurrenceGroupIdAndStartDateAndExceptionType(rg.getId(), start, ExceptionType.OVERRIDE)
+                        findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                                rg.getId(), occurrenceDate, ExceptionType.OVERRIDE
+                        )
                         .map(existingEx -> {
                             // 이미 존재한다면 타입만 변경 (더티 체킹 활용)
                             existingEx.updateExceptionTypeToSKIP();
@@ -246,7 +321,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                         .orElseGet(() -> {
                             // 존재하지 않는다면 새로 생성 후 저장
                             RecurrenceException newEx = RecurrenceGroupConverter
-                                    .toRecurrenceExceptionForDelete(rg, start.atStartOfDay());
+                                    .toRecurrenceExceptionForDelete(rg, occurrenceDate);
                             rg.addExceptionDate(newEx); // 연관관계 편의 메서드 호출
                             return recurrenceExRepository.save(newEx);
                         });
@@ -266,7 +341,8 @@ public class EventCommandServiceImpl implements EventCommandService {
             Event event,
             Member member,
             LocalDateTime start,
-            LocalDateTime end
+            LocalDateTime end,
+            LocalDateTime occurrenceDate
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
@@ -284,17 +360,39 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
 
         // 원본 일정에 대한 수정이면 기존 일정 + 반복 삭제
-        if (Objects.equals(event.getStartTime(), req.occurrenceDate().atTime(event.getStartTime().toLocalTime()))) {
+        if (Objects.equals(event.getStartTime(), occurrenceDate)) {
             eventRepository.delete(event);
             recurrenceGroupRepository.delete(event.getRecurrenceGroup());
-            handleEventChanged(
-                    event.getId(),
+            handleReminderDeleted(
+                    null,
                     member.getId(),
-                    null,
-                    true,
                     event.getStartTime(),
-                    null,
-                    ChangeType.DELETED_ALL);
+                    event.getId(),
+                    TargetType.EVENT,
+                    DeletedType.DELETED_ALL);
+        }
+
+        // 수정된 일정에 대한 수정이면 (THIS_EVENT로 수정된 일정)
+        Optional<RecurrenceException> re = recurrenceExRepository
+                .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                        rg.getId(),
+                        occurrenceDate,
+                        ExceptionType.OVERRIDE
+                );
+
+        if (re.isPresent()) {
+            RecurrenceException ex = re.get();
+            LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
+            recurrenceExRepository.delete(ex);
+            handleReminderDeleted(
+                    ex.getId(),
+                    member.getId(),
+                    startTime,
+                    event.getId(),
+                    TargetType.EVENT,
+                    DeletedType.DELETED_THIS_AND_FOLLOWING
+            );
+            return;
         }
 
         // 새 일정 생성에 대한 리마인더 발생
@@ -304,7 +402,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                 newEvent.getTitle(),
                 true,
                 newEvent.getStartTime(),
-                null,
                 ChangeType.CREATED
         );
     }
@@ -313,38 +410,48 @@ public class EventCommandServiceImpl implements EventCommandService {
     private void deleteThisAndFutureEvents(
             Event event,
             Long memberId,
-            LocalDate occurrenceDate) {
-
+            LocalDateTime occurrenceDate) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
+
+        // 삭제하려는 날짜가 수정된 일정인지
+        Optional<RecurrenceException> re = recurrenceExRepository.
+                findByRecurrenceGroupIdAndExceptionDate(rg.getId(), occurrenceDate);
+
+        LocalDateTime startDate = occurrenceDate;
+
+        // 수정된 일정에 대한 occurrenceDate라면
+        if (re.isPresent()) {
+            RecurrenceException ex = re.get();
+            startDate = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
+        }
 
         // 삭제하려는 날을 포함한 이후 일정들에 대한 반복예외 객체 모두 삭제
         recurrenceExRepository.deleteByRecurrenceGroupIdAndOccurrenceDate(rg.getId(), occurrenceDate);
 
         // 원본 일정에 대한 수정이면 기존 일정 + 반복 삭제
-        if (event.getStartTime().toLocalDate().equals(occurrenceDate)) {
+        if (event.getStartTime().equals(occurrenceDate)) {
             eventRepository.delete(event);
             recurrenceGroupRepository.delete(event.getRecurrenceGroup());
-            handleEventChanged(
-                    event.getId(),
-                    memberId,
+            handleReminderDeleted(
                     null,
-                    true,
+                    memberId,
                     event.getStartTime(),
-                    occurrenceDate, // 삭제하려는 대상 일정 날짜
-                    ChangeType.DELETED_ALL);
+                    event.getId(),
+                    TargetType.EVENT,
+                    DeletedType.DELETED_ALL
+            );
         } else {
-            // 해당 event가 속한 반복그룹의 종료기간을 해당 event의 생성일 하루전으로 설정
-            rg.updateEndDateTime(occurrenceDate.atStartOfDay());
+            // 계산된 일정에 대한 수정이면 해당 event가 속한 반복그룹의 종료기간을 해당 event의 생성일 하루전으로 설정
+            rg.updateEndDateTime(startDate.toLocalDate().atStartOfDay().minusDays(1));
 
             // 해당 일정과 그 이후 일정들을 삭제했을 때 리스너 수정 로직 실행
-            handleEventChanged(
-                    event.getId(),
+            handleReminderDeleted(
+                    null,
                     memberId,
-                    null,
-                    true,
-                    null,
-                    occurrenceDate, // 삭제하려는 대상 일정 날짜
-                    ChangeType.DELETED_THIS_AND_FOLLOWING
+                    startDate,
+                    event.getId(),
+                    TargetType.EVENT,
+                    DeletedType.DELETED_THIS_AND_FOLLOWING
             );
         }
     }
@@ -401,15 +508,27 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
 
-    private LocalDateTime calStartTime(EventReqDTO.UpdateReq req, Event event) {
+    private LocalDateTime calStartTime(EventReqDTO.UpdateReq req, Event event, LocalDateTime occurrenceDate) {
         if (req.startTime() != null) {
             return req.startTime();
         }
 
-        return req.occurrenceDate().atTime(event.getStartTime().toLocalTime());
+        Optional<RecurrenceException> re = recurrenceExRepository.findByRecurrenceGroupIdAndExceptionDate(
+                event.getRecurrenceGroup().getId(), occurrenceDate
+        );
+        if (re.isPresent() && re.get().getStartTime() != null) {
+            return re.get().getStartTime();
+        }
+
+        return occurrenceDate;
     }
 
-    private LocalDateTime calEndTime(EventReqDTO.UpdateReq req, Event event, LocalDateTime calStartTime) {
+    private LocalDateTime calEndTime(
+            EventReqDTO.UpdateReq req,
+            Event event,
+            LocalDateTime calStartTime,
+            LocalDateTime occurrenceDate
+            ) {
         if (req.endTime() != null) {
             return req.endTime();
         }
@@ -419,12 +538,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             return calStartTime.plusMinutes(event.getDurationMinutes());
         }
 
-        if (req.occurrenceDate() != null) {
-            return req.occurrenceDate()
-                    .atTime(event.getEndTime().toLocalTime());
-        }
-
-        return event.getEndTime();
+        return occurrenceDate;
     }
 
     private void handleEventChanged (
@@ -433,7 +547,6 @@ public class EventCommandServiceImpl implements EventCommandService {
             String title,
             Boolean isRecurring,
             LocalDateTime startTime,
-            LocalDate startDate,
             ChangeType changeType
     ) {
         reminderListener.onEvent(EventConverter.toEventChanged(
@@ -442,7 +555,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                 title,
                 isRecurring,
                 startTime,
-                startDate,
                 changeType
         ));
     }
@@ -468,6 +580,24 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     private void handleRecurrenceEnded(Long eventId, LocalDateTime startTime) {
         reminderListener.onEvent(EventConverter.toEventRecurrenceEnded(eventId, startTime));
+    }
+
+    private void handleReminderDeleted(
+            Long exceptionId,
+            Long memberId,
+            LocalDateTime occurrenceTime,
+            Long eventId,
+            TargetType targetType,
+            DeletedType deletedType
+    ) {
+        reminderListener.onEvent(EventConverter.toReminderDeleted(
+                exceptionId,
+                memberId,
+                occurrenceTime,
+                eventId,
+                targetType,
+                deletedType
+        ));
     }
 
     private Event createEventWithNewRecurrenceGroup(

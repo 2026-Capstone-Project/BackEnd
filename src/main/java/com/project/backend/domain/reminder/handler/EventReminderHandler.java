@@ -43,13 +43,6 @@ public class EventReminderHandler {
                     }
                 }
             }
-            case DELETED_SINGLE -> {
-                reminderCommandService.deleteReminderOfSingle(rs);
-            }
-            case DELETED_THIS_AND_FOLLOWING ->
-                    reminderCommandService.deleteReminderOfThisAndFollowings(rs, ec.occurrenceDate());
-            case DELETED_ALL ->
-                reminderCommandService.deleteReminderOfAll(rs, rs.getOccurrenceTime());
         }
     }
 }

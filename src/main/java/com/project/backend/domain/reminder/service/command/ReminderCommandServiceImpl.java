@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -53,7 +52,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
         // 단일 일정 / 단일 할일
         if (!source.getIsRecurring()) {
             if (!source.getOccurrenceTime().isBefore(now)) {
-                saveReminder(source, memberId);
+                saveReminder(source, memberId, null, ReminderRole.BASE);
             }
             return;
         }
@@ -68,11 +67,11 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                 // 현재시간보다 이전 날짜로 생성되었는데 반복을 통해 계산된 일정의 시간이 현재 시간보다 이후에 있는 경우
                 if (!last.isBefore(now)) {
                     ReminderSource overrideRs = reminderSourceProvider.getEventReminderSourceWithTime(source, last);
-                    saveReminder(overrideRs, memberId);
+                    saveReminder(overrideRs, memberId, null, ReminderRole.BASE);
                     return;
                 }
             }
-            saveReminder(source, memberId);
+            saveReminder(source, memberId, null, ReminderRole.BASE);
         }
         if (source.getTargetType() == TargetType.TODO) {
             // 투두
@@ -80,11 +79,16 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void createSingleOverrideReminder(Long eventId, Long memberId, LocalDateTime occurrenceTime, String title) {
+    public void createSingleOverrideReminder(
+            Long eventId,
+            Long memberId,
+            LocalDateTime occurrenceTime,
+            String title,
+            Long exceptionId
+            ) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        log.info("2222222");
         ReminderSource source = ReminderConverter.toEventReminderSource(
                 eventId,
                 title,
@@ -92,16 +96,15 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                 false
         );
 
-        log.info("3333333");
         Reminder reminder = ReminderConverter.toReminderWithOccurrence(
                 source,
                 member,
                 occurrenceTime,
                 LifecycleStatus.ACTIVE,
-                ReminderRole.OVERRIDE
+                ReminderRole.OVERRIDE,
+                exceptionId
         );
 
-        log.info("4444444");
         reminderRepository.save(reminder);
     }
 
@@ -138,20 +141,20 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                         new RecurrenceGroupException(RecurrenceGroupErrorCode.RECURRENCE_EXCEPTION_NOT_FOUND));
 
         // 날짜가 바뀐 경우 -> 반복 + 일정에서 유일하게 수정된 일정에 대한 리마인더 생성
-        if (ex.getStartTime() != null && !ex.getStartTime().toLocalDate().equals(ex.getExceptionDate())) {
-            log.info("11111111");
+        if (ex.getStartTime() != null && !ex.getStartTime().equals(ex.getExceptionDate())) {
             createSingleOverrideReminder(
                     rs.getTargetId(),
                     reminder.getMember().getId(),
                     ex.getStartTime(),
                     ex.getTitle() != null
                             ? ex.getTitle()
-                            : reminder.getTitle()
+                            : reminder.getTitle(),
+                    ex.getId()
             );
         }
 
         // 리마인더가 지정하고 있던 계산된 일정의 시간을 변경/삭제한 경우
-        if (reminder.getOccurrenceTime().toLocalDate().equals(ex.getExceptionDate())) {
+        if (reminder.getOccurrenceTime().equals(ex.getExceptionDate())) {
             refreshDueToUpdate(reminder);
         }
     }
@@ -159,9 +162,9 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     @Override
     public void updateReminderOfSingle(ReminderSource rs, Long memberId) {
         // 기존 리마인더 삭제
-        deleteReminder(rs);
+        deleteReminder(rs.getTargetId(), rs.getTargetType(), rs.getOccurrenceTime());
 
-        saveReminder(rs, memberId);
+        saveReminder(rs, memberId, null, ReminderRole.BASE);
     }
 
     @Override
@@ -171,7 +174,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
 
         Reminder reminder =
                 ReminderConverter.toReminderWithOccurrence(
-                        rs, member, occurrenceTime, LifecycleStatus.ACTIVE, ReminderRole.BASE);
+                        rs, member, occurrenceTime, LifecycleStatus.ACTIVE, ReminderRole.BASE, null);
         reminderRepository.save(reminder);
     }
 
@@ -188,38 +191,60 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void deleteReminderOfSingle(ReminderSource rs) {
-        deleteReminder(rs);
-    }
+    public void syncReminderAfterExceptionUpdate(ReminderSource rs, Long exceptionId, Long memberId) {
+        LocalDateTime now = LocalDateTime.now();
 
-    @Override
-    public void deleteReminderOfThisAndFollowings(ReminderSource rs, LocalDate occurrenceTime) {
-        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
-                rs.getTargetId(), rs.getTargetType(), ReminderRole.BASE);
+        // 수정한 일정의 startTime or ExceptionDate가 현재보다 이전인 경우 리마인더 생성 x
+        if (rs.getOccurrenceTime().isBefore(now)) return;
 
-        if (reminder.isEmpty()) return;
+        // 수정하려는 일정의 startTime이 현재보다 이후인 경우
+        Optional<Reminder> reminder = reminderRepository.findByRecurrenceExceptionId(exceptionId);
 
-        Reminder baseReminder = reminder.get();
+        if (reminder.isEmpty()) {
+            // 이전 수정된 일정의 날짜가 현재보다 이후여서 리마인더가 삭제된 경우 리마인더 새로 생성
+            saveReminder(rs, memberId,exceptionId, ReminderRole.OVERRIDE);
+            return;
+        }
 
-        LocalDateTime targetTime = occurrenceTime.atTime(baseReminder.getOccurrenceTime().toLocalTime());
+        Reminder re = reminder.get();
 
-        // 수정한 일정에 대한 리마인더의 발생 시간이 수정한 일정의 시간보다 이전 or 동일하다면 리마인더 삭제
-        if (!baseReminder.getOccurrenceTime().isAfter(targetTime)) {
-            deleteReminderAfterOccurrenceTime(rs, targetTime);
+        // rs의 title이 저장된 리마인더와 일치하지 않은경우 (제목이 업데이트 된 경우)
+        if (rs.getTitle() != null && !rs.getTitle().equals(re.getTitle())) {
+            re.updateTitle(rs.getTitle());
+        }
+
+        if (rs.getOccurrenceTime() != null && !rs.getOccurrenceTime().equals(re.getOccurrenceTime())) {
+            re.updateOccurrence(rs.getOccurrenceTime());
         }
     }
 
     @Override
-    public void deleteReminderOfAll(ReminderSource rs, LocalDateTime occurrenceTime) {
-        deleteReminderAfterOccurrenceTime(rs, occurrenceTime);
+    public void deleteReminderOfSingle(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+        deleteReminder(targetId, targetType, occurrenceTime);
     }
 
-    private void saveReminder(ReminderSource rs, Long memberId) {
+    @Override
+    public void deleteReminderOfThisAndFollowings(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
+                targetId, targetType, ReminderRole.BASE);
+
+        if (reminder.isEmpty()) return;
+
+        // THIS_AND_FOLLOWING: 기준 occurrenceTime(포함) 이후에 발생하는 리마인더만 삭제한다.
+        deleteReminderAfterOccurrenceTime(targetId, targetType, occurrenceTime);
+    }
+
+    @Override
+    public void deleteReminderOfAll(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+        deleteReminderAfterOccurrenceTime(targetId, targetType, occurrenceTime);
+    }
+
+    private void saveReminder(ReminderSource rs, Long memberId, Long exceptionId, ReminderRole role) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 당장 활성화된 새 리마인더 생성
-        Reminder reminder = ReminderConverter.toReminder(rs, member, LifecycleStatus.ACTIVE);
+        Reminder reminder = ReminderConverter.toReminder(rs, member, exceptionId, LifecycleStatus.ACTIVE, role);
         reminderRepository.save(reminder);
     }
 
@@ -241,12 +266,15 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
         reminder.updateOccurrence(result.nextTime());
     }
 
-    private void deleteReminder(ReminderSource rs) {
-        reminderRepository.deleteByTargetIdAndTargetType(rs.getTargetId(), rs.getTargetType());
+    private void deleteReminder(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+        reminderRepository.deleteByTargetIdAndTargetTypeAndOccurrenceTime(targetId, targetType, occurrenceTime);
     }
 
-    private void deleteReminderAfterOccurrenceTime(ReminderSource rs, LocalDateTime occurrenceTime) {
-        reminderRepository.deleteByTargetIDAndTargetTypeAndOccurrenceTime
-                (rs.getTargetId(), rs.getTargetType(), occurrenceTime);
+    private void deleteReminderAfterOccurrenceTime(
+            Long targetId,
+            TargetType targetType,
+            LocalDateTime occurrenceTime
+    ) {
+        reminderRepository.deleteRemindersFromOccurrenceTime(targetId, targetType, occurrenceTime);
     }
 }

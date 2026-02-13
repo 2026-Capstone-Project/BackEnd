@@ -106,7 +106,7 @@ public class RecurrenceGroupConverter {
             RecurrenceGroup recurrenceGroup,
             LocalDateTime time) {
         return RecurrenceException.builder()
-                .exceptionDate(time.toLocalDate())
+                .exceptionDate(time)
                 .title(null)
                 .content(null)
                 .startTime(null)
@@ -121,10 +121,11 @@ public class RecurrenceGroupConverter {
 
     public static RecurrenceException toRecurrenceExceptionForUpdate(
             EventReqDTO.UpdateReq req,
-            RecurrenceGroup recurrenceGroup
+            RecurrenceGroup recurrenceGroup,
+            LocalDateTime occurrenceDate
     ) {
         return RecurrenceException.builder()
-                .exceptionDate(req.occurrenceDate())
+                .exceptionDate(occurrenceDate)
                 .title(req.title() != null ? req.title() : null)
                 .content(req.content() != null ? req.content() : null)
                 .startTime(req.startTime() != null ? req.startTime() : null)

@@ -1,8 +1,6 @@
 package com.project.backend.domain.event.converter;
 
-import com.project.backend.domain.event.dto.EventChanged;
-import com.project.backend.domain.event.dto.RecurrenceEnded;
-import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.event.dto.*;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
@@ -11,7 +9,9 @@ import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
+import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.AccessLevel;
@@ -19,7 +19,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -83,21 +82,16 @@ public class EventConverter {
                 .build();
     }
 
-    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime occurrenceStartTime) {
-        LocalDateTime end;
-        if (event.getDurationMinutes() != null) {
-            end = occurrenceStartTime.plusMinutes(event.getDurationMinutes());
-        } else {
-            end = occurrenceStartTime.plusMinutes(
-                    event.getEndTime().toLocalTime().getMinute() - occurrenceStartTime.toLocalTime().getMinute());
-        }
+    // RecurrenceException이 없는 일정일경우
+    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime occurrenceDate) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .occurrenceDate(occurrenceDate)
                 .calculated(true)
                 .title(event.getTitle())
                 .content(event.getContent())
-                .start(occurrenceStartTime)
-                .end(end)
+                .start(occurrenceDate)
+                .end(getEndTime(event, occurrenceDate))
                 .location(event.getLocation())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
@@ -105,10 +99,32 @@ public class EventConverter {
                 .build();
     }
 
+    public static EventResDTO.DetailRes toDetailRes(
+            Event event,
+            RecurrenceException ex,
+            LocalDateTime occurrenceDate) {
+        return EventResDTO.DetailRes.builder()
+                .id(event.getId())
+                .occurrenceDate(ex.getExceptionDate())
+                .calculated(true)
+                .title(ex.getTitle() != null ? ex.getTitle() : event.getTitle())
+                .content(ex.getContent() != null ? ex.getContent() : event.getContent())
+                .start(occurrenceDate)
+                .end(getEndTime(event, occurrenceDate))
+                .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
+                .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
+                .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .recurrenceGroup(
+                        RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
+                )
+                .build();
+    }
+
     // TODO : 오버 로딩 임시조치
     public static EventResDTO.DetailRes toDetailRes(Event event) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .occurrenceDate(event.getStartTime())
                 .calculated(false)
                 .title(event.getTitle())
                 .content(event.getContent())
@@ -128,6 +144,7 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime start, LocalDateTime end) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .occurrenceDate(start)
                 .calculated(true)
                 .title(event.getTitle())
                 .content(event.getContent())
@@ -144,17 +161,30 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(RecurrenceException ex, Event event) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
+                .occurrenceDate(ex.getExceptionDate())
                 .calculated(true)
                 .title(ex.getTitle() != null ? ex.getTitle() : event.getTitle())
                 .content(ex.getContent() != null ? ex.getContent() : event.getContent())
-                .start(ex.getStartTime() != null ? ex.getStartTime() : event.getStartTime())
-                .end(ex.getEndTime() != null ? ex.getEndTime() : event.getEndTime())
+                .start(ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate())
+                .end(ex.getEndTime() != null ? ex.getEndTime() : getEndTime(event, ex.getExceptionDate()))
                 .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
+                .build();
+    }
+
+    public static ResolvedOccurrence toResolvedOccurrence(
+            Event event,
+            RecurrenceException ex,
+            LocalDateTime occurrenceDate
+    ) {
+        return ResolvedOccurrence.builder()
+                .occurrenceDate(occurrenceDate)
+                .event(event)
+                .exception(ex)
                 .build();
     }
 
@@ -170,7 +200,6 @@ public class EventConverter {
             String title,
             Boolean isRecurring,
             LocalDateTime occurrenceTime,
-            LocalDate occurrenceDate,
             ChangeType changeType) {
         return EventChanged.builder()
                 .eventId(targetId)
@@ -178,7 +207,6 @@ public class EventConverter {
                 .title(title)
                 .isrRecurring(isRecurring)
                 .occurrenceTime(occurrenceTime)
-                .occurrenceDate(occurrenceDate)
                 .changeType(changeType)
                 .build();
     }
@@ -209,5 +237,34 @@ public class EventConverter {
                 .targetType(TargetType.EVENT)
                 .startTime(startTime)
                 .build();
+    }
+
+    public static ReminderDeleted toReminderDeleted(
+            Long exceptionId,
+            Long memberId,
+            LocalDateTime occurrenceTime,
+            Long targetId,
+            TargetType targetType,
+            DeletedType deletedType
+    ) {
+        return ReminderDeleted.builder()
+                .exceptionId(exceptionId)
+                .memberId(memberId)
+                .occurenceTime(occurrenceTime)
+                .targetId(targetId)
+                .targetType(targetType)
+                .deletedType(deletedType)
+                .build();
+    }
+
+    private static LocalDateTime getEndTime(Event event, LocalDateTime occurrenceDate) {
+        LocalDateTime end;
+        if (event.getDurationMinutes() != null) {
+            end = occurrenceDate.plusMinutes(event.getDurationMinutes());
+        } else {
+            end = occurrenceDate.plusMinutes(
+                    event.getEndTime().toLocalTime().getMinute() - occurrenceDate.toLocalTime().getMinute());
+        }
+        return end;
     }
 }

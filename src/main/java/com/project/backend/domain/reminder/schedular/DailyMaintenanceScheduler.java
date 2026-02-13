@@ -15,7 +15,7 @@ public class DailyMaintenanceScheduler {
     private final ReminderGenerationJob reminderGenerationJob;
     private final ReminderCleanupJob reminderCleanupJob;
 
-    @Scheduled(cron = "30 7 4 * * *")
+    @Scheduled(cron = "0 0 0 * * *")
     public void dailyRun() {
         log.info("Daily Maintenance Job Started");
         reminderGenerationJob.run();

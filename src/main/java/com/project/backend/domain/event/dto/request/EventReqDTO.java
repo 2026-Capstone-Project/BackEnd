@@ -37,7 +37,6 @@ public class EventReqDTO {
 
     @Builder
     public record UpdateReq(
-            LocalDate occurrenceDate, // 계산된 날짜
             String title,
             String content,
             LocalDateTime startTime,

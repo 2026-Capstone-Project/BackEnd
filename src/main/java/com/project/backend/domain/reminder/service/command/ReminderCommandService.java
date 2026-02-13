@@ -1,8 +1,11 @@
 package com.project.backend.domain.reminder.service.command;
 
 import com.project.backend.domain.event.dto.RecurrenceEnded;
+import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.reminder.entity.Reminder;
 import com.project.backend.domain.reminder.entity.ReminderSource;
+import com.project.backend.domain.reminder.enums.TargetType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,7 +15,8 @@ public interface ReminderCommandService {
 
     void createReminder(ReminderSource rs, Long memberId);
 
-    void createSingleOverrideReminder(Long eventId, Long memberId, LocalDateTime occurrenceTime, String title);
+    void createSingleOverrideReminder
+            (Long eventId, Long memberId, LocalDateTime occurrenceTime, String title, Long exceptionId);
 
     List<Reminder> findActiveReminders();
 
@@ -28,9 +32,11 @@ public interface ReminderCommandService {
 
     void cleanupBaseReminderOnUpdate(RecurrenceEnded re);
 
-    void deleteReminderOfSingle(ReminderSource rs);
+    void syncReminderAfterExceptionUpdate(ReminderSource rs, Long exceptionId, Long memberId);
 
-    void deleteReminderOfThisAndFollowings(ReminderSource rs, LocalDate occurrenceDate);
+    void deleteReminderOfSingle(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
 
-    void deleteReminderOfAll(ReminderSource rs, LocalDateTime occurrenceTime);
+    void deleteReminderOfThisAndFollowings(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
+
+    void deleteReminderOfAll(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
 }

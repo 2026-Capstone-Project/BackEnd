@@ -12,12 +12,8 @@ public record EventChanged (
         Long memberId,
         String title,
         Boolean isrRecurring,
-
         // 생성 / 수정에서만 의미 있음
         LocalDateTime occurrenceTime,
-        // 삭제 계열에서만 의미 있음
-        LocalDate occurrenceDate,
-
         ChangeType changeType
 ) {
 }

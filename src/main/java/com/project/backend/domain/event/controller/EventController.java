@@ -64,9 +64,10 @@ public class EventController implements EventDocs {
     public CustomResponse<Void> updateEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
+            @RequestParam LocalDateTime originalDate,
             @RequestBody EventReqDTO.UpdateReq req
     ){
-        eventCommandService.updateEvent(req, eventId, customUserDetails.getId());
+        eventCommandService.updateEvent(req, eventId, customUserDetails.getId(), originalDate);
         return CustomResponse.onSuccess("수정 완료", null);
     }
 
@@ -75,7 +76,7 @@ public class EventController implements EventDocs {
     public CustomResponse<Void> deleteEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
-            @RequestParam LocalDate occurrenceDate,
+            @RequestParam LocalDateTime occurrenceDate,
             @RequestParam(required = false) RecurrenceUpdateScope scope
     ){
         eventCommandService.deleteEvent(eventId, occurrenceDate, scope, customUserDetails.getId());

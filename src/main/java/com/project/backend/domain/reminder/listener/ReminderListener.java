@@ -3,10 +3,12 @@ package com.project.backend.domain.reminder.listener;
 import com.project.backend.domain.event.dto.EventChanged;
 import com.project.backend.domain.event.dto.RecurrenceEnded;
 import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.entity.ReminderSource;
 import com.project.backend.domain.reminder.handler.EventReminderHandler;
 import com.project.backend.domain.reminder.handler.ExceptionReminderHandler;
 import com.project.backend.domain.reminder.handler.RecurrenceEndedHandler;
+import com.project.backend.domain.reminder.handler.ReminderDeletedHandler;
 import com.project.backend.domain.reminder.provider.ReminderSourceProvider;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import com.project.backend.domain.todo.dto.TodoChanged;
@@ -32,6 +34,7 @@ public class ReminderListener {
     private final ExceptionReminderHandler exceptionReminderHandler;
     private final TodoRepository todoRepository;
     private final RecurrenceEndedHandler recurrenceEndedHandler;
+    private final ReminderDeletedHandler reminderDeletedHandler;
 
     // 리스너를 호출하는 로직이 flush + commit 된 이후 실행
     @TransactionalEventListener(
@@ -55,6 +58,14 @@ public class ReminderListener {
     )
     public void onEvent(RecurrenceEnded re) {
         recurrenceEndedHandler.handle(re);
+    }
+
+    // 수정된 일정에 대해 THIS_AND_FOLLWING 으로 재수정하거나 삭제 하는 경우
+    @TransactionalEventListener(
+            phase = TransactionPhase.AFTER_COMMIT
+    )
+    public void onEvent(ReminderDeleted rd) {
+        reminderDeletedHandler.handle(rd);
     }
 
     @TransactionalEventListener(

@@ -1,7 +1,6 @@
 package com.project.backend.domain.briefing.converter;
 
 import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
-import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.briefing.dto.response.BriefingResDTO;
 import com.project.backend.domain.briefing.enums.BriefingReason;
 import lombok.AccessLevel;
@@ -56,22 +55,6 @@ public class BriefingConverter {
                 .toDoCount(0)
                 .build();
     }
-
-    public static BriefingResDTO.BriefingRes toAvailable(
-            LocalDate date,
-            List<BriefingResDTO.BriefInfoRes> briefInfo,
-            int eventCount,
-            int toDoCount
-    ) {
-        return BriefingResDTO.BriefingRes.builder()
-                .date(date)
-                .reason(BriefingReason.AVAILABLE)
-                .briefInfo(briefInfo)
-                .eventCount(eventCount)
-                .toDoCount(toDoCount)
-                .build();
-    }
-
 
 //    public static NotificationResDTO.BriefInfoRes toBriefTodoInfoRes (Todo todo) {
 //        return NotificationResDTO.BriefInfoRes.builder()

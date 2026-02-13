@@ -20,15 +20,22 @@ import java.time.LocalTime;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ReminderConverter {
 
-    public static Reminder toReminder(ReminderSource source, Member member, LifecycleStatus lifecycleStatus) {
+    public static Reminder toReminder(
+            ReminderSource source,
+            Member member,
+            Long exceptionId,
+            LifecycleStatus lifecycleStatus,
+            ReminderRole role
+    ) {
         return Reminder.builder()
                 .title(source.getTitle())
                 .occurrenceTime(source.getOccurrenceTime())
                 .targetType(source.getTargetType())
                 .targetId(source.getTargetId())
+                .recurrenceExceptionId(exceptionId)
                 .interactionStatus(InteractionStatus.PENDING)
                 .lifecycleStatus(lifecycleStatus)
-                .role(ReminderRole.BASE)
+                .role(role)
                 .member(member)
                 .build();
     }
@@ -38,13 +45,16 @@ public class ReminderConverter {
             Member member,
             LocalDateTime occurrenceTime,
             LifecycleStatus lifecycleStatus,
-            ReminderRole role
+            ReminderRole role,
+            Long recurrenceExceptionId
+
     ) {
         return Reminder.builder()
                 .title(source.getTitle())
                 .occurrenceTime(occurrenceTime)
                 .targetType(source.getTargetType())
                 .targetId(source.getTargetId())
+                .recurrenceExceptionId(recurrenceExceptionId)
                 .interactionStatus(InteractionStatus.PENDING)
                 .lifecycleStatus(lifecycleStatus)
                 .role(role)

@@ -36,6 +36,9 @@ public class Reminder extends BaseEntity {
     @Column(name = "target_id", nullable = false)
     private Long targetId;
 
+    @Column(name = "recurrence_exception_id")
+    private Long recurrenceExceptionId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "reminder_status", nullable = false)
     private InteractionStatus interactionStatus;

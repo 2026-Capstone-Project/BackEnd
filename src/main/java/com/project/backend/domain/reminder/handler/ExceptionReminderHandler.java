@@ -25,6 +25,9 @@ public class ExceptionReminderHandler {
             case UPDATED_THIS, DELETED_THIS -> {
                 reminderCommandService.refreshIfOccurrenceInvalidated(rs, rec.exceptionId());
             }
+            case UPDATE_THIS_AGAIN -> {
+                reminderCommandService.syncReminderAfterExceptionUpdate(rs, rec.exceptionId(), rec.memberId());
+            }
         }
     }
 }

@@ -31,7 +31,7 @@ public class RecurrenceException {
     private Long id;
 
     @Column(name = "exception_date", nullable = false)
-    private LocalDate exceptionDate;
+    private LocalDateTime exceptionDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "exception_type", nullable = false, length = 10)
@@ -53,6 +53,7 @@ public class RecurrenceException {
     @Column(name = "location")
     private String location;
 
+    // TODO 리팩토링 단계에서 삭제할지 말지 결정
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", length = 10)
     private RecurrenceFrequency recurrenceFrequency;
@@ -85,5 +86,23 @@ public class RecurrenceException {
 
     public void updateExceptionTypeToSKIP() {
         this.exceptionType = ExceptionType.SKIP;
+    }
+
+    public void updateForUpdate(
+            String title,
+            String content,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            String location,
+            EventColor color,
+            Boolean isAllDay
+    ) {
+        if (title != null) this.title = title;
+        if (content != null) this.content = content;
+        if (startTime != null) this.startTime = startTime;
+        if (endTime != null) this.endTime = endTime;
+        if (location != null) this.location = location;
+        if (color != null) this.color = color;
+        if (isAllDay != null) this.isAllDay = isAllDay;
     }
 }
