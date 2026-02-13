@@ -84,12 +84,16 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
         if (reminder.getTargetType() == TargetType.EVENT) {
             Event event = eventRepository.findById(reminder.getTargetId())
                     .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
-            log.info("111111");
+
+            // 단일 일정이면 RecurrenceException은 존재하지 않는다.
+            if (!event.isRecurring()) {
+                return reminder.getTitle();
+            }
+
             re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
                     event.getRecurrenceGroup().getId(),
                     reminder.getOccurrenceTime().toLocalDate()
             );
-            log.info("re = " + reminder.getOccurrenceTime().toLocalDate());
         } else {
             // Todo 반복그룹 통합 필요
 //            Todo todo = todoRepository.findById(reminder.getTargetId())
