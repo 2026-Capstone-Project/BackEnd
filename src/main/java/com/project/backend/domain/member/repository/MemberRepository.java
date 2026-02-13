@@ -18,4 +18,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 삭제된 회원 포함 조회 (스케줄러용)
     @Query("SELECT m FROM Member m WHERE m.deletedAt IS NOT NULL AND m.deletedAt < :threshold")
     List<Member> findAllDeletedBefore(@Param("threshold") LocalDateTime threshold);
+
+    @Query("""
+    SELECT m.id
+    FROM Member m
+    JOIN Setting s ON s.member = m
+    WHERE m.deletedAt IS NULL
+      AND s.suggestion = TRUE
+""")
+    List<Long> findActiveMemberIdsWithSuggestionEnabled();
 }

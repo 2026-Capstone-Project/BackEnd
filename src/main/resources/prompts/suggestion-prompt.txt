@@ -7,11 +7,13 @@
 - 패턴/반복 여부를 새로 판단하거나 추론하지 마세요. 입력값 그대로만 사용하세요.
 - 입력에 없는 정보(날짜/장소/행동/맥락)를 만들지 마세요.
 - 실제 날짜(YYYY-MM-DD)는 문구에 절대 노출하지 마세요. (미래 날짜 계산/변환 금지)
+- start의 날짜 부분을 해석/변환/계산하지 마세요. 시간(HH:mm)만 사용하세요.
 - stableType / patternType 문자열을 문구에 그대로 노출하지 마세요.
 - 출력은 JSON만. 설명/코멘트/마크다운 금지.
 - id는 그대로 반환(변형 금지). 입력 순서 유지.
 - primaryContent는 primaryPattern만 사용. secondaryPattern 참조 금지.
 - secondaryContent는 secondaryPattern만 사용. primaryPattern 참조 금지.
+- primaryContent/secondaryContent 문자열에는 줄바꿈(\n)을 넣지 마세요. (한 줄 문자열)
 
 [입력]
 {
@@ -34,9 +36,10 @@
 - title은 반드시 ‘{title}’(작은따옴표)로 포함.
 - category=EVENT: “일정 ‘{title}’은/는 …”
 - category=TODO : “할 일 ‘{title}’은/는 …”
-- 은/는: 마지막 글자에 받침 있으면 “은”, 없으면 “는”.
-- 문구는 가급적 2문장, 전체 40~60자 권장, 반드시 질문(“…등록할까요?”/“…추가할까요?”)으로 끝낼 것.
-- 시간표현(start의 시각만 사용):
+- 은/는: title의 마지막 글자에 받침 있으면 “은”, 없으면 “는”.
+- 문구는 반드시 질문(“…등록할까요?”/“…추가할까요?”)으로 끝낼 것.
+- {등록/추가}는 둘 중 하나만 선택(카테고리 강제 없음, 단 문장 끝 질문 유지).
+- 시간표현(start의 시각만 사용, 날짜 추론 금지):
   - HH:00 → “HH시에” (예: 10:00 → “10시에”, “10시 0분” 금지)
   - HH:MM(00 아님) → “HH시 M분에” (앞자리 0 없이: 10:05 → “10시 5분에”)
 
@@ -81,6 +84,13 @@
 - monthDiff>2: 반드시 “{monthDiff}달 뒤”
 
 [문구 생성 규칙]
+※ primaryContent는 어떤 stableType이든 “반드시 2문장”입니다.
+※ 2문장은 다음 규칙으로 강제합니다:
+- 1문장: 반드시 마침표(.)로 끝나야 함
+- 2문장: 반드시 물음표(?)로 끝나야 함
+- 두 문장 사이는 공백 1개로 연결(줄바꿈 금지)
+- 1문장만 출력하는 것은 절대 금지
+
 A) stableType = PERFECTLY_STABLE 또는 PARTIALLY_STABLE
 - primaryContent는 아래 2문장 구조 고정(추가/삭제/순서 변경 금지):
   1) "({일정|할 일}) ‘{title}’{은/는} {primary 간격표현} {(가능하면 요일/날짜요소)} {시간}에 반복한 기록이 있어요."
@@ -88,27 +98,34 @@ A) stableType = PERFECTLY_STABLE 또는 PARTIALLY_STABLE
      - WEEKLY_SET: “{간격표현} {요일(들)} {시간}”
      - MONTHLY_DAY: “{간격표현} {dayOfMonthSet} {시간}”
   2) "{(반드시 primaryPattern 기반) primary 상대표현}{시간}로 {등록/추가}할까요?"
-- {등록/추가}는 둘 중 하나 선택(카테고리 강제 없음)
+     - 2문장에는 반드시 시간표현을 포함해야 함(예: “10시에”, “10시 5분에”)
 
 B) stableType = CONTAMINATED_STABLE
 - primaryContent는 아래 2문장 구조 고정:
   1) "({일정|할 일}) ‘{title}’{은/는} 최근 기록에서 {primary 간격표현} 간격이 가장 많았어요."
      - 간격표현은 정확히 1회만 등장
   2) "{(반드시 primaryPattern 기반) primary 상대표현}{시간}로 {등록/추가}할까요?"
+     - 2문장에는 반드시 시간표현을 포함해야 함
 
 C) secondaryContent
 - secondaryPattern이 null이면 secondaryContent는 반드시 null.
-- secondaryPattern이 존재하면 아래 1문장 구조 고정(secondaryPattern만 사용):
+- secondaryPattern이 존재하면 아래 1문장 구조 고정(secondaryPattern만 사용, 반드시 물음표로 끝):
   - EVENT:
     "일정 ‘{title}’은 가장 최근에 {secondary 간격표현} 간격이었어요. {(반드시 secondaryPattern 기반) secondary 상대표현}{시간}로 {등록/추가}할까요?"
   - TODO:
     "할 일 ‘{title}’은 가장 최근에 {secondary 간격표현} 간격이었어요. {(반드시 secondaryPattern 기반) secondary 상대표현}{시간}로 {등록/추가}할까요?"
 
 [자체 검증(출력 전 필수)]
+- primaryContent는 반드시 “마침표(.) 1개 + 물음표(?) 1개”를 포함해야 하며, 문장 수는 정확히 2개여야 함.
+  - 조건을 만족하지 않으면 해당 항목의 primaryContent를 규칙에 맞게 즉시 재생성.
+- secondaryContent가 null이면 그대로 null인지 확인.
+- secondaryContent가 문자열이면 반드시 물음표(?)로 끝나는지 확인.
 - primaryContent의 간격/상대표현 숫자는 primaryPattern에서만 나와야 함.
 - secondaryContent의 간격/상대표현 숫자는 secondaryPattern에서만 나와야 함.
 - monthDiff=2인데 “매달/다음 달” 사용하면 규칙 위반.
 - HH:00인데 “0분” 표기하면 규칙 위반.
+- 실제 날짜(YYYY-MM-DD) 또는 월/일 숫자(예: “12월 31일”, “31일(날짜 의미)”)를 문구에 노출하면 규칙 위반.
+  - 단, MONTHLY_DAY의 dayOfMonthSet(예: “27일·28일”, “31일”)은 “날짜 계산 없이” 그대로 표기하는 것은 허용.
 
 [출력(JSON만)]
 {

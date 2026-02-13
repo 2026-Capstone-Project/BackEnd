@@ -89,7 +89,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final EndConditionFactory endConditionFactory;
 
     @Override
-    public void createSuggestion(Long memberId) {
+    public void createEventSuggestion(Long memberId) {
 
         LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
 //        LocalDate now = LocalDate.of(2026, 1, 19);
@@ -255,10 +255,10 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                         detail.secondaryPattern()
                 );
             }
-            log.info("anchorDate = {}", primaryAnchorDate);
+            log.debug("anchorDate = {}", primaryAnchorDate);
             // 제안을 생성하기 위한 최소 시점 계산 (N_INTERVAL : dayDiff가 7일 미만인 경우 dayDiff가 leadDays)
             Integer leadDays = SuggestionAnchorUtil.computeLeadDays(detail.patternType(), detail.primaryPattern());
-            log.info("leadDay = {}", leadDays);
+            log.debug("leadDay = {}", leadDays);
             // 명시적 NPE 방지
             if (primaryAnchorDate == null || leadDays == null) {
                 continue;
@@ -297,7 +297,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                         log.warn("baseCandidate가 존재하지 않음. event/todoId={}", llmSuggestion.id());
                         return Stream.empty();
                     }
-                    log.info("anchor = {}", base.primaryAnchorDate());
+                    log.debug("anchor = {}", base.primaryAnchorDate());
                     return switch (base.category()) {
                         case EVENT -> eventRepository.findById(base.id())
                                 .map(e -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, e, null))
@@ -401,7 +401,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                 LocalDateTime start = resolveExceptionStart(current, exMap.get(current.toLocalDate()));
                 // SKIP or Exception 없음
                 if (start != null) {
-                    log.info("title = {}, start = {}", candidate.event().getTitle(), start);
+                    log.debug("title = {}, start = {}", candidate.event().getTitle(), start);
                     last = start;
                 }
             }
@@ -453,24 +453,24 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private SuggestionResDTO.LlmRes getLlmResponse(SuggestionReqDTO.LlmSuggestionReq llmReq) {
 
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
-        log.info("llm request json = {}",llmReqJson);
+        log.debug("llm request json = {}",llmReqJson);
 
         String suggestionPrompt = suggestionPromptTemplate.getSuggestionPrompt();
         String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
-        log.info("llm response json = {}",llmSuggestionRes);
+        log.debug("llm response json = {}",llmSuggestionRes);
         return llmSuggestionResponseParser.parseSuggestion(llmSuggestionRes);
     }
 
     private SuggestionResDTO.LlmRecurrenceGroupSuggestionRes getLlmResponse(SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq) {
 
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
-        log.info("llm request json = {}",llmReqJson);
+        log.debug("llm request json = {}",llmReqJson);
 
         String suggestionPrompt = suggestionPromptTemplate.getRecurrenceSuggestionPrompt();
         String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
-        log.info("llm response json = {}",llmSuggestionRes);
+        log.debug("llm response json = {}",llmSuggestionRes);
         return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 

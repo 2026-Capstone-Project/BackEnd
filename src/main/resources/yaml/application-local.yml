@@ -56,3 +56,7 @@ spring:
     api-key: ${LLM_API_KEY}
     model: gpt-4o-mini
     timeout: 30s
+
+  scheduler:
+    suggestion:
+      enabled: ${SUGGESTION_SCHEDULER_ENABLE:true}
