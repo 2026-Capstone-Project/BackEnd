@@ -52,6 +52,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,7 +91,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     public void createSuggestion(Long memberId) {
 
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 2, 4);
+        LocalDate now = LocalDate.of(2026, 2, 21);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusYears(1);
@@ -263,6 +264,11 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             }
             // 다음 객체 생성일이 현재 서버 시간 + leadDays가 아니면 아직 제안을 생성할 시점이 아님
             if (!primaryAnchorDate.equals(now.plusDays(leadDays))) {
+                continue;
+            }
+            // 다음 객체 생성일에 이미 객체가 있는 경우 제안 건너뛰기
+            if (checkAlreadyExist(primaryAnchorDate, baseCandidate, member)
+                    || checkAlreadyExist(secondaryAnchorDate, baseCandidate, member)) {
                 continue;
             }
             // LLM 요청 바디에 추가
@@ -464,6 +470,23 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
         log.info("llm response json = {}",llmSuggestionRes);
         return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
+    }
+
+    private boolean checkAlreadyExist(LocalDate anchor, SuggestionCandidate baseCandidate, Member member) {
+        if (anchor == null) return false;
+
+        Long memberId = member.getId();
+        String title = baseCandidate.title();
+        String content = baseCandidate.content();
+        LocalTime startTime = baseCandidate.start().toLocalTime();
+
+        return switch (baseCandidate.category()) {
+            case EVENT -> eventRepository.existsByMemberIdAndTitleAndLocationAndStartTime(
+                    memberId, title, content, anchor.atTime(startTime));
+
+            case TODO -> todoRepository.existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(
+                    memberId, title, content, anchor, startTime);
+        };
     }
 
     // 중복된 제안을 해시를 통해 비교 후, 걸러낸 List<Suggestion>을 한 번에 저장

@@ -30,7 +30,7 @@ public record SuggestionCandidate(
         return new SuggestionCandidate(
                 event.getId(),
                 event.getTitle(),
-                event.getContent(),
+                event.getLocation(),
                 event.getStartTime(),
                 event.getIsAllDay(),
                 null,
@@ -39,7 +39,6 @@ public record SuggestionCandidate(
                 new EventInfo(
                         event.getEndTime(),
                         event.getDurationMinutes(),
-                        event.getLocation(),
                         event.getColor()),
                 null
         );
@@ -78,7 +77,6 @@ public record SuggestionCandidate(
     public record EventInfo(
             LocalDateTime end,
             Integer durationMinutes,
-            String location,
             EventColor color
     ) {
     }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
@@ -52,4 +53,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             @Param("memberId") Long memberId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
+
+    boolean existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(Long memberId, String title, String memo, LocalDate startDate, LocalTime dueTime);
 }
