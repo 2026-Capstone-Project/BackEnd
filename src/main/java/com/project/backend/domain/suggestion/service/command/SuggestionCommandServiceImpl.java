@@ -53,6 +53,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,8 +91,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public void createSuggestion(Long memberId) {
 
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 1, 19);
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 1, 19);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusYears(1);
@@ -112,9 +113,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public void createTodoSuggestion(Long memberId) {
 
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
         // TODO : todo일때 날짜인데, event는 시간까지 있어서 플러스 데이를 한 것인데, 이거 통일하기
-        LocalDate now = LocalDate.of(2026, 1, 28);
+//        LocalDate now = LocalDate.of(2026, 1, 28);
         LocalDate from = now.minusYears(1);
         LocalDate to = now.plusYears(1);
 
@@ -135,8 +136,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public void createRecurrenceSuggestion(Long memberId) {
 
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 3, 2);
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 3, 2);
 
         List<RecurrenceGroup> recurrenceGroups =
                 recurrenceGroupRepository.findCandidateRecurrenceGroups(memberId, now);
@@ -155,8 +156,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public void createTodoRecurrenceSuggestion(Long memberId) {
 
-//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 2, 16);
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+//        LocalDate now = LocalDate.of(2026, 2, 16);
 
         List<TodoRecurrenceGroup> todoRecurrenceGroups =
                 todoRecurrenceGroupRepository.findCandidateTodoRecurrenceGroups(memberId, now);
