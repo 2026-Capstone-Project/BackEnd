@@ -10,12 +10,18 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SuggestionAnchorUtil {
 
-    public static LocalDate computeAnchorDate(
+    /**
+     * - N_INTERVAL: 다음 발생일 1개 (size=1)
+     * - WEEKLY_SET: dayOfWeekSet 개수만큼 (size=|set|)
+     * - MONTHLY_DAY: dayOfMonthSet 개수만큼 (size=|set|)  ※ 존재하지 않는 날짜면 null 원소로 들어갈 수 있음
+     */
+    public static List<LocalDate> computeAnchorDate(
             LocalDateTime lastStart,
             RecurrencePatternType patternType,
             SuggestionPattern primary
@@ -23,39 +29,45 @@ public final class SuggestionAnchorUtil {
         LocalDate lastDate = lastStart.toLocalDate();
 
         return switch (patternType) {
+
             case N_INTERVAL -> {
                 Integer dayDiff = primary.dayDiff();
                 if (dayDiff == null) yield null;
-                // 다음 발생일
-                yield lastDate.plusDays(dayDiff);
+                yield List.of(lastDate.plusDays(dayDiff));
             }
+
             case WEEKLY_SET -> {
                 Integer weekDiff = primary.weekDiff();
                 Set<DayOfWeek> dayOfWeekSet = primary.dayOfWeekSet();
                 if (weekDiff == null || dayOfWeekSet == null || dayOfWeekSet.isEmpty()) yield null;
 
-                DayOfWeek firstDayOfWeek = dayOfWeekSet.stream()
-                        .min(Comparator.comparingInt(DayOfWeek::getValue))
-                        .orElseThrow();
-
                 long baseEpochWeek = WeekEpochUtil.toEpochWeek(lastDate);
                 long targetEpochWeek = baseEpochWeek + weekDiff;
 
-                // "다음 패키지의 첫날" (월·화면 월요일)
-                yield dateOf(targetEpochWeek, firstDayOfWeek);
+                // "다음 패키지"에서 요일 set만큼 날짜를 모두 반환 (월·화면 월요일/화요일 둘 다)
+                yield dayOfWeekSet.stream()
+                        .sorted(Comparator.comparingInt(DayOfWeek::getValue))
+                        .map(dow -> dateOf(targetEpochWeek, dow))
+                        .toList();
             }
+
             case MONTHLY_DAY -> {
                 Integer monthDiff = primary.monthDiff();
                 Set<Integer> dayOfMonthSet = primary.dayOfMonthSet();
                 if (monthDiff == null || dayOfMonthSet == null || dayOfMonthSet.isEmpty()) yield null;
 
-                int firstDayOfMonth = dayOfMonthSet.stream()
-                        .min(Integer::compareTo)
-                        .orElseThrow();
                 YearMonth targetYm = YearMonth.from(lastDate).plusMonths(monthDiff);
+                int lastDay = targetYm.lengthOfMonth();
 
-                // TODO : 29/30/31 일 때, 일단 만약 대상 달에 그 날짜가 없다면 Null 반환
-                yield resolveMonthlyDayByPolicy(targetYm, firstDayOfMonth);
+                // 하나라도 존재하지 않으면 그냥 null 반환
+                if (dayOfMonthSet.stream().anyMatch(day -> day == null || day < 1 || day > lastDay)) {
+                    yield null;
+                }
+
+                yield dayOfMonthSet.stream()
+                        .sorted()
+                        .map(targetYm::atDay)
+                        .toList();
             }
         };
     }
@@ -83,6 +95,7 @@ public final class SuggestionAnchorUtil {
     }
 
     // "월별 날짜 누락" 공용 정책(예: clamp)
+    // 지금은 "없으면 null" 정책 유지
     private static LocalDate resolveMonthlyDayByPolicy(YearMonth ym, int dayOfMonth) {
         if (dayOfMonth > ym.lengthOfMonth()) {
             return null;

@@ -46,4 +46,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("memberId") Long memberId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    boolean existsByMemberIdAndTitleAndLocationAndStartTime(Long memberId, String title, String location, LocalDateTime startTime);
 }

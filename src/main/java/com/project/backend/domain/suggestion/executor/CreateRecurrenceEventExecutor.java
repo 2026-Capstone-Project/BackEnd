@@ -21,7 +21,7 @@ public class CreateRecurrenceEventExecutor implements SuggestionExecutor {
     }
 
     @Override
-    public void execute(Suggestion suggestion, Status currentStatus) {
+    public void execute(Suggestion suggestion, Status currentStatus, Long memberId) {
         RecurrenceGroup rg = suggestion.getRecurrenceGroup();
 
         switch (rg.getEndType()) {

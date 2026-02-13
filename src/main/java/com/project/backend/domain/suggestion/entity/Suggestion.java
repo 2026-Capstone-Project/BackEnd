@@ -14,6 +14,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -64,11 +66,23 @@ public class Suggestion extends BaseEntity {
     @Column(name = "target_key_hash", nullable = false, columnDefinition = "BINARY(32)")
     private byte[] targetKeyHash;
 
-    @Column(name = "primary_anchor_date")
-    private LocalDate primaryAnchorDate;
+    @ElementCollection
+    @CollectionTable(
+            name = "suggestion_primary_anchor_date",
+            joinColumns = @JoinColumn(name = "suggestion_id")
+    )
+    @Column(name = "primary_anchor_date", nullable = false)
+    @OrderColumn(name = "anchor_idx")
+    private List<LocalDate> primaryAnchorDate = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(
+            name = "suggestion_secondary_anchor_date",
+            joinColumns = @JoinColumn(name = "suggestion_id")
+    )
     @Column(name = "secondary_anchor_date")
-    private LocalDate secondaryAnchorDate;
+    @OrderColumn(name = "anchor_idx")
+    private List<LocalDate> secondaryAnchorDate = new ArrayList<>();
 
 
     @ManyToOne(fetch = FetchType.LAZY)

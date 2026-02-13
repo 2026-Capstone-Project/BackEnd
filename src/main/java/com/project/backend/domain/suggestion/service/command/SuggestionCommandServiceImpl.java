@@ -91,7 +91,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     public void createSuggestion(Long memberId) {
 
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 2, 21);
+        LocalDate now = LocalDate.of(2026, 1, 19);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
         LocalDateTime to = now.atStartOfDay().plusYears(1);
@@ -190,7 +190,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
         SuggestionExecutor executor = suggestionExecutorFactory.getExecutor(suggestion.getSuggestionType());
 
-        executor.execute(suggestion, currentStatus);
+        executor.execute(suggestion, currentStatus, memberId);
     }
 
     @Override
@@ -241,12 +241,12 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             SuggestionReqDTO.LlmSuggestionDetail detail = LlmSuggestionConverter.toLlmSuggestionDetail(baseCandidate, dr);
             // 패턴 탐지 결과로 예측한 다음 객체 생성일
             // TODO : 앵커 데이트 날짜에 이미 객체가 있다면 컨티뉴해서 llm 호출 줄이기
-            LocalDate primaryAnchorDate = SuggestionAnchorUtil.computeAnchorDate(
+            List<LocalDate> primaryAnchorDate = SuggestionAnchorUtil.computeAnchorDate(
                     baseCandidate.start(),
                     detail.patternType(),
                     detail.primaryPattern()
             );
-            LocalDate secondaryAnchorDate = null;
+            List<LocalDate> secondaryAnchorDate = null;
             if (detail.secondaryPattern() != null) {
                 secondaryAnchorDate = SuggestionAnchorUtil.computeAnchorDate(
                         baseCandidate.start(),
@@ -263,7 +263,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                 continue;
             }
             // 다음 객체 생성일이 현재 서버 시간 + leadDays가 아니면 아직 제안을 생성할 시점이 아님
-            if (!primaryAnchorDate.equals(now.plusDays(leadDays))) {
+            if (!primaryAnchorDate.getFirst().equals(now.plusDays(leadDays))) {
                 continue;
             }
             // 다음 객체 생성일에 이미 객체가 있는 경우 제안 건너뛰기
@@ -296,6 +296,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                         log.warn("baseCandidate가 존재하지 않음. event/todoId={}", llmSuggestion.id());
                         return Stream.empty();
                     }
+                    log.info("anchor = {}", base.primaryAnchorDate());
                     return switch (base.category()) {
                         case EVENT -> eventRepository.findById(base.id())
                                 .map(e -> SuggestionConverter.toSuggestion(base, llmSuggestion, member, e, null))
@@ -472,20 +473,23 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 
-    private boolean checkAlreadyExist(LocalDate anchor, SuggestionCandidate baseCandidate, Member member) {
-        if (anchor == null) return false;
+    private boolean checkAlreadyExist(List<LocalDate> anchors, SuggestionCandidate candidate, Member member) {
+        if (anchors == null || anchors.isEmpty()) return false;
 
         Long memberId = member.getId();
-        String title = baseCandidate.title();
-        String content = baseCandidate.content();
-        LocalTime startTime = baseCandidate.start().toLocalTime();
+        String title = candidate.title();
+        String content = candidate.content();
+        LocalTime time = candidate.start().toLocalTime();
 
-        return switch (baseCandidate.category()) {
-            case EVENT -> eventRepository.existsByMemberIdAndTitleAndLocationAndStartTime(
-                    memberId, title, content, anchor.atTime(startTime));
-
-            case TODO -> todoRepository.existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(
-                    memberId, title, content, anchor, startTime);
+        return switch (candidate.category()) {
+            case EVENT -> anchors.stream()
+                    .anyMatch(date -> eventRepository.existsByMemberIdAndTitleAndLocationAndStartTime(
+                            memberId, title, content, date.atTime(time)
+                    ));
+            case TODO -> anchors.stream()
+                    .anyMatch(date -> todoRepository.existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(
+                            memberId, title, content, date, time
+                    ));
         };
     }
 

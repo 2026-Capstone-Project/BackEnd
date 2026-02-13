@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 단발성 Event Suggestion인 경우
@@ -27,33 +29,50 @@ public class CreateEventExecutor implements SuggestionExecutor {
     }
 
     @Override
-    public void execute(Suggestion suggestion, Status currentStatus) {
+    public void execute(Suggestion suggestion, Status currentStatus, Long memberId) {
         Event previousEvent = suggestion.getPreviousEvent();
 
-        LocalDate startDate = currentStatus == Status.PRIMARY
+        List<LocalDate> anchors = currentStatus == Status.PRIMARY
                 ? suggestion.getPrimaryAnchorDate()
                 : suggestion.getSecondaryAnchorDate();
 
-        LocalTime prevStartTime = previousEvent.getStartTime().toLocalTime();
+        if (anchors == null || anchors.isEmpty()) {
+            return;
+        }
+        List<Event> toSave = new ArrayList<>();
+        for (LocalDate anchor : anchors) {
+            LocalTime prevStartTime = previousEvent.getStartTime().toLocalTime();
 
-        LocalDateTime nextStart = startDate.atTime(prevStartTime);
-        LocalDateTime nextEnd = nextStart.plusMinutes(previousEvent.getDurationMinutes());
+            LocalDateTime nextStart = anchor.atTime(prevStartTime);
+            LocalDateTime nextEnd = nextStart.plusMinutes(previousEvent.getDurationMinutes());
 
-        Event createdEvent = Event.builder()
-                .title(previousEvent.getTitle())
-                .content(previousEvent.getContent())
-                .startTime(nextStart)
-                .endTime(nextEnd)
-                .location(previousEvent.getLocation())
-                .recurrenceFrequency(previousEvent.getRecurrenceFrequency())
-                .color(previousEvent.getColor())
-                .isAllDay(previousEvent.getIsAllDay())
-                .durationMinutes(previousEvent.getDurationMinutes())
-                .sourceSuggestionId(suggestion.getId()) // 멱등키
-                .member(previousEvent.getMember())
-                .recurrenceGroup(previousEvent.getRecurrenceGroup())
-                .build();
+            boolean exist = eventRepository.existsByMemberIdAndTitleAndLocationAndStartTime(
+                    memberId,
+                    previousEvent.getTitle(),
+                    previousEvent.getLocation(),
+                    nextStart);
 
-        eventRepository.save(createdEvent);
+            if (exist) {
+                System.out.println("이미존재");
+                return;
+            }
+
+            toSave.add(Event.builder()
+                    .title(previousEvent.getTitle())
+                    .content(previousEvent.getContent())
+                    .startTime(nextStart)
+                    .endTime(nextEnd)
+                    .location(previousEvent.getLocation())
+                    .recurrenceFrequency(previousEvent.getRecurrenceFrequency())
+                    .color(previousEvent.getColor())
+                    .isAllDay(previousEvent.getIsAllDay())
+                    .durationMinutes(previousEvent.getDurationMinutes())
+                    .sourceSuggestionId(suggestion.getId()) // 멱등키
+                    .member(previousEvent.getMember())
+                    .recurrenceGroup(previousEvent.getRecurrenceGroup())
+                    .build());
+        }
+
+        eventRepository.saveAll(toSave);
     }
 }

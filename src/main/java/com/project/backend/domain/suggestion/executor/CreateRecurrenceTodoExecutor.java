@@ -20,7 +20,7 @@ public class CreateRecurrenceTodoExecutor implements SuggestionExecutor {
     }
 
     @Override
-    public void execute(Suggestion suggestion, Status currentStatus) {
+    public void execute(Suggestion suggestion, Status currentStatus, Long memberId) {
         TodoRecurrenceGroup trg = suggestion.getTodoRecurrenceGroup();
         switch (trg.getEndType()) {
             case END_BY_DATE -> extendEndDate(trg);

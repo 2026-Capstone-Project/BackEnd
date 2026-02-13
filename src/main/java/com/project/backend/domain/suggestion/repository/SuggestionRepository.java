@@ -2,11 +2,17 @@ package com.project.backend.domain.suggestion.repository;
 
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Status;
+import com.project.backend.domain.suggestion.listener.vo.SuggestionInvalidateEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +46,8 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
         left join fetch s.previousTodo
         left join fetch s.recurrenceGroup
         left join fetch s.todoRecurrenceGroup
+        left join fetch s.primaryAnchorDate
+        left join fetch s.secondaryAnchorDate
         where s.id = :id and s.member.id = :memberId
     """)
     Optional<Suggestion> findForExecute(@Param("id") Long id, @Param("memberId") Long memberId);
@@ -90,6 +98,4 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     """)
     int rejectFinally(@Param("memberId") Long memberId,
                       @Param("suggestionId") Long suggestionId);
-
-    Optional<Suggestion> findByIdAndMember_IdAndActiveIsTrue(Long id, Long memberId);
 }

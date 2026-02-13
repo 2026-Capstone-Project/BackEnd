@@ -46,7 +46,7 @@ public class Todo extends BaseEntity {
     @Column(name = "is_completed", nullable = false)
     private Boolean isCompleted = false;
 
-    @Column(name = "source_suggestion_id", unique = true)
+    @Column(name = "source_suggestion_id")
     private Long sourceSuggestionId;
 
     @ManyToOne(fetch = FetchType.LAZY)

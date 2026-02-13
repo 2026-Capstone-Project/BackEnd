@@ -9,6 +9,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 단발성 Todo Suggestion인 경우
@@ -25,27 +27,46 @@ public class CreateTodoExecutor implements SuggestionExecutor {
     }
 
     @Override
-    public void execute(Suggestion suggestion, Status currentStatus) {
+    public void execute(Suggestion suggestion, Status currentStatus, Long memberId) {
 
         Todo previousTodo = suggestion.getPreviousTodo();
 
-        LocalDate startDate = currentStatus == Status.PRIMARY
+        List<LocalDate> anchors = currentStatus == Status.PRIMARY
                 ? suggestion.getPrimaryAnchorDate()
                 : suggestion.getSecondaryAnchorDate();
 
-        Todo createdTodo = Todo.builder()
-                .title(previousTodo.getTitle())
-                .startDate(startDate)
-                .dueTime(previousTodo.getDueTime())
-                .isAllDay(previousTodo.getIsAllDay())
-                .priority(previousTodo.getPriority())
-                .memo(previousTodo.getMemo())
-                .isCompleted(false)
-                .sourceSuggestionId(suggestion.getId())
-                .member(previousTodo.getMember())
-                .todoRecurrenceGroup(previousTodo.getTodoRecurrenceGroup())
-                .build();
+        if (anchors == null || anchors.isEmpty()) {
+            return;
+        }
+        List<Todo> toSave = new ArrayList<>();
+        for (LocalDate anchor : anchors) {
+            boolean exist = todoRepository.existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(
+                    memberId,
+                    previousTodo.getTitle(),
+                    previousTodo.getMemo(),
+                    anchor,
+                    previousTodo.getDueTime()
+            );
 
-        todoRepository.save(createdTodo);
+            if (exist) {
+                return;
+            }
+
+            toSave.add(Todo.builder()
+                    .title(previousTodo.getTitle())
+                    .startDate(anchor)
+                    .dueTime(previousTodo.getDueTime())
+                    .isAllDay(previousTodo.getIsAllDay())
+                    .priority(previousTodo.getPriority())
+                    .memo(previousTodo.getMemo())
+                    .isCompleted(false)
+                    .sourceSuggestionId(suggestion.getId())
+                    .member(previousTodo.getMember())
+                    .todoRecurrenceGroup(previousTodo.getTodoRecurrenceGroup())
+                    .build());
+        }
+
+
+        todoRepository.saveAll(toSave);
     }
 }

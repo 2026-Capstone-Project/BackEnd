@@ -8,6 +8,7 @@ import com.project.backend.domain.todo.enums.Priority;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record SuggestionCandidate(
         // 공통
@@ -16,8 +17,8 @@ public record SuggestionCandidate(
         String content, // TODO : todo 에서는 메모
         LocalDateTime start,
         Boolean isAllDay,
-        LocalDate primaryAnchorDate,
-        LocalDate secondaryAnchorDate,
+        List<LocalDate> primaryAnchorDate,
+        List<LocalDate> secondaryAnchorDate,
         Category category,
 
         // Event
@@ -59,7 +60,7 @@ public record SuggestionCandidate(
         );
     }
 
-    public SuggestionCandidate withAnchor(LocalDate primaryAnchor, LocalDate secondaryAnchor) {
+    public SuggestionCandidate withAnchor(List<LocalDate> primaryAnchor, List<LocalDate> secondaryAnchor) {
         return new SuggestionCandidate(
                 this.id,
                 this.title,
