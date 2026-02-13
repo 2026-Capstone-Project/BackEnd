@@ -1,13 +1,12 @@
 package com.project.backend.domain.suggestion.vo;
 
-import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.suggestion.enums.Category;
-import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.enums.Priority;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record SuggestionCandidate(
@@ -17,8 +16,8 @@ public record SuggestionCandidate(
         String content, // TODO : todo 에서는 메모
         LocalDateTime start,
         Boolean isAllDay,
-        SuggestionPattern primary,
-        SuggestionPattern secondary,
+        LocalDate primaryAnchorDate,
+        LocalDate secondaryAnchorDate,
         Category category,
 
         // Event
@@ -61,15 +60,15 @@ public record SuggestionCandidate(
         );
     }
 
-    public SuggestionCandidate withPattern(SuggestionPattern primary, SuggestionPattern secondary) {
+    public SuggestionCandidate withAnchor(LocalDate primaryAnchor, LocalDate secondaryAnchor) {
         return new SuggestionCandidate(
                 this.id,
                 this.title,
                 this.content,
                 this.start,
                 this.isAllDay,
-                primary,
-                secondary,
+                primaryAnchor,
+                secondaryAnchor,
                 this.category,
                 this.eventInfo,
                 this.todoInfo

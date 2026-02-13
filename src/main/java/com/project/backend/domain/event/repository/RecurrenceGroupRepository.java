@@ -42,4 +42,6 @@ public interface RecurrenceGroupRepository extends JpaRepository<RecurrenceGroup
             @Param("memberId") Long memberId,
             @Param("today") LocalDate today
     );
+
+
 }

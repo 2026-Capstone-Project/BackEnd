@@ -23,4 +23,8 @@ public final class SuggestionTargetKeyUtil {
     public static String rgKey(Long rgId) {
         return "RG|" + rgId;
     }
+
+    public static String trgKey(Long trgId) {
+        return "TRG|" + trgId;
+    }
 }

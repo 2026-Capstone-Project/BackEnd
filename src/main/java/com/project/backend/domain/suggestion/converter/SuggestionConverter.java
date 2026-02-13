@@ -7,8 +7,8 @@ import com.project.backend.domain.suggestion.dto.request.SuggestionReqDTO;
 import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Category;
-import com.project.backend.domain.suggestion.enums.StableType;
 import com.project.backend.domain.suggestion.enums.Status;
+import com.project.backend.domain.suggestion.enums.SuggestionType;
 import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
 import com.project.backend.domain.suggestion.util.TargetKeyHashUtil;
 import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
@@ -18,7 +18,6 @@ import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,17 +46,21 @@ public class SuggestionConverter {
         if (previousEvent != null) {
             targetKey = SuggestionTargetKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation());
         }
-        if (previousTodo != null) {
+        else if (previousTodo != null) {
             targetKey = SuggestionTargetKeyUtil.todoKey(previousTodo.getTitle(), previousTodo.getMemo());
         }
 
         return Suggestion.builder()
-                .primaryPattern(baseCandidate.primary())
-                .secondaryPattern(baseCandidate.secondary())
+                .primaryAnchorDate(baseCandidate.primaryAnchorDate())
+                .secondaryAnchorDate(baseCandidate.secondaryAnchorDate())
                 .primaryContent(llmSuggestion.primaryContent())
                 .secondaryContent(llmSuggestion.secondaryContent())
                 .category(baseCandidate.category())
                 .status(Status.PRIMARY)
+                .suggestionType(
+                        previousEvent != null
+                                ? SuggestionType.CREATE_EVENT
+                                : SuggestionType.CREATE_TODO)
                 .targetKey(targetKey)
                 .targetKeyHash(TargetKeyHashUtil.sha256(targetKey))
                 .member(member)
@@ -74,7 +77,13 @@ public class SuggestionConverter {
             RecurrenceGroup rg,
             TodoRecurrenceGroup trg
     ) {
-        final String targetKey = SuggestionTargetKeyUtil.rgKey(baseCandidate.id());
+        String targetKey = null;
+        if (rg != null) {
+            targetKey = SuggestionTargetKeyUtil.rgKey(rg.getId());
+        }
+        else if (trg != null) {
+            targetKey = SuggestionTargetKeyUtil.trgKey(trg.getId());
+        }
         return Suggestion.builder()
                 .primaryContent(llmRecurrenceGroupSuggestion.content())
                 .targetKey(targetKey)
@@ -84,6 +93,10 @@ public class SuggestionConverter {
                 .member(member)
                 .category(Category.EVENT)
                 .status(Status.PRIMARY)
+                .suggestionType(
+                        rg != null
+                                ? SuggestionType.EXTEND_EVENT_RECURRENCE_GROUP
+                                : SuggestionType.EXTEND_TODO_RECURRENCE_GROUP)
                 .build();
     }
 

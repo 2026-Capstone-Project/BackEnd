@@ -2,6 +2,7 @@ package com.project.backend.domain.suggestion.entity;
 
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.suggestion.enums.SuggestionType;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
@@ -11,6 +12,8 @@ import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -47,6 +50,10 @@ public class Suggestion extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private Status status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suggestion_type", nullable = false, length = 30)
+    private SuggestionType suggestionType;
+
     /**
      * status랑 별개로 "현재 유효/노출/수락 가능한 row인지"를 DB 유니크와 조회에 쓰는 스위치
      */
@@ -66,47 +73,33 @@ public class Suggestion extends BaseEntity {
     @Column(name = "target_key_hash", nullable = false, columnDefinition = "BINARY(32)")
     private byte[] targetKeyHash;
 
+    @Column(name = "primary_anchor_date")
+    private LocalDate primaryAnchorDate;
+
+    @Column(name = "secondary_anchor_date")
+    private LocalDate secondaryAnchorDate;
+
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
     // 시간이 지나면 같은 이전 이벤트/그룹으로 여러 Suggestion 히스토리가 생길 수 있음 -> 나중에 개발을 위해
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "previous_event")
     private Event previousEvent;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "previous_todo")
     private Todo previousTodo;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recurrence_group")
     private RecurrenceGroup recurrenceGroup;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "todo_recurrence_group")
     private TodoRecurrenceGroup todoRecurrenceGroup;
-
-    // TODO : 이것이 최선인가?
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "dayDiff", column = @Column(name = "primary_day_diff")),
-            @AttributeOverride(name = "weekDiff", column = @Column(name = "primary_week_diff")),
-            @AttributeOverride(name = "monthDiff", column = @Column(name = "primary_month_diff")),
-            @AttributeOverride(name = "dayOfWeekSet", column = @Column(name = "primary_day_of_week_set")),
-            @AttributeOverride(name = "dayOfMonthSet", column = @Column(name = "primary_day_of_month_set"))
-    })
-    private SuggestionPattern primaryPattern;
-
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "dayDiff", column = @Column(name = "secondary_day_diff")),
-            @AttributeOverride(name = "weekDiff", column = @Column(name = "secondary_week_diff")),
-            @AttributeOverride(name = "monthDiff", column = @Column(name = "secondary_month_diff")),
-            @AttributeOverride(name = "dayOfWeekSet", column = @Column(name = "secondary_day_of_week_set")),
-            @AttributeOverride(name = "dayOfMonthSet", column = @Column(name = "secondary_day_of_month_set"))
-    })
-    private SuggestionPattern secondaryPattern;
 
     // Update 메서드
 

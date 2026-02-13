@@ -24,8 +24,11 @@ import com.project.backend.domain.suggestion.detector.vo.RecurrencePreprocessRes
 import com.project.backend.domain.suggestion.dto.request.SuggestionReqDTO;
 import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import com.project.backend.domain.suggestion.entity.Suggestion;
+import com.project.backend.domain.suggestion.enums.Status;
 import com.project.backend.domain.suggestion.exception.SuggestionErrorCode;
 import com.project.backend.domain.suggestion.exception.SuggestionException;
+import com.project.backend.domain.suggestion.executor.SuggestionExecutor;
+import com.project.backend.domain.suggestion.executor.SuggestionExecutorFactory;
 import com.project.backend.domain.suggestion.llm.LlmSuggestionResponseParser;
 import com.project.backend.domain.suggestion.llm.SuggestionPromptTemplate;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
@@ -49,7 +52,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -79,6 +81,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final ObjectMapper objectMapper;
 
     private final RecurrencePatternDetector detector;
+    private final SuggestionExecutorFactory suggestionExecutorFactory;
 
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
@@ -87,10 +90,10 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     public void createSuggestion(Long memberId) {
 
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        LocalDate now = LocalDate.of(2026, 1, 31);
+        LocalDate now = LocalDate.of(2026, 2, 4);
         LocalDate oneYearAgo = now.minusYears(1);
         LocalDateTime from = oneYearAgo.atStartOfDay();
-        LocalDateTime to = now.atStartOfDay().plusDays(1);
+        LocalDateTime to = now.atStartOfDay().plusYears(1);
 
         // 최근 1년 간의 Event 객체
         List<Event> events = eventRepository.findByMemberIdAndInRangeAndRecurrenceGroupIsNull(memberId, from, to);
@@ -110,9 +113,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
 //        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
         // TODO : todo일때 날짜인데, event는 시간까지 있어서 플러스 데이를 한 것인데, 이거 통일하기
-        LocalDate now = LocalDate.of(2026, 2, 5);
+        LocalDate now = LocalDate.of(2026, 1, 28);
         LocalDate from = now.minusYears(1);
-        LocalDate to = now.plusDays(0);
+        LocalDate to = now.plusYears(1);
 
         // 최근 1년 간의 Event 객체
         List<Todo> todos = todoRepository.findByMemberIdAndInRangeAndRecurrenceGroupIsNull(memberId, from, to);
@@ -131,8 +134,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     @Override
     public void createRecurrenceSuggestion(Long memberId) {
 
-        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
-//        LocalDate now = LocalDate.of(2026, 2, 16);
+//        LocalDate now = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate now = LocalDate.of(2026, 3, 2);
 
         List<RecurrenceGroup> recurrenceGroups =
                 recurrenceGroupRepository.findCandidateRecurrenceGroups(memberId, now);
@@ -168,28 +171,44 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         saveAllSuggestion(suggestions, memberId);
     }
 
-    // TODO : 락 구현하기?
     @Override
     public void acceptSuggestion(Long memberId, Long suggestionId) {
 
-        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
-                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+        Suggestion suggestion = suggestionRepository.findForExecute(suggestionId, memberId)
+                        .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
 
-        suggestion.accept();
+        Status currentStatus = suggestion.getStatus();
+        if (currentStatus == Status.ACCEPTED || currentStatus == Status.REJECTED) {
+            throw new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND);
+        }
+        // 원자적 수락
+        int updated = suggestionRepository.acceptAtomically(suggestionId, memberId, currentStatus);
+        if (updated == 0) {
+            throw new SuggestionException(SuggestionErrorCode.SUGGESTION_CONFLICT);
+        }
 
-        // 생성 로직 구현하기
+        SuggestionExecutor executor = suggestionExecutorFactory.getExecutor(suggestion.getSuggestionType());
+
+        executor.execute(suggestion, currentStatus);
     }
 
-    // TODO : 락 구현하기?
     @Override
     public void rejectSuggestion(Long memberId, Long suggestionId) {
+        // 원자적 거절
+        // 1) PRIMARY -> SECONDARY 전환 (secondaryContent 있을 때만)
+        int switched = suggestionRepository.rejectPrimaryToSecondary(memberId, suggestionId);
+        if (switched == 1) {
+            return;
+        }
 
-        Suggestion suggestion = suggestionRepository.findByIdAndActiveIsTrue(suggestionId)
-                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
+        // 2) (PRIMARY인데 secondary 없음) OR (SECONDARY 상태) -> REJECTED
+        int rejected = suggestionRepository.rejectFinally(memberId, suggestionId);
+        if (rejected == 1) {
+            return;
+        }
 
-        suggestion.reject();
-
-        // 생성 로직 구현하기
+        // 없거나(active=false) 이미 처리됨
+        throw new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND);
     }
 
     private List<Suggestion> generateSuggestion(
@@ -221,21 +240,29 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             SuggestionReqDTO.LlmSuggestionDetail detail = LlmSuggestionConverter.toLlmSuggestionDetail(baseCandidate, dr);
             // 패턴 탐지 결과로 예측한 다음 객체 생성일
             // TODO : 앵커 데이트 날짜에 이미 객체가 있다면 컨티뉴해서 llm 호출 줄이기
-            LocalDate anchorDate = SuggestionAnchorUtil.computeAnchorDate(
+            LocalDate primaryAnchorDate = SuggestionAnchorUtil.computeAnchorDate(
                     baseCandidate.start(),
                     detail.patternType(),
                     detail.primaryPattern()
             );
-            log.info("anchorDate = {}", anchorDate);
+            LocalDate secondaryAnchorDate = null;
+            if (detail.secondaryPattern() != null) {
+                secondaryAnchorDate = SuggestionAnchorUtil.computeAnchorDate(
+                        baseCandidate.start(),
+                        detail.patternType(),
+                        detail.secondaryPattern()
+                );
+            }
+            log.info("anchorDate = {}", primaryAnchorDate);
             // 제안을 생성하기 위한 최소 시점 계산 (N_INTERVAL : dayDiff가 7일 미만인 경우 dayDiff가 leadDays)
             Integer leadDays = SuggestionAnchorUtil.computeLeadDays(detail.patternType(), detail.primaryPattern());
             log.info("leadDay = {}", leadDays);
             // 명시적 NPE 방지
-            if (anchorDate == null || leadDays == null) {
+            if (primaryAnchorDate == null || leadDays == null) {
                 continue;
             }
             // 다음 객체 생성일이 현재 서버 시간 + leadDays가 아니면 아직 제안을 생성할 시점이 아님
-            if (!anchorDate.equals(now.plusDays(leadDays))) {
+            if (!primaryAnchorDate.equals(now.plusDays(leadDays))) {
                 continue;
             }
             // LLM 요청 바디에 추가
@@ -243,7 +270,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             // 제안 객체 생성을 위한 정보 추가
             baseCandidateMap.put(
                     baseCandidate.id(),
-                    baseCandidate.withPattern(detail.primaryPattern(), detail.secondaryPattern())
+                    baseCandidate.withAnchor(primaryAnchorDate, secondaryAnchorDate)
             );
         }
         // LLM 요청 바디를 List 형식의 DTO로 변환
