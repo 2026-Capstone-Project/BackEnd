@@ -1,13 +1,10 @@
 package com.project.backend.domain.reminder.service.command;
 
 import com.project.backend.domain.event.dto.RecurrenceEnded;
-import com.project.backend.domain.event.entity.Event;
-import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.reminder.entity.Reminder;
-import com.project.backend.domain.reminder.entity.ReminderSource;
+import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.TargetType;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,9 +19,7 @@ public interface ReminderCommandService {
 
     void refreshIfExpired(Reminder reminder);
 
-    void refreshDueToUpdate(Reminder reminder);
-
-    void refreshIfOccurrenceInvalidated(ReminderSource rs, Long exceptionId);
+    void refreshIfOccurrenceInvalidated(ReminderSource rs, Long exceptionId, Boolean isSkip);
 
     void updateReminderOfSingle(ReminderSource rs, Long memberId);
 

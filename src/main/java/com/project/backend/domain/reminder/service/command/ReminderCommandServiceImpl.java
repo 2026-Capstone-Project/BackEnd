@@ -126,36 +126,30 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void refreshDueToUpdate(Reminder reminder) {
-        doRefresh(reminder);
-    }
-
-    @Override
-    public void refreshIfOccurrenceInvalidated(ReminderSource rs, Long exceptionId) {
+    public void refreshIfOccurrenceInvalidated(ReminderSource rs, Long exceptionId, Boolean isSkip) {
         Reminder reminder = reminderRepository.findByIdAndTypeAndRole(
-                rs.getTargetId(), rs.getTargetType(), ReminderRole.BASE)
+                rs.targetId(), rs.targetType(), ReminderRole.BASE)
                 .orElseThrow(() -> new ReminderException(ReminderErrorCode.REMINDER_NOT_FOUND));
 
         RecurrenceException ex = recurrenceExRepository.findById(exceptionId)
                 .orElseThrow(() ->
                         new RecurrenceGroupException(RecurrenceGroupErrorCode.RECURRENCE_EXCEPTION_NOT_FOUND));
 
-        // 날짜가 바뀐 경우 -> 반복 + 일정에서 유일하게 수정된 일정에 대한 리마인더 생성
-        if (ex.getStartTime() != null && !ex.getStartTime().equals(ex.getExceptionDate())) {
+        // // 수정(날짜 변경)에서만: 일회성 override 리마인더 생성
+        if (!isSkip && ex.getStartTime() != null && !ex.getStartTime().equals(ex.getExceptionDate())) {
             createSingleOverrideReminder(
-                    rs.getTargetId(),
+                    rs.targetId(),
+                    rs.targetType(),
                     reminder.getMember().getId(),
                     ex.getStartTime(),
-                    ex.getTitle() != null
-                            ? ex.getTitle()
-                            : reminder.getTitle(),
+                    ex.getTitle() != null ? ex.getTitle() : reminder.getTitle(),
                     ex.getId()
             );
         }
 
-        // 리마인더가 지정하고 있던 계산된 일정의 시간을 변경/삭제한 경우
+        // 수정/삭제에서 : 리마인더가 지정하고 있던 계산된 일정의 시간을 변경/삭제한 경우
         if (reminder.getOccurrenceTime().equals(ex.getExceptionDate())) {
-            refreshDueToUpdate(reminder);
+            doRefresh(reminder);
         }
     }
 

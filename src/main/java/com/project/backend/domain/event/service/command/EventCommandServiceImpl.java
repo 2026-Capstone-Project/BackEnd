@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.command;
 
+import com.project.backend.domain.common.reminder.ReminderEventBridge;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventSpec;
 import com.project.backend.domain.event.converter.RecurrenceGroupConverter;
@@ -284,18 +285,20 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우
     private void deleteThisEventOnly(Event event, LocalDateTime occurrenceDate, Long memberId) {
-        // THIS_EVENT로 수정된 일정을 삭제하는 경우
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+
         Optional<RecurrenceException> r = recurrenceExRepository
                 .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-                event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
-        );
+                        event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                );
 
+        // THIS_EVENT로 수정된 일정을 삭제하는 경우
         if (r.isPresent()) {
             RecurrenceException ex = r.get();
             ex.updateExceptionTypeToSKIP();
             LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
             if (startTime.isAfter(LocalDateTime.now())) {
-                handleReminderDeleted(
+                reminderEventBridge.handleReminderDeleted(
                         ex.getId(),
                         memberId,
                         startTime,
@@ -306,32 +309,22 @@ public class EventCommandServiceImpl implements EventCommandService {
             }
             return;
         }
-        log.info("4444444");
-        RecurrenceGroup rg = event.getRecurrenceGroup();
-        RecurrenceException ex =
-                recurrenceExRepository.
-                        findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-                                rg.getId(), occurrenceDate, ExceptionType.OVERRIDE
-                        )
-                        .map(existingEx -> {
-                            // 이미 존재한다면 타입만 변경 (더티 체킹 활용)
-                            existingEx.updateExceptionTypeToSKIP();
-                            return existingEx;
-                        })
-                        .orElseGet(() -> {
-                            // 존재하지 않는다면 새로 생성 후 저장
-                            RecurrenceException newEx = RecurrenceGroupConverter
-                                    .toRecurrenceExceptionForDelete(rg, occurrenceDate);
-                            rg.addExceptionDate(newEx); // 연관관계 편의 메서드 호출
-                            return recurrenceExRepository.save(newEx);
-                        });
+
+        // 존재하지 않는다면 새로 생성 후 저장
+        RecurrenceException newEx = RecurrenceGroupConverter.toRecurrenceExceptionForDelete(rg, occurrenceDate);
+        rg.addExceptionDate(newEx); // 연관관계 편의 메서드 호출
+        recurrenceExRepository.save(newEx);
+
         // 해당 일정만 삭제했을 때 리스너 수정 로직 실행
-        handleExceptionChanged(
-                ex.getId(),
+        reminderEventBridge.handleExceptionChanged(
+                newEx.getId(),
                 event.getId(),
+                TargetType.EVENT,
                 memberId,
                 ex.getTitle(),
                 ex.getStartTime(),
+                event.getTitle(),
+                occurrenceDate,
                 ExceptionChangeType.DELETED_THIS);
     }
 
