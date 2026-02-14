@@ -161,6 +161,7 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
 
     public void updateOccurrenceCount(int occurrenceCount) {
         this.occurrenceCount = occurrenceCount;
+    }
       
     public void attachEvent(Event event) {
         this.event = event;

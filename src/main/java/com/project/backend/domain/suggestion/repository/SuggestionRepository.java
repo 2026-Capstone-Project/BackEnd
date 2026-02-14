@@ -2,17 +2,11 @@ package com.project.backend.domain.suggestion.repository;
 
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Status;
-import com.project.backend.domain.suggestion.listener.vo.SuggestionInvalidateEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

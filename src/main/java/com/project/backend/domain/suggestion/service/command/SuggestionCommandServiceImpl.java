@@ -433,7 +433,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         return switch (candidate.category()) {
             case EVENT -> {
                 List<RecurrenceException> exList =
-                        recurrenceExceptionRepository.findByRecurrenceGroupId(candidate.id());
+                        recurrenceExceptionRepository.findAllByRecurrenceGroupId(candidate.id());
                 yield exList.stream()
                         .collect(Collectors.toMap(
                                         RecurrenceException::getExceptionDate,
