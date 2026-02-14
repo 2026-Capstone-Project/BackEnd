@@ -1,5 +1,11 @@
 package com.project.backend.domain.suggestion.entity;
 
+import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.suggestion.enums.SuggestionType;
+import com.project.backend.domain.suggestion.vo.SuggestionPattern;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.enums.Category;
@@ -7,31 +13,96 @@ import com.project.backend.domain.suggestion.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "suggestion")
+@Table(
+        name = "suggestion",
+        uniqueConstraints = {
+                // "활성 제안(active=true)"은 (memberId, targetKeyHash) 당 1개만
+                @UniqueConstraint(
+                        name = "uk_suggestion_active_target",
+                        columnNames = {"member_id", "target_key_hash", "active"}
+                )
+        }
+)
 public class Suggestion extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "content", nullable = false)
-    private String content;
+    @Column(name = "primary_content", nullable = false)
+    private String primaryContent;
+
+    @Column(name = "secondary_content")
+    private String secondaryContent;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 20)
     private Category category;
 
-    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private Status status = Status.PENDING;
+    private Status status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suggestion_type", nullable = false, length = 30)
+    private SuggestionType suggestionType;
+
+    @Builder.Default
+    @Column(name = "active")
+    private Boolean active = true;
+
+    @Column(name = "target_key", nullable = false, length = 300)
+    private String targetKey;
+
+    @Column(name = "target_key_hash", nullable = false, columnDefinition = "BINARY(32)")
+    private byte[] targetKeyHash;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "suggestion_primary_anchor_date",
+            joinColumns = @JoinColumn(name = "suggestion_id")
+    )
+    @Column(name = "primary_anchor_date", nullable = false)
+    @OrderColumn(name = "anchor_idx")
+    private List<LocalDate> primaryAnchorDate = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(
+            name = "suggestion_secondary_anchor_date",
+            joinColumns = @JoinColumn(name = "suggestion_id")
+    )
+    @Column(name = "secondary_anchor_date")
+    @OrderColumn(name = "anchor_idx")
+    private List<LocalDate> secondaryAnchorDate = new ArrayList<>();
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    // 시간이 지나면 같은 이전 이벤트/그룹으로 여러 Suggestion 히스토리가 생길 수 있음 -> 나중에 개발을 위해
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "previous_event")
+    private Event previousEvent;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "previous_todo")
+    private Todo previousTodo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurrence_group")
+    private RecurrenceGroup recurrenceGroup;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "todo_recurrence_group")
+    private TodoRecurrenceGroup todoRecurrenceGroup;
 }

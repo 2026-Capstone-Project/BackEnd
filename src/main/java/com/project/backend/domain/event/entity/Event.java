@@ -51,6 +51,9 @@ public class Event extends BaseEntity {
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
 
+    @Column(name = "source_suggestion_id")
+    private Long sourceSuggestionId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
