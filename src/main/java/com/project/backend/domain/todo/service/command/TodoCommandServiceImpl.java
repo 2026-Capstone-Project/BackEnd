@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Optional;
 
 @Slf4j
@@ -351,9 +352,16 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     .findByTodoRecurrenceGroupIdAndExceptionDate(oldGroup.getId(), occurrenceDate);
 
             // 수정된 할 일에 대한 수정인 경우 수정된 dueTime으로 설정
-            if (ex.isPresent() && ex.get().getExceptionType() == ExceptionType.OVERRIDE
-                    && !ex.get().getDueTime().equals(startDate.toLocalTime())) {
-                startDate = occurrenceDate.atTime(ex.get().getDueTime());
+            if (ex.isPresent()) {
+                TodoRecurrenceException re = ex.get();
+                if (re.getExceptionType() == ExceptionType.SKIP) {
+                    throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+                }
+
+                if (re.getExceptionType() == ExceptionType.OVERRIDE
+                        && !re.getDueTime().equals(startDate.toLocalTime())) {
+                    startDate = occurrenceDate.atTime(re.getDueTime());
+                }
             }
         }
         // 새 Todo 생성
@@ -447,6 +455,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private void deleteThisTodoOnly(Todo todo, LocalDate occurrenceDate, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
+        LocalDateTime startTime = occurrenceDate.atTime(todo.getDueTime());
+
         Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository
                 .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate);
 
@@ -460,7 +470,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
             // 기존 예외가 있으면 SKIP으로 상태 변경
             ex.updateExceptionTypeToSKIP();
-            LocalDateTime startTime = todo.getStartDate().atTime(ex.getDueTime());
+            startTime = todo.getStartDate().atTime(ex.getDueTime());
 
             if (startTime.isAfter(LocalDateTime.now())) {
                 reminderEventBridge.handleReminderDeleted(
@@ -487,7 +497,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 TargetType.TODO,
                 memberId,
                 todo.getTitle(),
-                occurrenceDate.atTime(exception.getDueTime()),
+                startTime,
                 ExceptionChangeType.DELETED_THIS);
 
         log.debug("반복 할 일 예외 삭제 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
