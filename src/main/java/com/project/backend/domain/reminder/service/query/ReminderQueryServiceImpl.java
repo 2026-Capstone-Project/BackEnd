@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -49,14 +48,13 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
         // 현재시간보다 저장된 리마인더의 occurrenceTime이 더 이후에 있는 리마인더만 반환 (이미 지나서 필요없는 리마인더 제외)
-        // 발생시간은 오늘인데 active하고, 현재시간이 안 지난 리마인더
         List<Reminder> reminders = reminderRepository.
-                findByMemberIdAndLifecycleStatusAndOccurrenceTimeAfterAndOccurrenceTimeLessThanEqual(
+                findVisibleReminders(
                         memberId,
                         LifecycleStatus.ACTIVE,
                         LocalDateTime.now(),
-                        LocalDate.now().atTime(23, 59, 59)
-                        );
+                        LocalDateTime.now().plusMinutes(setting.getReminderTiming().getMinutes())
+                );
 
         return reminders.stream()
                 .map(reminder ->
@@ -84,6 +82,11 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
         if (reminder.getTargetType() == TargetType.EVENT) {
             Event event = eventRepository.findById(reminder.getTargetId())
                     .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+            // 단일 일정이면 RecurrenceException은 존재하지 않는다.
+            if (!event.isRecurring()) {
+                return reminder.getTitle();
+            }
 
             re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
                     event.getRecurrenceGroup().getId(),

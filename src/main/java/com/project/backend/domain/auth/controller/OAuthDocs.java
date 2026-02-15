@@ -46,16 +46,24 @@ public interface OAuthDocs {
                 1. state 값 검증 (CSRF 방지)
                 2. Access Token / ID Token 발급
                 3. 사용자 정보 조회
-                4. 회원가입 또는 로그인 처리
-                5. JWT 쿠키 발급
-                6. 프론트엔드로 리다이렉트
+                4. 재가입 제한 검증 (탈퇴 후 3개월 이내 재가입 불가)
+                5. 회원가입 또는 로그인 처리
+                6. JWT 쿠키 발급
+                7. 프론트엔드로 리다이렉트
+
+                **에러 발생 시:**
+                - 프론트엔드 로그인 페이지로 리다이렉트
+                - 쿼리 파라미터: `?error={에러코드}&message={에러메시지}`
+                - 예시: `/login?error=AUTH403&message=탈퇴 후 3개월간 재가입이 제한됩니다.`
+
+                **주요 에러코드:**
+                - `AUTH403`: 재가입 제한 (탈퇴 후 3개월 이내)
+                - `AUTH401`: 세션 검증 실패
                 """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "302", description = "로그인 성공 - 프론트엔드로 리다이렉트"),
-            @ApiResponse(responseCode = "400", description = "잘못된 OAuth 요청"),
-            @ApiResponse(responseCode = "401", description = "인증 실패 (state 검증 실패 등)"),
-            @ApiResponse(responseCode = "502", description = "OAuth Provider 서버 오류")
+            @ApiResponse(responseCode = "302", description = "로그인 성공 - 프론트엔드 홈으로 리다이렉트"),
+            @ApiResponse(responseCode = "302", description = "로그인 실패 - 프론트엔드 로그인 페이지로 리다이렉트 (에러 파라미터 포함)")
     })
     void handleCallback(
             @Parameter(description = "OAuth Provider (kakao, naver, google)", required = true)
