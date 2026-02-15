@@ -58,14 +58,6 @@ public class ReminderEventBridge {
         ));
     }
 
-    public void handleRecurrenceEnded(Long targetId, TargetType targetType, LocalDateTime startTime) {
-        reminderListener.onRecurrenceEnded(PlanEventFactory.toEventRecurrenceEnded(
-                targetId,
-                targetType,
-                startTime
-        ));
-    }
-
     public void handleReminderDeleted(
             Long exceptionId,
             Long memberId,

@@ -1,6 +1,5 @@
 package com.project.backend.domain.reminder.service.command;
 
-import com.project.backend.domain.event.dto.RecurrenceEnded;
 import com.project.backend.domain.reminder.entity.Reminder;
 import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.TargetType;
@@ -24,8 +23,6 @@ public interface ReminderCommandService {
     void updateReminderOfSingle(ReminderSource rs, Long memberId);
 
     void updateReminderOfRecurrence(ReminderSource rs, Long memberId, LocalDateTime occurrenceTime);
-
-    void cleanupBaseReminderOnUpdate(RecurrenceEnded re);
 
     void syncReminderAfterExceptionUpdate(ReminderSource rs, Long exceptionId, Long memberId);
 

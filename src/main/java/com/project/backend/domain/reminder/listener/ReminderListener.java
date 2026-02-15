@@ -1,12 +1,10 @@
 package com.project.backend.domain.reminder.listener;
 
 import com.project.backend.domain.event.dto.PlanChanged;
-import com.project.backend.domain.event.dto.RecurrenceEnded;
 import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
 import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.handler.PlanReminderHandler;
 import com.project.backend.domain.reminder.handler.ExceptionReminderHandler;
-import com.project.backend.domain.reminder.handler.RecurrenceEndedHandler;
 import com.project.backend.domain.reminder.handler.ReminderDeletedHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +19,6 @@ public class ReminderListener {
 
     private final PlanReminderHandler planReminderHandler;
     private final ExceptionReminderHandler exceptionReminderHandler;
-    private final RecurrenceEndedHandler recurrenceEndedHandler;
     private final ReminderDeletedHandler reminderDeletedHandler;
 
     // 리스너를 호출하는 로직이 flush + commit 된 이후 실행
@@ -37,14 +34,6 @@ public class ReminderListener {
     )
     public void onRecurrenceExceptionChanged(RecurrenceExceptionChanged rec) {
         exceptionReminderHandler.handle(rec);
-    }
-
-    // 반복이 있는 일정 수정 시, 해당 일정과 그 이후 일정들을 수정하는 경우
-    @TransactionalEventListener(
-            phase = TransactionPhase.AFTER_COMMIT
-    )
-    public void onRecurrenceEnded(RecurrenceEnded re) {
-        recurrenceEndedHandler.handle(re);
     }
 
     // 수정된 일정에 대해 THIS_AND_FOLLWING 으로 재수정하거나 삭제 하는 경우

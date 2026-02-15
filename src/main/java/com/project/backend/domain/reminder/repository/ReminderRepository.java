@@ -85,5 +85,7 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
             @Param("occurrenceTime") LocalDateTime occurrenceTime
     );
 
-    Optional<Reminder> findByRecurrenceExceptionId(Long id);
+    Optional<Reminder> findByRecurrenceExceptionIdAndTargetType(Long id, TargetType type);
+
+    void deleteByTargetIdAndTargetType(Long targetId, TargetType type);
 }

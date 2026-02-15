@@ -1,6 +1,5 @@
 package com.project.backend.domain.reminder.service.command;
 
-import com.project.backend.domain.event.dto.RecurrenceEnded;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
 import com.project.backend.domain.event.exception.RecurrenceGroupException;
@@ -21,6 +20,12 @@ import com.project.backend.domain.reminder.exception.ReminderErrorCode;
 import com.project.backend.domain.reminder.exception.ReminderException;
 import com.project.backend.domain.reminder.repository.ReminderRepository;
 import com.project.backend.domain.reminder.provider.OccurrenceProvider;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceException;
+import com.project.backend.domain.todo.exception.TodoErrorCode;
+import com.project.backend.domain.todo.exception.TodoException;
+import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
+import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.domain.todo.service.query.TodoQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +49,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     private final OccurrenceProvider occurrenceProvider;
     private final EventQueryService eventQueryService;
     private final TodoQueryService todoQueryService;
+    private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+    private final TodoRepository todoRepository;
 
     @Override
     public void createReminder(ReminderSource source, Long memberId) {
@@ -193,18 +200,6 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void cleanupBaseReminderOnUpdate(RecurrenceEnded re) {
-        Reminder reminder = reminderRepository.findByIdAndTypeAndRole(
-                re.targetId(), re.targetType(), ReminderRole.BASE
-        ).orElseThrow(() -> new ReminderException(ReminderErrorCode.REMINDER_NOT_FOUND));
-
-        // 원본 일정에 대한 리마인더의 발생 시간이 수정을 통해 생성된 일정의 startTime과 동일하거나 이후라면 원본 일정에 대한 리마인더 삭제
-        if (!reminder.getOccurrenceTime().isBefore(re.startTime())) {
-            reminderRepository.deleteById(reminder.getId());
-        }
-    }
-
-    @Override
     public void syncReminderAfterExceptionUpdate(ReminderSource rs, Long exceptionId, Long memberId) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -244,13 +239,25 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
 
         if (reminder.isEmpty()) return;
 
+        Reminder re = reminder.get();
+        // 원본 일정에 대한 리마인더의 발생 시간이 수정을 통해 생성된 일정의 startTime과 동일하거나 이후라면 원본 일정에 대한 리마인더 삭제
+        if (!re.getOccurrenceTime().isBefore(occurrenceTime)) {
+            reminderRepository.deleteById(re.getId());
+        }
+
         // THIS_AND_FOLLOWING: 기준 occurrenceTime(포함) 이후에 발생하는 리마인더만 삭제한다.
         deleteReminderAfterOccurrenceTime(targetId, targetType, occurrenceTime);
     }
 
     @Override
     public void deleteReminderOfAll(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
-        deleteReminderAfterOccurrenceTime(targetId, targetType, occurrenceTime);
+        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
+                targetId, targetType, ReminderRole.BASE);
+
+        if (reminder.isEmpty()) return;
+
+        // base, override 리마인더 모두 삭제
+        reminderRepository.deleteByTargetIdAndTargetType(targetId, targetType);
     }
 
     private void saveReminder(ReminderSource rs, Long memberId, Long exceptionId, ReminderRole role) {

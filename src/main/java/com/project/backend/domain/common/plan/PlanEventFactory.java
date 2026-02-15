@@ -1,7 +1,6 @@
 package com.project.backend.domain.common.plan;
 
 import com.project.backend.domain.event.dto.PlanChanged;
-import com.project.backend.domain.event.dto.RecurrenceEnded;
 import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
 import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.enums.ChangeType;
@@ -53,18 +52,6 @@ public class PlanEventFactory {
                 .isrRecurring(isRecurring)
                 .occurrenceTime(occurrenceTime)
                 .changeType(changeType)
-                .build();
-    }
-
-    public static RecurrenceEnded toEventRecurrenceEnded(
-            Long eventId,
-            TargetType targetType,
-            LocalDateTime startTime
-    ) {
-        return RecurrenceEnded.builder()
-                .targetId(eventId)
-                .targetType(targetType)
-                .startTime(startTime)
                 .build();
     }
 
