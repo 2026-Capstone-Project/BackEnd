@@ -345,7 +345,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         Todo newTodo = Todo.createRecurring(
                 member,
                 reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
-                occurrenceDate,
+                reqDTO.startDate() != null ? reqDTO.startDate() : occurrenceDate,
                 reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
                 reqDTO.isAllDay() != null ? reqDTO.isAllDay() : todo.getIsAllDay(),
                 reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),

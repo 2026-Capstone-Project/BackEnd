@@ -187,7 +187,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
             }
 
             // 수정/삭제에서 : 리마인더가 지정하고 있던 계산된 일정의 시간을 변경/삭제한 경우
-            if (reminder.getOccurrenceTime().equals(tex.getExceptionDate().atTime(tex.getDueTime()))) {
+            if (reminder.getOccurrenceTime().toLocalDate().equals(tex.getExceptionDate())) {
                 doRefresh(reminder);
             }
         }
