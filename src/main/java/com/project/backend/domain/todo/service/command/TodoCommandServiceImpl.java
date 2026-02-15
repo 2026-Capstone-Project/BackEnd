@@ -1,9 +1,15 @@
 package com.project.backend.domain.todo.service.command;
 
+import com.project.backend.domain.common.reminder.ReminderEventBridge;
+import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
+import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.DeletedType;
+import com.project.backend.domain.reminder.enums.ExceptionChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
@@ -23,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -35,6 +43,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
     private final TodoQueryService todoQueryService;
+    private final ReminderEventBridge reminderEventBridge;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -60,6 +69,16 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             recurrenceGroup.setTodo(todo);
         }
 
+        // 투두 생성에 따른 리스너 생성 로직 실행
+        reminderEventBridge.handlePlanChanged(
+                todo.getId(),
+                TargetType.TODO,
+                memberId,
+                todo.getTitle(),
+                recurrenceGroup != null,
+                todo.getStartDate().atTime(todo.getDueTime()),
+                ChangeType.CREATED
+        );
         return TodoConverter.toTodoInfo(todo);
     }
 
@@ -71,6 +90,16 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
             updateSingleTodo(todo, reqDTO);
+            // 이벤트 생성에 따른 리스너 생성 로직 실행
+            reminderEventBridge.handlePlanChanged(
+                    todo.getId(),
+                    TargetType.TODO,
+                    memberId,
+                    todo.getTitle(),
+                    false,
+                    todo.getStartDate().atTime(todo.getDueTime()),
+                    ChangeType.UPDATE_SINGLE
+            );
             return TodoConverter.toTodoInfo(todo);
         }
 
@@ -90,9 +119,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         }
 
         return switch (scope) {
-            case THIS_TODO -> updateThisTodoOnly(todo, occurrenceDate, reqDTO);
+            case THIS_TODO -> updateThisTodoOnly(todo, occurrenceDate, reqDTO, memberId);
             case THIS_AND_FOLLOWING -> updateThisAndFollowing(todo, occurrenceDate, reqDTO);
-            case ALL_TODOS -> updateAllTodos(todo, reqDTO);
         };
     }
 
@@ -104,6 +132,13 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         if (!todo.isRecurring()) {
             todoRepository.delete(todo);
             log.debug("단일 할 일 삭제 완료 - todoId: {}", todoId);
+            reminderEventBridge.handleReminderDeleted(
+                    null,
+                    memberId,
+                    occurrenceDate.atTime(todo.getDueTime()),
+                    todoId,
+                    TargetType.TODO,
+                    DeletedType.DELETED_SINGLE);
             return;
         }
 
@@ -123,9 +158,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         }
 
         switch (scope) {
-            case THIS_TODO -> deleteThisTodoOnly(todo, occurrenceDate);
-            case THIS_AND_FOLLOWING -> deleteThisAndFollowing(todo, occurrenceDate);
-            case ALL_TODOS -> deleteAllTodos(todo);
+            case THIS_TODO -> deleteThisTodoOnly(todo, occurrenceDate, memberId);
+            case THIS_AND_FOLLOWING -> deleteThisAndFollowing(todo, occurrenceDate, memberId);
         }
     }
 
@@ -217,7 +251,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
      * 반복 할 일 - 이 할 일만 수정 (OVERRIDE 예외 생성/수정)
      */
     private TodoResDTO.TodoInfo updateThisTodoOnly(Todo todo, LocalDate occurrenceDate,
-                                                    TodoReqDTO.UpdateTodo reqDTO) {
+                                                    TodoReqDTO.UpdateTodo reqDTO, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
         // 기존 예외 조회
@@ -240,6 +274,17 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
             existingException.updateOverride(newTitle, newDueTime, newPriority, newMemo);
             exception = existingException;
+
+            // Exception을 가진 할 일을 재 수정 했을 때 리마인더 처리 실행
+            reminderEventBridge.handleExceptionChanged(
+                    exception.getId(),
+                    todo.getId(),
+                    TargetType.TODO,
+                    memberId,
+                    exception.getTitle(),
+                    exception.getExceptionDate().atTime(exception.getDueTime()),
+                    ExceptionChangeType.UPDATE_THIS_AGAIN
+            );
             log.debug("반복 할 일 예외 수정 완료 (업데이트) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
         } else {
             // 기존 예외가 없으면 새로 생성
@@ -253,6 +298,16 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             );
             todoRecurrenceExceptionRepository.save(exception);
             group.addExceptionDate(exception);
+
+            // 원본 할 일 수정 시 리마인더 처리
+            reminderEventBridge.handleExceptionChanged(
+                    exception.getId(),
+                    todo.getId(),
+                    TargetType.TODO,
+                    memberId,
+                    exception.getTitle(),
+                    exception.getExceptionDate().atTime(exception.getDueTime()),
+                    ExceptionChangeType.UPDATED_THIS);
             log.debug("반복 할 일 예외 수정 완료 (생성) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
         }
 
@@ -303,50 +358,133 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 반복 그룹에 Todo 연결
         newGroup.setTodo(newTodo);
 
-        log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
+        // 수정하려는 날짜 포함한 이후 할 일들에 대한 반복예외 객체 모두 삭제
+        todoRecurrenceExceptionRepository.deleteByTodoRecurrenceGroupIdAndOccurrenceDate(
+                oldGroup.getId(), occurrenceDate
+        );
 
+        // 원본 할 일에 대한 수정일 경우 기존 할 일 + 반복 삭제
+        if (todo.getStartDate().equals(occurrenceDate)) {
+            todoRepository.delete(todo);
+            todoRecurrenceGroupRepository.delete(oldGroup);
+            reminderEventBridge.handleReminderDeleted(
+                    null,
+                    member.getId(),
+                    todo.getStartDate().atTime(todo.getDueTime()),
+                    todo.getId(),
+                    TargetType.TODO,
+                    DeletedType.DELETED_ALL);
+        } else {
+            LocalDateTime startDate = occurrenceDate.atTime(todo.getDueTime());
+
+            Optional<TodoRecurrenceException> ex = todoRecurrenceExceptionRepository
+                    .findByTodoRecurrenceGroupIdAndExceptionDate(oldGroup.getId(), occurrenceDate);
+
+            // dueTime이 수정된 할 일에 대한 수정인 경우
+            if (ex.isPresent() && ex.get().getExceptionType() == ExceptionType.OVERRIDE
+                    && !ex.get().getDueTime().equals(startDate.toLocalTime())) {
+                startDate = occurrenceDate.atTime(ex.get().getDueTime());
+            }
+
+            // 해당 일정과 그 이후 일정들을 수정했을 때 리스너 수정 로직 실행
+            // 기존 일정에 대한 리마인더 삭제 여부 결정
+            reminderEventBridge.handleReminderDeleted(
+                    null,
+                    member.getId(),
+                    startDate,
+                    todo.getId(),
+                    TargetType.TODO,
+                    DeletedType.DELETED_THIS_AND_FOLLOWING
+            );
+        }
+
+        // 새 일정 생성에 대한 리마인더 발생
+        reminderEventBridge.handlePlanChanged(
+                newTodo.getId(),
+                TargetType.TODO,
+                member.getId(),
+                newTodo.getTitle(),
+                true,
+                newTodo.getStartDate().atTime(newTodo.getDueTime()),
+                ChangeType.CREATED
+        );
+
+        log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
         return TodoConverter.toTodoInfo(newTodo);
     }
 
     /**
      * 반복 할 일 - 모든 할 일 수정
      */
-    private TodoResDTO.TodoInfo updateAllTodos(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
-        // 원본 Todo 수정
-        todo.update(
-                reqDTO.title(),
-                reqDTO.startDate(),
-                reqDTO.dueTime(),
-                reqDTO.isAllDay(),
-                reqDTO.priority(),
-                reqDTO.memo()
-        );
-
-        // 반복 종료일 변경
-        if (reqDTO.endDate() != null && todo.getTodoRecurrenceGroup() != null) {
-            todo.getTodoRecurrenceGroup().updateEndByDate(reqDTO.endDate());
-        }
-
-        log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
-
-        return TodoConverter.toTodoInfo(todo);
-    }
+//    private TodoResDTO.TodoInfo updateAllTodos(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
+//        // 원본 Todo 수정
+//        todo.update(
+//                reqDTO.title(),
+//                reqDTO.startDate(),
+//                reqDTO.dueTime(),
+//                reqDTO.isAllDay(),
+//                reqDTO.priority(),
+//                reqDTO.memo()
+//        );
+//
+//        // 반복 종료일 변경
+//        if (reqDTO.endDate() != null && todo.getTodoRecurrenceGroup() != null) {
+//            todo.getTodoRecurrenceGroup().updateEndByDate(reqDTO.endDate());
+//        }
+//
+//        log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
+//
+//        return TodoConverter.toTodoInfo(todo);
+//    }
 
     /**
      * 반복 할 일 - 이 할 일만 삭제 (SKIP 예외 생성)
      */
-    private void deleteThisTodoOnly(Todo todo, LocalDate occurrenceDate) {
+    private void deleteThisTodoOnly(Todo todo, LocalDate occurrenceDate, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
-        // 기존 예외가 있으면 삭제
-        todoRecurrenceExceptionRepository
-                .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate)
-                .ifPresent(todoRecurrenceExceptionRepository::delete);
+        Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate);
+
+        if (re.isPresent()) {
+            TodoRecurrenceException ex = re.get();
+
+            // 삭제된 할 일인 경우
+            if (ex.getExceptionType() == ExceptionType.SKIP) {
+                throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+            }
+
+            // 기존 예외가 있으면 SKIP으로 상태 변경
+            ex.updateExceptionTypeToSKIP();
+            LocalDateTime startTime = todo.getStartDate().atTime(ex.getDueTime());
+
+            if (startTime.isAfter(LocalDateTime.now())) {
+                reminderEventBridge.handleReminderDeleted(
+                        ex.getId(),
+                        memberId,
+                        startTime,
+                        todo.getId(),
+                        TargetType.TODO,
+                        DeletedType.DELETED_SINGLE
+                );
+            }
+            return;
+        }
 
         // SKIP 예외 생성
         TodoRecurrenceException exception = TodoRecurrenceException.createSkip(group, occurrenceDate);
         todoRecurrenceExceptionRepository.save(exception);
         group.addExceptionDate(exception);
+
+        // 해당 일정만 삭제했을 때 리스너 수정 로직 실행
+        reminderEventBridge.handleExceptionChanged(
+                exception.getId(),
+                todo.getId(),
+                TargetType.TODO,
+                memberId,
+                todo.getTitle(),
+                occurrenceDate.atTime(exception.getDueTime()),
+                ExceptionChangeType.DELETED_THIS);
 
         log.debug("반복 할 일 예외 삭제 완료 - todoId: {}, date: {}", todo.getId(), occurrenceDate);
     }
@@ -354,11 +492,59 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     /**
      * 반복 할 일 - 이 할 일 및 이후 삭제 (종료 날짜 변경)
      */
-    private void deleteThisAndFollowing(Todo todo, LocalDate occurrenceDate) {
+    private void deleteThisAndFollowing(Todo todo, LocalDate occurrenceDate, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
-        // 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정
-        group.updateEndByDate(occurrenceDate.minusDays(1));
+        // 삭제하려는 날짜가 수정된 일정인지
+        Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository.
+                findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate);
+
+        LocalDateTime startDate = occurrenceDate.atTime(todo.getDueTime());
+
+        // 수정/삭제된 할 일일때
+        if (re.isPresent()) {
+            TodoRecurrenceException ex = re.get();
+
+            // 삭제된 할 일이면
+            if (ex.getExceptionType() == ExceptionType.SKIP) {
+                throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
+            }
+
+            // dueTime이 수정된 할 일인 경우
+            if (todo.getDueTime() != ex.getDueTime()) {
+                startDate = occurrenceDate.atTime(ex.getDueTime());
+            }
+        }
+
+        // 삭제하려는 날을 포함한 이후 할 일들에 대한 반복예외 객체 모두 삭제
+        todoRecurrenceExceptionRepository.deleteByTodoRecurrenceGroupIdAndOccurrenceDate(group.getId(), occurrenceDate);
+
+        // 원본 할 일에 대한 수정이면 기존 할 일 + 반복 삭제
+        if (todo.getStartDate().equals(occurrenceDate)) {
+            todoRepository.delete(todo);
+            todoRecurrenceGroupRepository.delete(todo.getTodoRecurrenceGroup());
+            reminderEventBridge.handleReminderDeleted(
+                    null,
+                    memberId,
+                    startDate,
+                    todo.getId(),
+                    TargetType.TODO,
+                    DeletedType.DELETED_ALL
+            );
+        } else {
+            // 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정
+            group.updateEndByDate(occurrenceDate.minusDays(1));
+
+            // 해당 일정과 그 이후 일정들을 삭제했을 때 리스너 수정 로직 실행
+            reminderEventBridge.handleReminderDeleted(
+                    null,
+                    memberId,
+                    startDate,
+                    todo.getId(),
+                    TargetType.TODO,
+                    DeletedType.DELETED_THIS_AND_FOLLOWING
+            );
+        }
 
         log.debug("반복 할 일 이후 삭제 완료 - todoId: {}, newEndDate: {}", todo.getId(), occurrenceDate.minusDays(1));
     }
@@ -366,17 +552,17 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     /**
      * 반복 할 일 - 모든 할 일 삭제
      */
-    private void deleteAllTodos(Todo todo) {
-        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
-
-        // Todo 삭제 (cascade로 예외도 삭제됨)
-        todoRepository.delete(todo);
-
-        // 반복 그룹 삭제
-        todoRecurrenceGroupRepository.delete(group);
-
-        log.debug("반복 할 일 전체 삭제 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
-    }
+//    private void deleteAllTodos(Todo todo) {
+//        TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+//
+//        // Todo 삭제 (cascade로 예외도 삭제됨)
+//        todoRepository.delete(todo);
+//
+//        // 반복 그룹 삭제
+//        todoRecurrenceGroupRepository.delete(group);
+//
+//        log.debug("반복 할 일 전체 삭제 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
+//    }
 
     /**
      * 기존 반복 그룹 설정을 복사하여 새 그룹 생성

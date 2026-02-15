@@ -140,6 +140,13 @@ public class TodoRecurrenceException {
                 .build();
     }
 
+    /**
+     * ExceptionType을 skip으로 업데이트
+     */
+    public void updateExceptionTypeToSKIP() {
+        this.exceptionType = ExceptionType.SKIP;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

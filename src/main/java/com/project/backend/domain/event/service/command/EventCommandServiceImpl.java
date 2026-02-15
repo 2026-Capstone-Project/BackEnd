@@ -363,35 +363,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                     TargetType.EVENT,
                     DeletedType.DELETED_THIS_AND_FOLLOWING
             );
-//            reminderEventBridge.handleRecurrenceEnded(
-//                    event.getId(),
-//                    TargetType.EVENT,
-//                    occurrenceDate
-//            );
         }
-
-//        // 수정된 일정에 대한 수정이면 (THIS_EVENT로 수정된 일정)
-//        Optional<RecurrenceException> re = recurrenceExRepository
-//                .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-//                        rg.getId(),
-//                        occurrenceDate,
-//                        ExceptionType.OVERRIDE
-//                );
-//
-//        if (re.isPresent()) {
-//            RecurrenceException ex = re.get();
-//            LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
-//            recurrenceExRepository.delete(ex);
-//            reminderEventBridge.handleReminderDeleted(
-//                    ex.getId(),
-//                    member.getId(),
-//                    startTime,
-//                    event.getId(),
-//                    TargetType.EVENT,
-//                    DeletedType.DELETED_THIS_AND_FOLLOWING
-//            );
-//            return;
-//        }
 
         // 새 일정 생성에 대한 리마인더 발생
         reminderEventBridge.handlePlanChanged(

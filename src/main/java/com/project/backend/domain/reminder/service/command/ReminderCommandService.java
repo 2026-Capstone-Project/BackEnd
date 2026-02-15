@@ -12,7 +12,8 @@ public interface ReminderCommandService {
     void createReminder(ReminderSource rs, Long memberId);
 
     void createSingleOverrideReminder
-            (Long eventId, Long memberId, LocalDateTime occurrenceTime, String title, Long exceptionId);
+            (Long eventId, TargetType targetType, Long memberId,
+             LocalDateTime occurrenceTime, String title, Long exceptionId);
 
     List<Reminder> findActiveReminders();
 

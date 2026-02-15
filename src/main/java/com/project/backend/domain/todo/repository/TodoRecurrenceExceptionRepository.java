@@ -2,6 +2,7 @@ package com.project.backend.domain.todo.repository;
 
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
@@ -23,4 +24,13 @@ public interface TodoRecurrenceExceptionRepository extends JpaRepository<TodoRec
             " WHERE e.todoRecurrenceGroup.id = :groupId " +
             "AND e.exceptionDate = :date")
     Optional<TodoRecurrenceException> findByTodoRecurrenceGroupIdAndExceptionDate(Long groupId, LocalDate date);
+
+    /**
+     * 반복 그룹의 특정 날짜 예외와 그 이후 occurrenceDate를 가진 예외 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM TodoRecurrenceException e " +
+            "WHERE e.todoRecurrenceGroup.id = :groupId " +
+            "AND e.exceptionDate >= :occurrenceDate")
+    void deleteByTodoRecurrenceGroupIdAndOccurrenceDate(Long groupId, LocalDate occurrenceDate);
 }

@@ -24,7 +24,7 @@ public class OccurrenceProvider {
             return eventQueryService.calculateNextOccurrence(reminder.getTargetId(), reminder.getOccurrenceTime());
         }
 
-        return todoService.calculateNextOccurrence(reminder);
+        return todoService.calculateNextOccurrence(reminder.getTargetId(), reminder.getOccurrenceTime());
     }
 
     public List<TodayOccurrenceResult> getTodayOccurrence(TargetType type, List<Long> targetId, LocalDate date) {
