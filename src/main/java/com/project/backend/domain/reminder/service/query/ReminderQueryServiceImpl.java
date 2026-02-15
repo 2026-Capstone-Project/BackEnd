@@ -91,12 +91,6 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
             }
 
             Optional<RecurrenceException> re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
-            // 단일 일정이면 RecurrenceException은 존재하지 않는다.
-            if (!event.isRecurring()) {
-                return reminder.getTitle();
-            }
-
-            re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
                     event.getRecurrenceGroup().getId(),
                     reminder.getOccurrenceTime()
             );

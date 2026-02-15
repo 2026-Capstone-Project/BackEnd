@@ -391,9 +391,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
 
         LocalDateTime current = candidate.startDate();
         // 반복 예외 가져오기
-        Map<LocalDate, RecurrenceSuggestionException> exMap = getExMap(candidate);
+        Map<LocalDateTime, RecurrenceSuggestionException> exMap = getExMap(candidate);
         // 맨 처음이 반복 예외인 경우 SKIP, OVERRIDE 처리
-        LocalDateTime last = resolveExceptionStart(current, exMap.get(current.toLocalDate()));
+        LocalDateTime last = resolveExceptionStart(current, exMap.get(current));
 
         int count = 1;
         // 반복 조건에 따라 반복
@@ -409,9 +409,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                 break;
             }
             // 반복 예외가 있다면
-            if (!exMap.isEmpty()) {
+            if (!exMap.isEmpty() && exMap.containsKey(current)) {
                 // SKIP, OVERRIDE 적용
-                LocalDateTime start = resolveExceptionStart(current, exMap.get(current.toLocalDate()));
+                LocalDateTime start = resolveExceptionStart(current, exMap.get(current));
                 // SKIP or Exception 없음
                 if (start != null) {
                     log.debug("title = {}, start = {}", candidate.event().getTitle(), start);
@@ -428,7 +428,7 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     }
 
     // candidate의 카테고리에 따라 알맞은 반복 예외를 반환
-    private Map<LocalDate, RecurrenceSuggestionException> getExMap(RecurrenceSuggestionCandidate candidate) {
+    private Map<LocalDateTime, RecurrenceSuggestionException> getExMap(RecurrenceSuggestionCandidate candidate) {
 
         return switch (candidate.category()) {
             case EVENT -> {
@@ -444,12 +444,13 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             case TODO -> {
                 List<TodoRecurrenceException> exList =
                         todoRecurrenceExceptionRepository.findByTodoRecurrenceGroupId(candidate.id());
-                yield exList.stream()
-                        .collect(Collectors.toMap(
-                                        TodoRecurrenceException::getExceptionDate,
-                                        RecurrenceSuggestionException::from
-                                )
-                        );
+//                yield exList.stream()
+//                        .collect(Collectors.toMap(
+//                                        TodoRecurrenceException::getExceptionDate,
+//                                        RecurrenceSuggestionException::from
+//                                )
+//                        );
+                yield Map.of();
             }
         };
     }
