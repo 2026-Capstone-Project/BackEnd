@@ -1,14 +1,15 @@
 package com.project.backend.domain.event.dto;
 
 import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.Builder;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Builder
-public record EventChanged (
-        Long eventId,
+public record PlanChanged(
+        Long targetId,
+        TargetType targetType,
         Long memberId,
         String title,
         Boolean isrRecurring,

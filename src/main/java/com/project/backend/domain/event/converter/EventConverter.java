@@ -194,69 +194,6 @@ public class EventConverter {
                 .build();
     }
 
-    public static EventChanged toEventChanged(
-            Long targetId,
-            Long memberId,
-            String title,
-            Boolean isRecurring,
-            LocalDateTime occurrenceTime,
-            ChangeType changeType) {
-        return EventChanged.builder()
-                .eventId(targetId)
-                .memberId(memberId)
-                .title(title)
-                .isrRecurring(isRecurring)
-                .occurrenceTime(occurrenceTime)
-                .changeType(changeType)
-                .build();
-    }
-
-    public static RecurrenceExceptionChanged toRecurrenceExceptionChanged (
-            Long exceptionId,
-            Long eventId,
-            Long memberId,
-            String title,
-            Boolean isRecurring,
-            LocalDateTime occurrenceTime,
-            ExceptionChangeType changeType
-    ) {
-        return RecurrenceExceptionChanged.builder()
-                .exceptionId(exceptionId)
-                .eventId(eventId)
-                .memberId(memberId)
-                .title(title)
-                .isrRecurring(isRecurring)
-                .occurrenceTime(occurrenceTime)
-                .changeType(changeType)
-                .build();
-    }
-
-    public static RecurrenceEnded toEventRecurrenceEnded(Long eventId, LocalDateTime startTime) {
-        return RecurrenceEnded.builder()
-                .targetId(eventId)
-                .targetType(TargetType.EVENT)
-                .startTime(startTime)
-                .build();
-    }
-
-    public static ReminderDeleted toReminderDeleted(
-            Long exceptionId,
-            Long memberId,
-            LocalDateTime occurrenceTime,
-            Long targetId,
-            TargetType targetType,
-            DeletedType deletedType
-    ) {
-        return ReminderDeleted.builder()
-                .exceptionId(exceptionId)
-                .memberId(memberId)
-                .occurenceTime(occurrenceTime)
-                .targetId(targetId)
-                .targetType(targetType)
-                .deletedType(deletedType)
-                .build();
-    }
-
     private static LocalDateTime getEndTime(Event event, LocalDateTime occurrenceDate) {
         LocalDateTime end;
         if (event.getDurationMinutes() != null) {

@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.dto;
 
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 public record RecurrenceExceptionChanged(
         Long exceptionId,
         Long eventId,
+        TargetType targetType,
         Long memberId,
         String title,
         LocalDateTime occurrenceTime,

@@ -32,7 +32,6 @@ import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.reminder.listener.ReminderListener;
-import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,9 +53,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
     private final RecurrenceGroupValidator rgValidator;
-    private final ReminderListener reminderListener;
     private final EventOccurrenceResolver eventOccurrenceResolver;
-    private final ReminderCommandService reminderCommandService;
+    private final ReminderEventBridge reminderEventBridge;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -80,8 +78,9 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = createEvent(eventSpec, member, recurrenceGroup);
 
         // 이벤트 생성에 따른 리스너 생성 로직 실행
-        handleEventChanged(
+        reminderEventBridge.handlePlanChanged(
                 event.getId(),
+                TargetType.EVENT,
                 memberId,
                 event.getTitle(),
                 recurrenceGroup != null,
@@ -125,8 +124,9 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.updateRecurrenceGroup(rg);
                 rg.updateEvent(event);
                 // 이벤트 + 반복 생성에 따른 리스너 수정 로직 실행
-                handleEventChanged(
+                reminderEventBridge.handlePlanChanged(
                         eventId,
+                        TargetType.EVENT,
                         memberId,
                         event.getTitle(),
                         true,
@@ -135,8 +135,9 @@ public class EventCommandServiceImpl implements EventCommandService {
                 );
             } else{
                 // 이벤트 생성에 따른 리스너 생성 수정 실행
-                handleEventChanged(
+                reminderEventBridge.handlePlanChanged(
                         eventId,
+                        TargetType.EVENT,
                         memberId,
                         event.getTitle(),
                         false,
@@ -174,8 +175,8 @@ public class EventCommandServiceImpl implements EventCommandService {
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
             eventRepository.delete(event);
-            handleReminderDeleted(
-                    eventId,
+            reminderEventBridge.handleReminderDeleted(
+                    null,
                     memberId,
                     occurrenceDate,
                     eventId,
@@ -253,9 +254,10 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (re.isPresent()) {
             RecurrenceException ex = re.get();
             updateRecurrenceException(req, ex);
-            handleExceptionChanged(
+            reminderEventBridge.handleExceptionChanged(
                     ex.getId(),
                     event.getId(),
+                    TargetType.EVENT,
                     member.getId(),
                     ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
                     ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
@@ -273,9 +275,10 @@ public class EventCommandServiceImpl implements EventCommandService {
         // startTime이 현재보다 이후라면 리마인더 생성
         if ((ex.getStartTime() != null || ex.getTitle() != null) && !startTime.isBefore(LocalDateTime.now())) {
             // 해당 일정만 수정했을 때 리스너 수정 로직 실행
-            handleExceptionChanged(
+            reminderEventBridge.handleExceptionChanged(
                     ex.getId(),
                     event.getId(),
+                    TargetType.EVENT,
                     member.getId(),
                     ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
                     event.getStartTime(),
@@ -321,8 +324,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.getId(),
                 TargetType.EVENT,
                 memberId,
-                ex.getTitle(),
-                ex.getStartTime(),
                 event.getTitle(),
                 occurrenceDate,
                 ExceptionChangeType.DELETED_THIS);
@@ -347,8 +348,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 해당 일정과 그 이후 일정들을 수정했을 때 리스너 수정 로직 실행
         // 기존 일정에 대한 리마인더 삭제 여부 결정
-        handleRecurrenceEnded(
+        reminderEventBridge.handleRecurrenceEnded(
                 event.getId(),
+                TargetType.EVENT,
                 newEvent.getStartTime()
         );
 
@@ -356,7 +358,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (Objects.equals(event.getStartTime(), occurrenceDate)) {
             eventRepository.delete(event);
             recurrenceGroupRepository.delete(event.getRecurrenceGroup());
-            handleReminderDeleted(
+            reminderEventBridge.handleReminderDeleted(
                     null,
                     member.getId(),
                     event.getStartTime(),
@@ -377,7 +379,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             RecurrenceException ex = re.get();
             LocalDateTime startTime = ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate();
             recurrenceExRepository.delete(ex);
-            handleReminderDeleted(
+            reminderEventBridge.handleReminderDeleted(
                     ex.getId(),
                     member.getId(),
                     startTime,
@@ -389,8 +391,9 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         // 새 일정 생성에 대한 리마인더 발생
-        handleEventChanged(
+        reminderEventBridge.handlePlanChanged(
                 newEvent.getId(),
+                TargetType.EVENT,
                 member.getId(),
                 newEvent.getTitle(),
                 true,
@@ -425,7 +428,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (event.getStartTime().equals(occurrenceDate)) {
             eventRepository.delete(event);
             recurrenceGroupRepository.delete(event.getRecurrenceGroup());
-            handleReminderDeleted(
+            reminderEventBridge.handleReminderDeleted(
                     null,
                     memberId,
                     event.getStartTime(),
@@ -438,7 +441,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             rg.updateEndDateTime(startDate.toLocalDate().atStartOfDay().minusDays(1));
 
             // 해당 일정과 그 이후 일정들을 삭제했을 때 리스너 수정 로직 실행
-            handleReminderDeleted(
+            reminderEventBridge.handleReminderDeleted(
                     null,
                     memberId,
                     startDate,
@@ -532,65 +535,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         return occurrenceDate;
-    }
-
-    private void handleEventChanged (
-            Long eventId,
-            Long memberId,
-            String title,
-            Boolean isRecurring,
-            LocalDateTime startTime,
-            ChangeType changeType
-    ) {
-        reminderListener.onEvent(EventConverter.toEventChanged(
-                eventId,
-                memberId,
-                title,
-                isRecurring,
-                startTime,
-                changeType
-        ));
-    }
-
-    private void handleExceptionChanged (
-            Long exceptionId,
-            Long eventId,
-            Long memberId,
-            String title,
-            LocalDateTime occurrenceTime,
-            ExceptionChangeType changeType
-    ) {
-        reminderListener.onEvent(EventConverter.toRecurrenceExceptionChanged(
-                exceptionId,
-                eventId,
-                memberId,
-                title,
-                true,
-                occurrenceTime,
-                changeType
-        ));
-    }
-
-    private void handleRecurrenceEnded(Long eventId, LocalDateTime startTime) {
-        reminderListener.onEvent(EventConverter.toEventRecurrenceEnded(eventId, startTime));
-    }
-
-    private void handleReminderDeleted(
-            Long exceptionId,
-            Long memberId,
-            LocalDateTime occurrenceTime,
-            Long eventId,
-            TargetType targetType,
-            DeletedType deletedType
-    ) {
-        reminderListener.onEvent(EventConverter.toReminderDeleted(
-                exceptionId,
-                memberId,
-                occurrenceTime,
-                eventId,
-                targetType,
-                deletedType
-        ));
     }
 
     private Event createEventWithNewRecurrenceGroup(

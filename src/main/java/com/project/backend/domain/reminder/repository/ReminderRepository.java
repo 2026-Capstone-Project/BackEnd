@@ -36,16 +36,16 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
      */
     @Query("SELECT r FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :targetType")
     Optional<Reminder> findByTargetIdAndTargetType(
-            @Param("eventId") Long targetId,
+            @Param("targetId") Long targetId,
             @Param("targetType") TargetType targetType
     );
 
     /**
      * 리마인더의 역할 구분 조회
      */
-    @Query("SELECT r FROM Reminder r WHERE r.targetId = :eventId AND r.targetType = :type AND r.role = :role")
+    @Query("SELECT r FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :type AND r.role = :role")
     Optional<Reminder> findByIdAndTypeAndRole(
-            @Param("eventId") Long eventId,
+            @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("role") ReminderRole role
     );
@@ -62,11 +62,11 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
      */
     @Modifying
     @Query("DELETE FROM Reminder r " +
-            "WHERE r.targetId = :eventId " +
+            "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type " +
             "AND r.occurrenceTime >= :occurrenceTime")
     void deleteByTargetIdAndTargetTypeAndOccurrenceTime(
-            @Param("eventId") Long eventId,
+            @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("occurrenceTime") LocalDateTime occurrenceTime
     );
@@ -76,11 +76,11 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
      */
     @Modifying
     @Query("DELETE FROM Reminder r " +
-            "WHERE r.targetId = :eventId " +
+            "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type " +
             "AND r.occurrenceTime >= :occurrenceTime")
     void deleteRemindersFromOccurrenceTime(
-            @Param("eventId") Long eventId,
+            @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("occurrenceTime") LocalDateTime occurrenceTime
     );
