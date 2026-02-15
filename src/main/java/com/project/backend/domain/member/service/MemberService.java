@@ -1,14 +1,19 @@
 package com.project.backend.domain.member.service;
 
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
+import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.auth.dto.response.AuthResDTO;
 import com.project.backend.domain.member.converter.MemberConverter;
+import com.project.backend.domain.member.dto.response.MemberResDTO;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.setting.repository.SettingRepository;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
+import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.global.security.jwt.JwtUtil;
 import com.project.backend.global.security.utils.CookieUtil;
@@ -29,7 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventRepository eventRepository;
+    private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
+    private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
     private final TodoRepository todoRepository;
     private final SuggestionRepository suggestionRepository;
     private final SettingRepository settingRepository;
@@ -45,6 +54,17 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
+    /**
+     * 현재 로그인한 사용자 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public MemberResDTO.MyInfo getMyInfo(Long memberId) {
+        Member member = memberRepository.findActiveByIdWithAuth(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        return MemberConverter.toMyInfo(member);
+    }
+
     // 회원 탈퇴
     @Transactional
     public void withdraw(Long memberId, HttpServletRequest request, HttpServletResponse response) {
@@ -57,8 +77,16 @@ public class MemberService {
             throw new MemberException(MemberErrorCode.MEMBER_ALREADY_DELETED);
         }
 
-        // 3. 연관 데이터 Hard Delete (Event, Todo, Suggestion, Setting)
+        // 3. 연관 데이터 Hard Delete
+        // Event ↔ RecurrenceGroup 양방향 FK 순환 참조를 끊기 위해 먼저 NULL 처리
+        eventRepository.clearRecurrenceGroupByMemberId(memberId);
+        recurrenceExceptionRepository.deleteAllByMemberId(memberId);
+        recurrenceGroupRepository.deleteAllByMemberId(memberId);
         eventRepository.deleteAllByMemberId(memberId);
+        // Todo ↔ TodoRecurrenceGroup 양방향 FK 순환 참조를 끊기 위해 먼저 NULL 처리
+        todoRepository.clearTodoRecurrenceGroupByMemberId(memberId);
+        todoRecurrenceExceptionRepository.deleteAllByMemberId(memberId);
+        todoRecurrenceGroupRepository.deleteAllByMemberId(memberId);
         todoRepository.deleteAllByMemberId(memberId);
         suggestionRepository.deleteAllByMemberId(memberId);
         settingRepository.deleteByMemberId(memberId);

@@ -59,4 +59,8 @@ public interface RecurrenceExceptionRepository extends JpaRepository<RecurrenceE
             @Param("recurrenceGroupId") Long recurrenceGroupId,
             @Param("occurrenceDate") LocalDateTime occurrenceDate
     );
+
+    @Modifying
+    @Query("DELETE FROM RecurrenceException re WHERE re.recurrenceGroup.member.id = :memberId")
+    void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

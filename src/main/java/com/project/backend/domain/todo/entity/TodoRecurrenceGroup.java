@@ -114,6 +114,19 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
         this.endType = RecurrenceEndType.END_BY_DATE;
         this.endDate = endDate;
     }
+    /**
+     * 제안 수락 시 종료 기간 연장
+     */
+    public void extendEndDate(long dayDiff) {
+        this.endDate = endDate.plusDays(dayDiff);
+    }
+    /**
+     * 제안 수락 시 반복 횟수 추가
+     */
+    public void updateOccurrenceCount(Integer occurrenceCount) {
+        this.occurrenceCount = occurrenceCount;
+    }
+
 
     // ===== 팩토리 메서드 =====
 

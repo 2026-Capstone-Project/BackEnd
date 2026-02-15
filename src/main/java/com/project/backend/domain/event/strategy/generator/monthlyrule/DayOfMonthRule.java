@@ -18,6 +18,11 @@ public class DayOfMonthRule implements MonthlyRule {
         // X일
         List<Integer> targetDays = RecurrenceUtils.parseDaysOfMonth(rule.getDaysOfMonth());
 
+        // 반복 일자가 비어있으면 시작일의 일자를 기본값으로 사용
+        if (targetDays.isEmpty()) {
+            targetDays = List.of(current.getDayOfMonth());
+        }
+
         int baseDay = current.getDayOfMonth();
 
         while (true) {

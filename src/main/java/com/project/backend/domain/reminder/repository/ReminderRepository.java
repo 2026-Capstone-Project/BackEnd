@@ -16,13 +16,18 @@ import java.util.Optional;
 public interface ReminderRepository extends JpaRepository<Reminder, Long> {
 
     /**
-     * Reminder에 설정된 occurrenceTime이 현재 날짜이며, 현재시간보다 이후안 Reminder 가져오기
+     * 현재시간보다 이후이면서 현재시간 + 라마인더 설정시간보다 이전인 occurrenceTime을 가진 Reminder 가져오기
      */
-    List<Reminder> findByMemberIdAndLifecycleStatusAndOccurrenceTimeAfterAndOccurrenceTimeLessThanEqual(
-            Long memberId,
-            LifecycleStatus status,
-            LocalDateTime now,
-            LocalDateTime endOfToday
+    @Query("SELECT r " +
+            "FROM Reminder r " +
+            "WHERE r.member.id = :memberId " +
+            "AND r.lifecycleStatus = :status " +
+            "AND r.occurrenceTime >= :windowStart AND r.occurrenceTime <= :windowEnd ")
+    List<Reminder> findVisibleReminders(
+            @Param("memberId") Long memberId,
+            @Param("status") LifecycleStatus status,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd
     );
 
     /**
