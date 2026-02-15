@@ -444,13 +444,12 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
             case TODO -> {
                 List<TodoRecurrenceException> exList =
                         todoRecurrenceExceptionRepository.findByTodoRecurrenceGroupId(candidate.id());
-//                yield exList.stream()
-//                        .collect(Collectors.toMap(
-//                                        TodoRecurrenceException::getExceptionDate,
-//                                        RecurrenceSuggestionException::from
-//                                )
-//                        );
-                yield Map.of();
+                yield exList.stream()
+                        .collect(Collectors.toMap(
+                                        TodoRecurrenceException::getExceptionDateTime,
+                                        RecurrenceSuggestionException::from
+                                )
+                        );
             }
         };
     }
