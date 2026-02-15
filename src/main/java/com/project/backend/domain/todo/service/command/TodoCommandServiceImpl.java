@@ -341,12 +341,27 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 기존 반복 그룹의 종료 날짜를 해당 날짜 전날로 설정 (복사 후에 수정!)
         oldGroup.updateEndByDate(occurrenceDate.minusDays(1));
 
+        LocalDateTime startDate = occurrenceDate.atTime(
+                reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime()
+        );
+
+        // dueTime 변경하지 않은 경우
+        if (reqDTO.dueTime() == null) {
+            Optional<TodoRecurrenceException> ex = todoRecurrenceExceptionRepository
+                    .findByTodoRecurrenceGroupIdAndExceptionDate(oldGroup.getId(), occurrenceDate);
+
+            // 수정된 할 일에 대한 수정인 경우 수정된 dueTime으로 설정
+            if (ex.isPresent() && ex.get().getExceptionType() == ExceptionType.OVERRIDE
+                    && !ex.get().getDueTime().equals(startDate.toLocalTime())) {
+                startDate = occurrenceDate.atTime(ex.get().getDueTime());
+            }
+        }
         // 새 Todo 생성
         Todo newTodo = Todo.createRecurring(
                 member,
                 reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
                 reqDTO.startDate() != null ? reqDTO.startDate() : occurrenceDate,
-                reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
+                startDate.toLocalTime(),
                 reqDTO.isAllDay() != null ? reqDTO.isAllDay() : todo.getIsAllDay(),
                 reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
                 reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo(),
@@ -357,11 +372,6 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         // 반복 그룹에 Todo 연결
         newGroup.setTodo(newTodo);
-
-        // 수정하려는 날짜 포함한 이후 할 일들에 대한 반복예외 객체 모두 삭제
-        todoRecurrenceExceptionRepository.deleteByTodoRecurrenceGroupIdAndOccurrenceDate(
-                oldGroup.getId(), occurrenceDate
-        );
 
         // 원본 할 일에 대한 수정일 경우 기존 할 일 + 반복 삭제
         if (todo.getStartDate().equals(occurrenceDate)) {
@@ -375,17 +385,6 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     TargetType.TODO,
                     DeletedType.DELETED_ALL);
         } else {
-            LocalDateTime startDate = occurrenceDate.atTime(todo.getDueTime());
-
-            Optional<TodoRecurrenceException> ex = todoRecurrenceExceptionRepository
-                    .findByTodoRecurrenceGroupIdAndExceptionDate(oldGroup.getId(), occurrenceDate);
-
-            // dueTime이 수정된 할 일에 대한 수정인 경우
-            if (ex.isPresent() && ex.get().getExceptionType() == ExceptionType.OVERRIDE
-                    && !ex.get().getDueTime().equals(startDate.toLocalTime())) {
-                startDate = occurrenceDate.atTime(ex.get().getDueTime());
-            }
-
             // 해당 일정과 그 이후 일정들을 수정했을 때 리스너 수정 로직 실행
             // 기존 일정에 대한 리마인더 삭제 여부 결정
             reminderEventBridge.handleReminderDeleted(
@@ -397,6 +396,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     DeletedType.DELETED_THIS_AND_FOLLOWING
             );
         }
+
+        // 수정하려는 날짜 포함한 이후 할 일들에 대한 반복예외 객체 모두 삭제
+        todoRecurrenceExceptionRepository.deleteByTodoRecurrenceGroupIdAndOccurrenceDate(
+                oldGroup.getId(), occurrenceDate
+        );
 
         // 새 일정 생성에 대한 리마인더 발생
         reminderEventBridge.handlePlanChanged(
