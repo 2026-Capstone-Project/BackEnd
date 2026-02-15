@@ -218,7 +218,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
             }
             // 해당 일정의 반복을 진행했을 때, 현재 시간과 같거나 이후의 계산된 시간이 나온다면 리마인더의 발생 시간 업데이트
             // 현재 시간 이전 시간이 나온다면, 반복을 추가해도 더 이상 리마인더가 필요없기 때문에 리마인더 생성 x
-            if (last.isBefore(now)) {
+            if (last == null || last.isBefore(now)) {
                 return;
             }
         }

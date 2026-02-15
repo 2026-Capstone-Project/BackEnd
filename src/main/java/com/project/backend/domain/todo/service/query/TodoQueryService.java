@@ -50,7 +50,7 @@ public interface TodoQueryService {
     /**
      * 할 일이 오늘 브리핑 대상에 포함되는지 조회
      */
-    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoId, LocalDate occurrence);
+    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoId, LocalDate currentDate);
 
     /**
      * 반복이 포함된 할 일을 계산했을 때, 현재 시간보다 이후의 계산된 날짜가 있는지 반환

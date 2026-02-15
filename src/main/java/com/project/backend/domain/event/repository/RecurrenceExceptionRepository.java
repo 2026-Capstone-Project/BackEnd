@@ -37,6 +37,16 @@ public interface RecurrenceExceptionRepository extends JpaRepository<RecurrenceE
             @Param("exceptionDate") LocalDateTime exceptionDate
             );
 
+    @Query("SELECT re " +
+            "FROM RecurrenceException re " +
+            "WHERE re.recurrenceGroup.id = :recurrenceGroupId " +
+            "AND re.exceptionDate >= :windowFirst AND re.exceptionDate <= :windowLast")
+    Optional<RecurrenceException> findByRecurrenceGroupIdAndExceptionDate(
+            @Param("recurrenceGroupId") Long recurrenceGroupId,
+            @Param("windowFirst") LocalDateTime windowFirst,
+            @Param("windowLast") LocalDateTime windowLast
+    );
+
 
     /**
     * occurrenceDate과 exceptionDate가 같거나 이후인 Recurrence-groupException 객체 삭제

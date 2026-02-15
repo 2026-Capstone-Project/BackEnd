@@ -200,7 +200,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
     }
 
     @Override
-    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoIds, LocalDate date) {
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoIds, LocalDate currentDate) {
         List<TodayOccurrenceResult> result = new ArrayList<>();
 
         for (Long id : todoIds) {
@@ -209,7 +209,7 @@ public class TodoQueryServiceImpl implements TodoQueryService {
 
             // 1) 단일 할일
             if (!todo.isRecurring()) {
-                if (todo.getStartDate().isEqual(date)) {
+                if (todo.getStartDate().isEqual(currentDate)) {
                     LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
                     result.add(TodayOccurrenceResult.of(todo.getTitle(), dueTime, TargetType.TODO));
                 } else {
@@ -219,12 +219,65 @@ public class TodoQueryServiceImpl implements TodoQueryService {
             }
 
             // 2) 반복 할일: "오늘을 포함한 가장 가까운 다음 occurrence"를 구하고, 그게 오늘이면 브리핑 대상임
-            LocalDate next = getNextOccurrence(todo, date);
+            TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
-            if (next != null && next.isEqual(date)) {
-                result.add(TodayOccurrenceResult.of(todo.getTitle(), todo.getDueTime(), TargetType.TODO));
-            } else {
-                result.add(TodayOccurrenceResult.none());
+            Generator generator = generatorFactory.getGenerator(group);
+            EndCondition endCondition = endConditionFactory.getEndCondition(group);
+
+            // 예외 날짜 조회
+            Set<LocalDate> skipDates = todoRecurrenceExceptionRepository
+                    .findByTodoRecurrenceGroupId(group.getId())
+                    .stream()
+                    .filter(ex -> ex.getExceptionType() == ExceptionType.SKIP)
+                    .map(TodoRecurrenceException::getExceptionDate)
+                    .collect(Collectors.toSet());
+
+            Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository.
+                    findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), currentDate)
+                    .filter(ex -> ex.getExceptionType() == ExceptionType.OVERRIDE);
+
+            // 기준 시간 설정 (startDate + dueTime)
+            LocalTime dueTime = todo.getDueTime() != null ? todo.getDueTime() : LocalTime.MIDNIGHT;
+            LocalDateTime current = todo.getStartDate().atTime(dueTime);
+
+            String title = todo.getTitle();
+
+            if (re.isPresent()) {
+                TodoRecurrenceException exception = re.get();
+                title = !Objects.equals(todo.getTitle(), exception.getTitle()) ? exception.getTitle() : todo.getTitle();
+                if (exception.getDueTime() != null && !exception.getDueTime().equals(todo.getDueTime())) {
+                    dueTime = exception.getDueTime();
+                }
+            }
+
+            int count = 1;
+            int maxIterations = 1000;
+
+            // 첫 번째 날짜가 currentDate와 일치하는지
+            if (current.toLocalDate().isEqual(currentDate) && !skipDates.contains(current.toLocalDate())) {
+                result.add(TodayOccurrenceResult.of(title, dueTime, TargetType.TODO));
+                continue;
+            }
+
+            while (endCondition.shouldContinue(current, count, group) && count < maxIterations) {
+                current = generator.next(current, group);
+                if (current == null) {
+                    break;
+                }
+
+                // 계산된 일정의 날짜가 오늘보다 이후일 경우
+                if (current.isAfter(currentDate.atTime(LocalTime.MAX))) {
+                    result.add(TodayOccurrenceResult.none());
+                    break;
+                }
+
+                // 계산된 일정 날짜가 오늘과 일치한다면
+                if (current.toLocalDate().isEqual(currentDate)) {
+                    result.add(TodayOccurrenceResult.of(title, dueTime, TargetType.TODO));
+                    break;
+                }
+
+                count++;
             }
         }
 

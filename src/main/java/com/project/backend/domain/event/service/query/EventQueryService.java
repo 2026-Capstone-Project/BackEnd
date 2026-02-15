@@ -17,5 +17,5 @@ public interface EventQueryService {
 
     LocalDateTime findNextOccurrenceAfterNow(Long eventId);
 
-    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate occurrence);
+    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate);
 }

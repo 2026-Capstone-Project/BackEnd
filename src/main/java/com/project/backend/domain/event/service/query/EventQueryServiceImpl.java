@@ -6,6 +6,7 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
@@ -19,6 +20,7 @@ import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
 import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
@@ -217,7 +220,7 @@ public class EventQueryServiceImpl implements EventQueryService {
      * 일정에 대한 반복을 진행해 계산된 일정의 startTime이 오늘인 일정 정보 조회
      **/
     @Override
-    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate date) {
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate) {
         List<TodayOccurrenceResult> result = new ArrayList<>();
 
         for (Long id : eventId) {
@@ -227,7 +230,7 @@ public class EventQueryServiceImpl implements EventQueryService {
             // 단일 일정인데
             if (event.getRecurrenceGroup() == null) {
                 // startTime이 오늘 날짜와 일치한다면
-                if (event.getStartTime().toLocalDate().isEqual(date)) {
+                if (event.getStartTime().toLocalDate().isEqual(currentDate)) {
                     result.add(TodayOccurrenceResult.of(
                             event.getTitle(),
                             event.getStartTime().toLocalTime(),
@@ -244,11 +247,44 @@ public class EventQueryServiceImpl implements EventQueryService {
             Generator generator = generatorFactory.getGenerator(rg);
             EndCondition endCondition = endConditionFactory.getEndCondition(rg);
 
+            // 예외 날짜 조회
+            Set<LocalDateTime> skipDates = recurrenceExceptionRepository
+                    .findByRecurrenceGroupId(rg.getId())
+                    .stream()
+                    .filter(ex -> ex.getExceptionType() == ExceptionType.SKIP)
+                    .map(RecurrenceException::getExceptionDate)
+                    .collect(Collectors.toSet());
+
+            Optional<RecurrenceException> re = recurrenceExceptionRepository.
+                    findByRecurrenceGroupIdAndExceptionDate(
+                            rg.getId(),
+                            currentDate.atStartOfDay(),
+                            currentDate.atTime(23, 59, 59)
+                    )
+                    .filter(ex -> ex.getExceptionType() == ExceptionType.OVERRIDE);
+
+            // 기준 시간 설정
+            LocalTime startTime = event.getStartTime().toLocalTime();
             LocalDateTime current = event.getStartTime();
 
-            // 원본 일정의 startTime 검사
-            if (current.toLocalDate().isEqual(date)) {
-                result.add(TodayOccurrenceResult.of(event.getTitle(), current.toLocalTime(), TargetType.EVENT));
+            String title = event.getTitle();
+
+            if (re.isPresent()) {
+                RecurrenceException exception = re.get();
+                if (exception.getStartTime() != null) {
+                    // 다른 날짜로 수정된 경우
+                    if (!exception.getStartTime().toLocalDate().equals(exception.getExceptionDate().toLocalDate())) {
+                        result.add(TodayOccurrenceResult.none());
+                        continue;
+                    }
+                    // 시간만 수정된 경우)
+                    startTime = exception.getStartTime().toLocalTime();
+                }
+                title = !Objects.equals(event.getTitle(), exception.getTitle()) ? exception.getTitle() : title;
+            }
+            // 원본 일정의 startTime이 오늘과 같고
+            if (current.toLocalDate().isEqual(currentDate) && !skipDates.contains(current)) {
+                result.add(TodayOccurrenceResult.of(title, startTime, TargetType.EVENT));
                 continue;
             }
 
@@ -260,18 +296,14 @@ public class EventQueryServiceImpl implements EventQueryService {
                 count++;
 
                 // 계산된 일정의 날짜가 오늘보다 이후일 경우
-                if (current.isAfter(date.atTime(LocalTime.MAX))) {
+                if (current.isAfter(currentDate.atTime(LocalTime.MAX))) {
                     result.add(TodayOccurrenceResult.none());
                     break;
                 }
 
                 // 계산된 일정 날짜가 오늘과 일치한다면
-                if (current.toLocalDate().isEqual(date)) {
-                    result.add(TodayOccurrenceResult.of(
-                            event.getTitle(),
-                            current.toLocalTime(),
-                            TargetType.EVENT
-                    ));
+                if (current.toLocalDate().isEqual(currentDate)) {
+                    result.add(TodayOccurrenceResult.of(title, startTime, TargetType.EVENT));
                     break;
                 }
 

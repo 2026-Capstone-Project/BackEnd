@@ -27,10 +27,10 @@ public class OccurrenceProvider {
         return todoService.calculateNextOccurrence(reminder.getTargetId(), reminder.getOccurrenceTime());
     }
 
-    public List<TodayOccurrenceResult> getTodayOccurrence(TargetType type, List<Long> targetId, LocalDate date) {
+    public List<TodayOccurrenceResult> getTodayOccurrence(TargetType type, List<Long> targetId, LocalDate currentDate) {
         if (type == TargetType.EVENT) {
-            return eventQueryService.calculateTodayOccurrence(targetId, date);
+            return eventQueryService.calculateTodayOccurrence(targetId, currentDate);
         }
-        return todoService.calculateTodayOccurrence(targetId, date);
+        return todoService.calculateTodayOccurrence(targetId, currentDate);
     }
 }

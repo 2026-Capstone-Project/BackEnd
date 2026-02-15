@@ -36,10 +36,20 @@ public class BriefingConverter {
                 .build();
     }
 
-    public static BriefingResDTO.BriefingRes toUnavailable(LocalDate date) {
+    public static BriefingResDTO.BriefingRes toDisable(LocalDate date) {
         return BriefingResDTO.BriefingRes.builder()
                 .date(date)
                 .reason(BriefingReason.DISABLED)
+                .briefInfo(null)
+                .eventCount(0)
+                .toDoCount(0)
+                .build();
+    }
+
+    public static BriefingResDTO.BriefingRes toTimeNotReached(LocalDate date) {
+        return BriefingResDTO.BriefingRes.builder()
+                .date(date)
+                .reason(BriefingReason.TIME_NOT_REACHED)
                 .briefInfo(null)
                 .eventCount(0)
                 .toDoCount(0)
