@@ -208,6 +208,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.dueTime(),
                 reqDTO.isAllDay(),
                 reqDTO.priority(),
+                reqDTO.color(),
                 reqDTO.memo()
         );
         log.debug("단일 할 일 수정 완료 - todoId: {}", todo.getId());
@@ -235,10 +236,12 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     : (existingException.getDueTime() != null ? existingException.getDueTime() : todo.getDueTime());
             com.project.backend.domain.todo.enums.Priority newPriority = reqDTO.priority() != null ? reqDTO.priority()
                     : (existingException.getPriority() != null ? existingException.getPriority() : todo.getPriority());
+            com.project.backend.domain.todo.enums.TodoColor newColor = reqDTO.color() != null ? reqDTO.color()
+                    : (existingException.getColor() != null ? existingException.getColor() : todo.getColor());
             String newMemo = reqDTO.memo() != null ? reqDTO.memo()
                     : (existingException.getMemo() != null ? existingException.getMemo() : todo.getMemo());
 
-            existingException.updateOverride(newTitle, newDueTime, newPriority, newMemo);
+            existingException.updateOverride(newTitle, newDueTime, newPriority, newColor, newMemo);
             exception = existingException;
             log.debug("반복 할 일 예외 수정 완료 (업데이트) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
         } else {
@@ -249,6 +252,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
                     reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
                     reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
+                    reqDTO.color() != null ? reqDTO.color() : todo.getColor(),
                     reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo()
             );
             todoRecurrenceExceptionRepository.save(exception);
@@ -294,6 +298,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
                 reqDTO.isAllDay() != null ? reqDTO.isAllDay() : todo.getIsAllDay(),
                 reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
+                reqDTO.color() != null ? reqDTO.color() : todo.getColor(),
                 reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo(),
                 newGroup
         );
@@ -319,6 +324,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.dueTime(),
                 reqDTO.isAllDay(),
                 reqDTO.priority(),
+                reqDTO.color(),
                 reqDTO.memo()
         );
 
