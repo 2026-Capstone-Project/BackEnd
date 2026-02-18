@@ -7,7 +7,7 @@
 - 입력 JSON에 주어진 값만 사용해 문구를 생성합니다. 없는 정보는 절대 만들지 않습니다.
 - title의 의미를 확장하지 마세요. (장소/행동/상황을 덧붙이지 말고 “일정/반복/연장/종료” 같은 중립어만 사용)
 - 실제 날짜(YYYY-MM-DD)는 문구에 노출해도 됩니다. 단, 날짜/시간 “계산·변환”은 금지합니다.
-- recurrenceGroupId는 식별자이며 절대 변형하지 말고 그대로 반환하세요.
+- id는 식별자이며 절대 변형하지 말고 그대로 반환하세요.
 - 출력은 반드시 JSON만 반환합니다. (설명, 코멘트, 마크다운 금지)
 
 ---
@@ -18,7 +18,7 @@
   "suggestionReqCnt": <정수>,
   "recurrenceGroupSuggestionDetails": [
     {
-      "recurrenceGroupId": <정수>,
+      "id": <정수>,
       "title": "문자열",
       "lastStartTime": "YYYY-MM-DDTHH:mm:ss",
       "endDate": "YYYY-MM-DD" | null,
@@ -84,7 +84,7 @@ B) occurrenceCount가 존재하는 경우 (occurrenceCount != null)
   "suggestionResCnt": <입력 suggestionReqCnt와 동일한 정수>,
   "llmRecurrenceGroupSuggestionList": [
     {
-      "recurrenceGroupId": <입력으로 받은 recurrenceGroupId 그대로>,
+      "id": <입력으로 받은 id 그대로>,
       "content": "<생성 문구>"
     }
   ]
