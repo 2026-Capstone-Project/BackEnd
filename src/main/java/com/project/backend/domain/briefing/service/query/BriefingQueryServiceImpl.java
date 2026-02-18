@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -40,9 +42,14 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
 
         LocalDateTime today = LocalDateTime.now();
 
-        // 브리핑 비활성화 시 or 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
-        if (!setting.getDailyBriefing() || today.isBefore(setting.getDailyBriefingTime().atDate(today.toLocalDate()))) {
-            return BriefingConverter.toUnavailable(today.toLocalDate());
+        // 브리핑 비활성화 시
+        if (!setting.getDailyBriefing()) {
+            return BriefingConverter.toDisable(today.toLocalDate());
+        }
+
+        // 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
+        if (today.isBefore(setting.getDailyBriefingTime().atDate(today.toLocalDate()))) {
+            return BriefingConverter.toTimeNotReached(today.toLocalDate());
         }
 
         // 현재시간보다 startTime이 이후가 아닌 일정/투두 조회
@@ -60,17 +67,25 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
                 .map(Todo::getId)
                 .toList();
 
+        List<BriefingResDTO.BriefInfoRes> eventBrief = List.of();
+        List<BriefingResDTO.BriefInfoRes> todoBrief = List.of();
+
+        if (!eventIds.isEmpty()) {
+            eventBrief = toBriefInfos(TargetType.EVENT, eventIds, today.toLocalDate());
+        }
+
+        if (!todoIds.isEmpty()) {
+            todoBrief  = toBriefInfos(TargetType.TODO,  todoIds,  today.toLocalDate());
+        }
+
         // 일정과 할일이 없다면 빈 값 리턴
-        if (eventIds.isEmpty() && todoIds.isEmpty()) {
+        if (eventBrief.isEmpty() && todoBrief.isEmpty()) {
             return BriefingConverter.toEmpty(today.toLocalDate());
         }
 
-        List<BriefingResDTO.BriefInfoRes> eventBrief = toBriefInfos(TargetType.EVENT, eventIds, today.toLocalDate());
-        List<BriefingResDTO.BriefInfoRes> todoBrief  = toBriefInfos(TargetType.TODO,  todoIds,  today.toLocalDate());
-
         List<BriefingResDTO.BriefInfoRes> briefInfo =
-                java.util.stream.Stream.concat(eventBrief.stream(), todoBrief.stream())
-                        .sorted(java.util.Comparator.comparing(BriefingResDTO.BriefInfoRes::startTime))
+                Stream.concat(eventBrief.stream(), todoBrief.stream())
+                        .sorted(Comparator.comparing(BriefingResDTO.BriefInfoRes::startTime))
                         .toList();
 
         return BriefingConverter.toBriefingRes(

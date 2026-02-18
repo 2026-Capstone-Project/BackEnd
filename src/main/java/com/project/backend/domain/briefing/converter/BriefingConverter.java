@@ -1,7 +1,6 @@
 package com.project.backend.domain.briefing.converter;
 
 import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
-import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.briefing.dto.response.BriefingResDTO;
 import com.project.backend.domain.briefing.enums.BriefingReason;
 import lombok.AccessLevel;
@@ -37,10 +36,20 @@ public class BriefingConverter {
                 .build();
     }
 
-    public static BriefingResDTO.BriefingRes toUnavailable(LocalDate date) {
+    public static BriefingResDTO.BriefingRes toDisable(LocalDate date) {
         return BriefingResDTO.BriefingRes.builder()
                 .date(date)
                 .reason(BriefingReason.DISABLED)
+                .briefInfo(null)
+                .eventCount(0)
+                .toDoCount(0)
+                .build();
+    }
+
+    public static BriefingResDTO.BriefingRes toTimeNotReached(LocalDate date) {
+        return BriefingResDTO.BriefingRes.builder()
+                .date(date)
+                .reason(BriefingReason.TIME_NOT_REACHED)
                 .briefInfo(null)
                 .eventCount(0)
                 .toDoCount(0)
@@ -56,22 +65,6 @@ public class BriefingConverter {
                 .toDoCount(0)
                 .build();
     }
-
-    public static BriefingResDTO.BriefingRes toAvailable(
-            LocalDate date,
-            List<BriefingResDTO.BriefInfoRes> briefInfo,
-            int eventCount,
-            int toDoCount
-    ) {
-        return BriefingResDTO.BriefingRes.builder()
-                .date(date)
-                .reason(BriefingReason.AVAILABLE)
-                .briefInfo(briefInfo)
-                .eventCount(eventCount)
-                .toDoCount(toDoCount)
-                .build();
-    }
-
 
 //    public static NotificationResDTO.BriefInfoRes toBriefTodoInfoRes (Todo todo) {
 //        return NotificationResDTO.BriefInfoRes.builder()

@@ -1,16 +1,13 @@
 package com.project.backend.domain.reminder.converter;
 
-import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.member.entity.Member;
+import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.dto.response.ReminderResDTO;
-import com.project.backend.domain.reminder.entity.EventReminderSource;
 import com.project.backend.domain.reminder.entity.Reminder;
-import com.project.backend.domain.reminder.entity.ReminderSource;
-import com.project.backend.domain.reminder.entity.TodoReminderSource;
 import com.project.backend.domain.reminder.enums.InteractionStatus;
 import com.project.backend.domain.reminder.enums.LifecycleStatus;
 import com.project.backend.domain.reminder.enums.ReminderRole;
-import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -20,15 +17,22 @@ import java.time.LocalTime;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ReminderConverter {
 
-    public static Reminder toReminder(ReminderSource source, Member member, LifecycleStatus lifecycleStatus) {
+    public static Reminder toReminder(
+            ReminderSource source,
+            Member member,
+            Long exceptionId,
+            LifecycleStatus lifecycleStatus,
+            ReminderRole role
+    ) {
         return Reminder.builder()
-                .title(source.getTitle())
-                .occurrenceTime(source.getOccurrenceTime())
-                .targetType(source.getTargetType())
-                .targetId(source.getTargetId())
+                .title(source.title())
+                .occurrenceTime(source.occurrenceTime())
+                .targetType(source.targetType())
+                .targetId(source.targetId())
+                .recurrenceExceptionId(exceptionId)
                 .interactionStatus(InteractionStatus.PENDING)
                 .lifecycleStatus(lifecycleStatus)
-                .role(ReminderRole.BASE)
+                .role(role)
                 .member(member)
                 .build();
     }
@@ -38,22 +42,22 @@ public class ReminderConverter {
             Member member,
             LocalDateTime occurrenceTime,
             LifecycleStatus lifecycleStatus,
-            ReminderRole role
+            ReminderRole role,
+            Long recurrenceExceptionId
+
     ) {
         return Reminder.builder()
-                .title(source.getTitle())
+                .title(source.title())
                 .occurrenceTime(occurrenceTime)
-                .targetType(source.getTargetType())
-                .targetId(source.getTargetId())
+                .targetType(source.targetType())
+                .targetId(source.targetId())
+                .recurrenceExceptionId(recurrenceExceptionId)
                 .interactionStatus(InteractionStatus.PENDING)
                 .lifecycleStatus(lifecycleStatus)
                 .role(role)
                 .member(member)
                 .build();
     }
-
-
-
 
     public static ReminderResDTO.DetailRes toDetailRes(
             Reminder reminder,
@@ -70,24 +74,32 @@ public class ReminderConverter {
                 .build();
     }
 
-    public static EventReminderSource toEventReminderSource(
-            Long eventId,
+    public static ReminderSource toReminderSource(
+            Long targetId,
+            TargetType targetType,
             String title,
             LocalDateTime occurrenceTime,
             Boolean isRecurring
     ) {
-        return EventReminderSource.builder()
-                .eventId(eventId)
+        return com.project.backend.domain.reminder.dto.ReminderSource.builder()
+                .targetId(targetId)
+                .targetType(targetType)
                 .title(title)
                 .occurrenceTime(occurrenceTime)
-                .isrRecurring(isRecurring)
+                .isRecurring(isRecurring)
                 .build();
     }
 
-    public static TodoReminderSource toTodoReminderSource(Todo todo) {
-        return TodoReminderSource.builder()
-                .todo(todo)
-                .occurrenceTime(todo.getStartDate().atTime(todo.getDueTime()))
+    public static ReminderSource toReminderSource(
+            ReminderSource base,
+            LocalDateTime occurrenceTime
+    ){
+        return ReminderSource.builder()
+                .targetId(base.targetId())
+                .targetType(base.targetType())
+                .title(base.title())
+                .occurrenceTime(occurrenceTime)
+                .isRecurring(base.isRecurring())
                 .build();
     }
 }

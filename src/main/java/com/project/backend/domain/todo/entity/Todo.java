@@ -2,6 +2,7 @@ package com.project.backend.domain.todo.entity;
 
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import com.project.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -39,12 +40,20 @@ public class Todo extends BaseEntity {
     @Column(name = "priority", nullable = false, length = 10)
     private Priority priority = Priority.MEDIUM;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", nullable = false, length = 10)
+    private TodoColor color = TodoColor.BLUE;
+
     @Column(name = "memo")
     private String memo;
 
     @Builder.Default
     @Column(name = "is_completed", nullable = false)
     private Boolean isCompleted = false;
+
+    @Column(name = "source_suggestion_id")
+    private Long sourceSuggestionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -81,12 +90,13 @@ public class Todo extends BaseEntity {
      * 할 일 정보 수정
      */
     public void update(String title, LocalDate startDate, LocalTime dueTime,
-                       Boolean isAllDay, Priority priority, String memo) {
+                       Boolean isAllDay, Priority priority, TodoColor color, String memo) {
         if (title != null) this.title = title;
         if (startDate != null) this.startDate = startDate;
         this.dueTime = dueTime;
         if (isAllDay != null) this.isAllDay = isAllDay;
         if (priority != null) this.priority = priority;
+        if (color != null) this.color = color;
         this.memo = memo;
     }
 
@@ -109,6 +119,7 @@ public class Todo extends BaseEntity {
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
+            TodoColor color,
             String memo
     ) {
         return Todo.builder()
@@ -118,6 +129,7 @@ public class Todo extends BaseEntity {
                 .dueTime(dueTime)
                 .isAllDay(isAllDay != null ? isAllDay : false)
                 .priority(priority != null ? priority : Priority.MEDIUM)
+                .color(color != null ? color : TodoColor.BLUE)
                 .memo(memo)
                 .isCompleted(false)
                 .build();
@@ -133,6 +145,7 @@ public class Todo extends BaseEntity {
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
+            TodoColor color,
             String memo,
             TodoRecurrenceGroup todoRecurrenceGroup
     ) {
@@ -143,6 +156,7 @@ public class Todo extends BaseEntity {
                 .dueTime(dueTime)
                 .isAllDay(isAllDay != null ? isAllDay : false)
                 .priority(priority != null ? priority : Priority.MEDIUM)
+                .color(color != null ? color : TodoColor.BLUE)
                 .memo(memo)
                 .isCompleted(false)
                 .todoRecurrenceGroup(todoRecurrenceGroup)

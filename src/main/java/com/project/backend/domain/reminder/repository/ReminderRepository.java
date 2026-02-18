@@ -41,16 +41,16 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
      */
     @Query("SELECT r FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :targetType")
     Optional<Reminder> findByTargetIdAndTargetType(
-            @Param("eventId") Long targetId,
+            @Param("targetId") Long targetId,
             @Param("targetType") TargetType targetType
     );
 
     /**
      * 리마인더의 역할 구분 조회
      */
-    @Query("SELECT r FROM Reminder r WHERE r.targetId = :eventId AND r.targetType = :type AND r.role = :role")
+    @Query("SELECT r FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :type AND r.role = :role")
     Optional<Reminder> findByIdAndTypeAndRole(
-            @Param("eventId") Long eventId,
+            @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("role") ReminderRole role
     );
@@ -63,20 +63,34 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     void deleteByLifecycleStatus(@Param("status") LifecycleStatus status);
 
     /**
-     * 타겟id와 타겟타입을 통해 Reminder 삭제
+     * occurrenceTime와 일치하는 날짜값을 가진 Reminder 삭제
      */
     @Modifying
-    @Query("DELETE FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :targetType")
-    void deleteByTargetIdAndTargetType(@Param("eventId") Long targetId, @Param("targetType") TargetType targetType);
-
-    @Modifying
     @Query("DELETE FROM Reminder r " +
-            "WHERE r.targetId = :eventId " +
+            "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type " +
             "AND r.occurrenceTime >= :occurrenceTime")
-    void deleteByTargetIDAndTargetTypeAndOccurrenceTime(
-            @Param("eventId") Long eventId,
+    void deleteByTargetIdAndTargetTypeAndOccurrenceTime(
+            @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("occurrenceTime") LocalDateTime occurrenceTime
     );
+
+    /**
+     * occurrenceTime보다 이후 날짜값을 가진 Reminder 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM Reminder r " +
+            "WHERE r.targetId = :targetId " +
+            "AND r.targetType = :type " +
+            "AND r.occurrenceTime >= :occurrenceTime")
+    void deleteRemindersFromOccurrenceTime(
+            @Param("targetId") Long targetId,
+            @Param("type") TargetType type,
+            @Param("occurrenceTime") LocalDateTime occurrenceTime
+    );
+
+    Optional<Reminder> findByRecurrenceExceptionIdAndTargetType(Long id, TargetType type);
+
+    void deleteByTargetIdAndTargetType(Long targetId, TargetType type);
 }

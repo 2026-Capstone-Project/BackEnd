@@ -155,6 +155,14 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
         return List.of(dayOfWeekInMonth.split(","));
     }
 
+    public void extendEndDate(long dayDiff) {
+        this.endDate = this.endDate.plusDays(dayDiff);
+    }
+
+    public void updateOccurrenceCount(int occurrenceCount) {
+        this.occurrenceCount = occurrenceCount;
+    }
+      
     public void attachEvent(Event event) {
         this.event = event;
     }

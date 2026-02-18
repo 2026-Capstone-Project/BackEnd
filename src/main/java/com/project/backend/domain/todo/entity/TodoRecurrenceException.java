@@ -2,10 +2,12 @@ package com.project.backend.domain.todo.entity;
 
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Objects;
 
@@ -38,12 +40,19 @@ public class TodoRecurrenceException {
     @Column(name = "title", length = 100)
     private String title;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @Column(name = "due_time")
     private LocalTime dueTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "priority", length = 10)
     private Priority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", length = 10)
+    private TodoColor color;
 
     @Column(name = "memo")
     private String memo;
@@ -77,11 +86,13 @@ public class TodoRecurrenceException {
     /**
      * OVERRIDE 예외 정보 수정
      */
-    public void updateOverride(String title, LocalTime dueTime, Priority priority, String memo) {
+    public void updateOverride(String title, LocalDate startDate, LocalTime dueTime, Priority priority, TodoColor color, String memo) {
         this.exceptionType = ExceptionType.OVERRIDE;
         this.title = title;
+        this.startDate = startDate;
         this.dueTime = dueTime;
         this.priority = priority;
+        this.color = color;
         this.memo = memo;
     }
 
@@ -109,8 +120,10 @@ public class TodoRecurrenceException {
             TodoRecurrenceGroup todoRecurrenceGroup,
             LocalDate exceptionDate,
             String title,
+            LocalDate startDate,
             LocalTime dueTime,
             Priority priority,
+            TodoColor color,
             String memo
     ) {
         return TodoRecurrenceException.builder()
@@ -118,8 +131,10 @@ public class TodoRecurrenceException {
                 .exceptionDate(exceptionDate)
                 .exceptionType(ExceptionType.OVERRIDE)
                 .title(title)
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .priority(priority)
+                .color(color)
                 .memo(memo)
                 .isCompleted(false)
                 .build();
@@ -138,6 +153,17 @@ public class TodoRecurrenceException {
                 .exceptionType(ExceptionType.OVERRIDE)
                 .isCompleted(true)
                 .build();
+    }
+
+    /**
+     * ExceptionType을 skip으로 업데이트
+     */
+    public void updateExceptionTypeToSKIP() {
+        this.exceptionType = ExceptionType.SKIP;
+    }
+
+    public LocalDateTime getExceptionDateTime() {
+        return LocalDateTime.of(exceptionDate, dueTime);
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import lombok.Builder;
 
 import java.time.DayOfWeek;
@@ -26,6 +27,7 @@ public class TodoResDTO {
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
+            TodoColor color,
             String memo,
             Boolean isCompleted,
             Boolean isRecurring,
@@ -43,6 +45,7 @@ public class TodoResDTO {
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
+            TodoColor color,
             String memo,
             Boolean isCompleted,
             Boolean isRecurring
@@ -64,9 +67,11 @@ public class TodoResDTO {
             Long todoId,
             LocalDate occurrenceDate,
             String title,
+            LocalDate startDate,
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,
+            TodoColor color,
             String memo,
             Boolean isCompleted,
             Boolean isRecurring,

@@ -151,6 +151,7 @@ public class NlpSaverService {
                 dueTime,
                 item.isAllDay(),
                 null,  // priority: NLP에서 파싱하지 않음, 기본값 사용
+                null,  // color: 기본값 사용
                 null   // memo
         );
 
@@ -180,6 +181,7 @@ public class NlpSaverService {
                 dueTime,
                 item.isAllDay(),
                 null,  // priority
+                null,  // color
                 null,  // memo
                 group
         );

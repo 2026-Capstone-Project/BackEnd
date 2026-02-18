@@ -21,14 +21,14 @@ public class EventValidator {
         validateMother(event, time);
     }
 
-    public void validateUpdate(EventReqDTO.UpdateReq req, Event event) {
-        validateOccurrenceDate(req.occurrenceDate());
-        validateScope(event, req.occurrenceDate(), req.recurrenceUpdateScope());
+    public void validateUpdate(EventReqDTO.UpdateReq req, Event event, LocalDateTime occurrenceDate) {
+        validateOccurrenceDate(occurrenceDate);
+        validateScope(event, occurrenceDate, req.recurrenceUpdateScope());
     }
 
     public void validateDelete(
             Event event,
-            LocalDate occurrenceDate,
+            LocalDateTime occurrenceDate,
             RecurrenceUpdateScope scope
     ) {
         validateOccurrenceDate(occurrenceDate);
@@ -45,13 +45,17 @@ public class EventValidator {
         }
     }
 
-    private void validateMother(Event event, LocalDateTime time) {
-        if (!event.isRecurring() && !event.getStartTime().isEqual(time)) {
-            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+    private void validateMother(Event event, LocalDateTime originalDate) {
+        // 반복이 아닐때
+        if (!event.isRecurring()) {
+            // 이벤트의 시작시간과 원본 시작시간이 다른경우
+            if (!event.getStartTime().isEqual(originalDate)) {
+                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+            }
         }
     }
 
-    private void validateOccurrenceDate(LocalDate occurrenceDate) {
+    private void validateOccurrenceDate(LocalDateTime occurrenceDate) {
         if (occurrenceDate == null) {
             throw new EventException(EventErrorCode.OCCURRENCE_DATE_REQUIRED);
         }
@@ -59,7 +63,7 @@ public class EventValidator {
 
     private void validateScope(
             Event event,
-            LocalDate occurrenceDate,
+            LocalDateTime occurrenceDate,
             RecurrenceUpdateScope scope
     ) {
         boolean isRecurring = event.getRecurrenceGroup() != null;
