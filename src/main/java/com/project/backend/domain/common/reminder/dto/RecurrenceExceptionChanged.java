@@ -1,4 +1,4 @@
-package com.project.backend.domain.event.dto;
+package com.project.backend.domain.common.reminder.dto;
 
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;

@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.service.command;
 
-import com.project.backend.domain.common.reminder.ReminderEventBridge;
+import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Optional;
 
 @Slf4j

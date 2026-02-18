@@ -2,7 +2,7 @@ package com.project.backend.domain.common.plan;
 
 import com.project.backend.domain.common.reminder.dto.PlanChanged;
 import com.project.backend.domain.common.reminder.dto.RecurrenceExceptionChanged;
-import com.project.backend.domain.reminder.dto.ReminderDeleted;
+import com.project.backend.domain.common.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;

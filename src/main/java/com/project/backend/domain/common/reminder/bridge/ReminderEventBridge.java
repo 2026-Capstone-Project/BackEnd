@@ -1,4 +1,4 @@
-package com.project.backend.domain.common.reminder;
+package com.project.backend.domain.common.reminder.bridge;
 
 import com.project.backend.domain.common.plan.PlanEventFactory;
 import com.project.backend.domain.reminder.enums.ChangeType;

@@ -1,6 +1,6 @@
 package com.project.backend.domain.reminder.handler;
 
-import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.common.reminder.dto.RecurrenceExceptionChanged;
 import com.project.backend.domain.reminder.converter.ReminderConverter;
 import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;

@@ -1,8 +1,8 @@
 package com.project.backend.domain.reminder.listener;
 
-import com.project.backend.domain.event.dto.PlanChanged;
-import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
-import com.project.backend.domain.reminder.dto.ReminderDeleted;
+import com.project.backend.domain.common.reminder.dto.PlanChanged;
+import com.project.backend.domain.common.reminder.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.common.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.handler.PlanReminderHandler;
 import com.project.backend.domain.reminder.handler.ExceptionReminderHandler;
 import com.project.backend.domain.reminder.handler.ReminderDeletedHandler;
