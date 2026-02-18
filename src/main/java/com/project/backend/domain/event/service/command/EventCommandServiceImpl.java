@@ -100,11 +100,9 @@ public class EventCommandServiceImpl implements EventCommandService {
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventValidator.validateUpdate(req, event, occurrenceDate);
-        // occurrenceDate가 존재하는 일정의 계산된 날짜인지
-        eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = calStartTime(req, event, occurrenceDate);
+        LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
