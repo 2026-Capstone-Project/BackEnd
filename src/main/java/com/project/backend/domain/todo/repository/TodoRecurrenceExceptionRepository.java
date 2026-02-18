@@ -29,4 +29,13 @@ public interface TodoRecurrenceExceptionRepository extends JpaRepository<TodoRec
             " WHERE e.todoRecurrenceGroup.id = :groupId " +
             "AND e.exceptionDate = :date")
     Optional<TodoRecurrenceException> findByTodoRecurrenceGroupIdAndExceptionDate(Long groupId, LocalDate date);
+
+    /**
+     * 반복 그룹의 특정 날짜 예외와 그 이후 occurrenceDate를 가진 예외 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM TodoRecurrenceException e " +
+            "WHERE e.todoRecurrenceGroup.id = :groupId " +
+            "AND e.exceptionDate >= :occurrenceDate")
+    void deleteByTodoRecurrenceGroupIdAndOccurrenceDate(Long groupId, LocalDate occurrenceDate);
 }

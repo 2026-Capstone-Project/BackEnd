@@ -5,6 +5,7 @@ import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.enums.TodoFilter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
@@ -44,10 +45,15 @@ public interface TodoQueryService {
     /**
      * 할 일의 반복 여부 판단에 따른 리마인더 occurrenceTime 갱신
      */
-    NextOccurrenceResult calculateNextOccurrence(Reminder reminder);
+    NextOccurrenceResult calculateNextOccurrence(Long todoId, LocalDateTime occurrenceTime);
 
     /**
-     * 할일이 오늘 브리핑 대상에 포함되는지 조회
+     * 할 일이 오늘 브리핑 대상에 포함되는지 조회
      */
-    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoId, LocalDate occurrence);
+    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> todoId, LocalDate currentDate);
+
+    /**
+     * 반복이 포함된 할 일을 계산했을 때, 현재 시간보다 이후의 계산된 날짜가 있는지 반환
+     */
+    LocalDateTime findNextOccurrenceAfterNow(Long todoId);
 }

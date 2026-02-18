@@ -19,6 +19,14 @@ public interface BriefingDocs {
                     로그인한 사용자의 오늘 브리핑 정보를 조회합니다.
                     
                     - 조회 시점 기준으로 계산된 최신 브리핑 결과를 반환합니다.
+                    
+                    - 브리핑 기능을 끈 경우 - DISABLE
+                    
+                    - 브리핑을 켯으나, 현재 시간이 오늘의 브리핑 설정 시간보다 이전일경우 - TIME_NOT_REACHED
+                    
+                    - 브리핑을 켯으나, 오늘 데이터가 없는경우 - NOT_EVENT_TODAY
+                    
+                    - 브리핑을 켜서 오늘 데이터가 있는 경우 - AVAILABLE
                     """
     )
     @ApiResponses({

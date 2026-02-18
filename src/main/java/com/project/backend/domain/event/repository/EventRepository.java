@@ -21,7 +21,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query("DELETE FROM Event e WHERE e.member.id = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
 
-    Optional<Event> findByMemberIdAndId(Long memberId, Long eventId);
+    Optional<Event> findByIdAndMemberId(Long eventId, Long memberId);
 
     List<Event> findByMemberIdAndStartTimeBetween(Long memberId, LocalDateTime start, LocalDateTime end);
 

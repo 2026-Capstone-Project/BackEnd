@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum TodoErrorCode implements BaseErrorCode {
 
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO404_1", "할 일을 찾을 수 없습니다."),
+    TODO_RECURRENCE_EXCEPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO404_2", "할 일 반복예외를 찾을 수 없습니다."),
     TODO_FORBIDDEN(HttpStatus.FORBIDDEN, "TODO403_1", "해당 할 일에 대한 권한이 없습니다."),
     INVALID_RECURRENCE_SETTING(HttpStatus.BAD_REQUEST, "TODO400_1", "잘못된 반복 설정입니다."),
     INVALID_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "TODO400_2", "잘못된 수정 범위입니다."),

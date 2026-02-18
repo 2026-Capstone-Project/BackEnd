@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Objects;
 
@@ -146,6 +147,17 @@ public class TodoRecurrenceException {
                 .exceptionType(ExceptionType.OVERRIDE)
                 .isCompleted(true)
                 .build();
+    }
+
+    /**
+     * ExceptionType을 skip으로 업데이트
+     */
+    public void updateExceptionTypeToSKIP() {
+        this.exceptionType = ExceptionType.SKIP;
+    }
+
+    public LocalDateTime getExceptionDateTime() {
+        return LocalDateTime.of(exceptionDate, dueTime);
     }
 
     @Override

@@ -2,12 +2,12 @@ package com.project.backend.domain.event.repository;
 
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.enums.ExceptionType;
-import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,11 +20,11 @@ public interface RecurrenceExceptionRepository extends JpaRepository<RecurrenceE
     @Query("SELECT re " +
             "FROM RecurrenceException re " +
             "WHERE re.recurrenceGroup.id = :recurrenceGroupId " +
-            "AND re.exceptionDate = :startDate " +
+            "AND re.exceptionDate = :exceptionDate " +
             "AND re.exceptionType = :exceptionType")
-    Optional<RecurrenceException> findByRecurrenceGroupIdAndStartDateAndExceptionType (
+    Optional<RecurrenceException> findByRecurrenceGroupIdAndExceptionDateAndExceptionType (
             @Param("recurrenceGroupId") Long recurrenceGroupId,
-            @Param("startDateTime") LocalDate startDate,
+            @Param("exceptionDate") LocalDateTime exceptionDate,
             @Param("exceptionType") ExceptionType exceptionType
             );
 
@@ -34,8 +34,18 @@ public interface RecurrenceExceptionRepository extends JpaRepository<RecurrenceE
             "AND re.exceptionDate = :exceptionDate")
     Optional<RecurrenceException> findByRecurrenceGroupIdAndExceptionDate(
             @Param("recurrenceGroupId") Long recurrenceGroupId,
-            @Param("exceptionDate") LocalDate exceptionDate
+            @Param("exceptionDate") LocalDateTime exceptionDate
             );
+
+    @Query("SELECT re " +
+            "FROM RecurrenceException re " +
+            "WHERE re.recurrenceGroup.id = :recurrenceGroupId " +
+            "AND re.exceptionDate >= :windowFirst AND re.exceptionDate <= :windowLast")
+    Optional<RecurrenceException> findByRecurrenceGroupIdAndExceptionDate(
+            @Param("recurrenceGroupId") Long recurrenceGroupId,
+            @Param("windowFirst") LocalDateTime windowFirst,
+            @Param("windowLast") LocalDateTime windowLast
+    );
 
 
     /**
@@ -47,7 +57,7 @@ public interface RecurrenceExceptionRepository extends JpaRepository<RecurrenceE
             "AND re.exceptionDate >= :occurrenceDate")
     void deleteByRecurrenceGroupIdAndOccurrenceDate(
             @Param("recurrenceGroupId") Long recurrenceGroupId,
-            @Param("occurrenceDate") LocalDate occurrenceDate
+            @Param("occurrenceDate") LocalDateTime occurrenceDate
     );
 
     @Modifying

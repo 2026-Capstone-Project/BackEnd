@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventQueryService {
-    EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime time, Long memberId);
+    EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId);
 
     EventResDTO.EventsListRes getEvents(Long memberId, LocalDate startDate, LocalDate endDate);
 
@@ -17,5 +17,5 @@ public interface EventQueryService {
 
     LocalDateTime findNextOccurrenceAfterNow(Long eventId);
 
-    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate occurrence);
+    List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate);
 }

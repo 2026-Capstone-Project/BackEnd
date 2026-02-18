@@ -1,6 +1,5 @@
 package com.project.backend.domain.todo.repository;
 
-import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.todo.entity.Todo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,7 +9,6 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
-
 import java.util.List;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {

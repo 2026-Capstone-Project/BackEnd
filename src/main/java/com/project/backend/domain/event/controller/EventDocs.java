@@ -487,16 +487,14 @@ public interface EventDocs {
                     - eventId (PathVariable)
                       - 일정의 원본 ID
                     - occurrenceDate (Query Parameter)
-                      - 캘린더에서 사용자가 선택한 실제 발생 날짜
-                      - 캘린더 조회 API 응답의 startTime 기준 날짜를 전달합니다.
+                      - ✅ 조회/수정/삭제에 사용되는 **태생적 발생일시(LocalDateTime)** 입니다.
+                      - 캘린더 목록 응답에서 제공되는 **occurrenceDate 값을 그대로 전달**합니다.
+                      - ⚠️ UI에 표시되는 start(수정 반영된 실제 시간)를 전달하면 조회에 실패할 수 있습니다.
+                      - 형식: YYYY-MM-DDTHH:mm:ss
                     
                     ### 응답 규칙
-                    - 단일 일정인 경우
-                      → recurrenceGroup 필드는 null로 반환됩니다.
-                    - 반복 일정인 경우
-                      → 반복 규칙 원본 정보(recurrenceGroup)를 함께 반환합니다.
-                    
-                    해당 API는 일정 수정 / 삭제 화면에서 사용됩니다.
+                    - 단일 일정인 경우 → recurrenceGroup은 null로 반환됩니다.
+                    - 반복 일정인 경우 → recurrenceGroup(원본 반복 규칙 정보)을 함께 반환합니다.
                     """
     )
     @ApiResponses({
@@ -531,9 +529,10 @@ public interface EventDocs {
                     required = true
             )
             @PathVariable Long eventId,
+
             @Parameter(
-                    description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DDThh-mm)",
-                    example = "2026-02-06T14:00",
+                    description = "캘린더에서 선택한 일정의 태생적 날짜 (YYYY-MM-DDThh-mm-ss)",
+                    example = "2026-02-06T14:00:00",
                     required = false
             )
             @RequestParam (required = false) LocalDateTime occurrenceDate
@@ -600,48 +599,49 @@ public interface EventDocs {
                 - 변경 의도가 없는 경우에도 기존 일정 정보를 그대로 반환합니다.
                 
                 ---
-                ## 📌 occurrenceDate 규칙 (업데이트)
-                
-                - occurrenceDate는 **캘린더 화면에서 사용자가 선택한 실제 발생 일정의 날짜/시간**입니다.
-                - ✅ **단일 일정 / 반복 일정(원본/계산된 회차) 구분 없이 occurrenceDate는 항상 필수입니다.**
-                - 🔁 반복 일정인 경우:
-                  - occurrenceDate는 반복 규칙에 의해 **실제로 발생하는 날짜여야 합니다**.
-                  - 반복 규칙에 존재하지 않는 날짜를 전달하면 오류가 발생합니다.
-                    (예: 매달 15일 반복인데 14일 전달)
-                
+                ## ✅ 변경사항 (중요)
+        
+                - occurrenceDate는 기존처럼 Request Body에서 받지 않고,
+                  ✅ **Query Parameter로 전달받습니다.**
+                - 수정/삭제 기준 날짜 타입이 LocalDate가 아닌,
+                  ✅ **LocalDateTime(초 포함)으로 변경되었습니다.**
+        
+                ---
+                ## 📌 occurrenceDate 규칙
+        
+                - occurrenceDate는 **UI에 보이는 start(수정 반영된 실제 시간)가 아닙니다.**
+                - ✅ occurrenceDate는 일정마다 고정되는 **태생적 발생일시(LocalDateTime)** 입니다.
+                - 캘린더 목록/상세 조회 응답에 포함된 **occurrenceDate 값을 그대로 전달**해야 합니다.
+                - 형식: YYYY-MM-DDTHH:mm:ss
+        
                 ---
                 ## 🔁 반복 일정 수정 (recurrenceUpdateScope)
-                
-                - 🔁 반복 일정인 경우 **recurrenceUpdateScope는 필수**입니다.
-                - ✅ 사용 가능 값:
+        
+                - 반복 일정인 경우 recurrenceUpdateScope는 필수입니다.
+                - 사용 가능 값:
                   - THIS_EVENT
                   - THIS_AND_FOLLOWING_EVENTS
-                - ❌ **ALL_EVENTS는 더 이상 사용하지 않습니다.**
-                
+        
                 ### 🧩 수정 범위
-                
+        
                 #### ✅ THIS_EVENT
-                - 선택한 occurrenceDate의 일정만 수정합니다.
-                - 기존 반복 그룹에는 예외(RecurrenceException)가 추가됩니다.
-                - 해당 일정은 반복 규칙에서 분리되지 않습니다.
-                
+                - 선택한 occurrenceDate(태생) 회차만 수정합니다.
+                - RecurrenceException(OVERRIDE)이 생성/갱신됩니다.
+        
                 #### ✅ THIS_AND_FOLLOWING_EVENTS
-                - 선택한 occurrenceDate와 이후의 일정들을 수정합니다.
+                - 선택한 occurrenceDate(태생) 회차와 그 이후를 수정합니다.
                 - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
-                - ⭐ occurrenceDate가 **새 반복의 기준점(base)** 이 됩니다.
-                - 이후 일정들은 새로운 반복 그룹으로 재생성됩니다.
-                
+                - occurrenceDate는 새 반복의 기준점(base)이 됩니다.
                 ---
                 ## ⏱️ 시간(startTime / endTime) 처리 규칙 (업데이트)
                 
                 - startTime 또는 endTime이 전달되면 해당 값으로 수정됩니다.
                 
                 - 🕒 startTime이 전달되지 않은 경우:
-                  - 선택한 occurrenceDate의 날짜를 기준으로,
-                    기존 startTime의 '시간(HH:mm)'을 유지한 값으로 startTime이 자동 보정됩니다.
+                  - 선택한 occurrenceDate의 날짜로 보정됩니다.
                 
                 - 🕒 endTime이 전달되지 않은 경우:
-                  - 선택한 occurrenceDate의 날짜를 기준으로,
+                  - 위의 생성한 startTime을 기준으로
                     기존 종료 시간 규칙(또는 durationMinutes)을 유지하여 endTime이 자동 보정됩니다.
                 
                 ---
@@ -651,7 +651,7 @@ public interface EventDocs {
                 - recurrenceGroup 내부 필드 역시 **변경할 항목만 전달**합니다.
                 
                 ---
-                - 🗓️ occurrenceDate는 수정 대상 회차의 날짜이며, 원본/계산된 일정 구분 없이 항상 전달해야 합니다.
+                - 🗓️ occurrenceDate는 수정 대상 회차의 태생적 날짜이며, 원본/계산된 일정 구분 없이 항상 전달해야 합니다.
                 
                 - ⏱️ startTime을 변경하는 경우
                   - startTime은 사용자가 전달한 값이 우선 적용됩니다.
@@ -703,7 +703,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-10",
                                               "title": "팀 회의 (변경)",
                                               "location": "회의실 B"
                                             }
@@ -722,7 +721,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-10",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
                                                 "daysOfWeek": ["MONDAY", "WEDNESDAY"],
@@ -741,7 +739,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-01",
                                               "startTime": "2026-02-06T14:00:00",
                                               "endTime": "2026-02-06T15:00:00",
                                               "recurrenceUpdateScope": "THIS_EVENT"
@@ -758,7 +755,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-10",
                                               "title": "특별 회의",
                                               "recurrenceUpdateScope": "THIS_EVENT"
                                             }
@@ -773,7 +769,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-06",
                                               "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
@@ -794,7 +789,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "occurrenceDate": "2026-02-06",
                                               "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
@@ -1010,6 +1004,13 @@ public interface EventDocs {
             )
             @PathVariable Long eventId,
 
+            @Parameter(
+                    description = "캘린더에서 선택한 일정의 태생적 날짜 (YYYY-MM-DDThh-mm-ss)",
+                    example = "2026-02-06T14:00:00",
+                    required = true
+            )
+            @RequestParam LocalDateTime occurrenceDate,
+
             @RequestBody
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "일정 수정 요청 정보",
@@ -1027,44 +1028,46 @@ public interface EventDocs {
                 선택한 일정을 삭제합니다.
                 
                 ---
-                ## 🧾 요청 파라미터 (업데이트)
-                
+                ## ✅ 변경사항 (중요)
+        
+                - 삭제 기준 날짜 타입이 LocalDate가 아닌,
+                  ✅ **LocalDateTime(초 포함)으로 변경되었습니다.**
+        
+                ---
+                ## 🧾 요청 파라미터
+        
                 ### 🧷 Path Variable
-                - eventId (필수)
-                  - 삭제할 일정의 ID
-                
+                - eventId (필수) : 삭제할 일정 ID
+        
                 ### 🔎 Query Parameters
                 - occurrenceDate (필수)
-                  - 캘린더에서 사용자가 선택한 **실제 발생 날짜**
-                  - ✅ **단일 일정 / 반복 일정(원본/계산된 회차) 구분 없이 occurrenceDate는 항상 필수입니다.**
-                
-                - scope (필수)
+                  - ✅ 삭제에 사용되는 **태생적 발생일시(LocalDateTime)** 입니다.
+                  - 캘린더 목록/상세 조회 응답의 **occurrenceDate 값을 그대로 전달**합니다.
+                  - ⚠️ UI에 표시되는 start(수정 반영된 실제 시간)를 전달하면 삭제에 실패할 수 있습니다.
+                  - 형식: YYYY-MM-DDTHH:mm:ss
+        
+                - scope (선택/조건부)
                   - 반복 일정 삭제 범위
-                  - ✅ 사용 가능 값:
+                  - 사용 가능 값:
                     - THIS_EVENT
                     - THIS_AND_FOLLOWING_EVENTS
-                  - ❌ **ALL_EVENTS는 더 이상 사용하지 않습니다.**
-                
+        
                 ---
-                ## 🗑️ 삭제 시나리오별 동작
-                
+                ## 🗑️ 삭제 시나리오
+        
                 ### ✅ THIS_EVENT
-                - 선택한 occurrenceDate의 일정만 삭제됩니다.
-                - 🔁 반복 일정인 경우:
-                  - 실제 Event는 유지되고, 해당 날짜는 반복 예외(RecurrenceException)로 처리됩니다.
-                - 📌 단일 일정인 경우:
-                  - 해당 일정이 즉시 삭제됩니다.
-                
-                ---
+                - 선택한 occurrenceDate(태생) 회차만 삭제됩니다.
+                - 반복 일정: RecurrenceException(SKIP) 처리됩니다.
+                - 단일 일정: 즉시 삭제됩니다.
+        
                 ### ✅ THIS_AND_FOLLOWING_EVENTS
-                - 선택한 occurrenceDate와 그 이후의 일정이 삭제됩니다.
+                - 선택한 occurrenceDate(태생) 회차와 그 이후 일정이 삭제됩니다.
                 - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
-                - occurrenceDate 이후의 모든 계산된 일정이 삭제됩니다.
-                
+        
                 ---
                 ## ⚠️ 유효성 규칙 (업데이트)
                 
-                - scope가 없으면 오류가 발생합니다.
+                - scope가 없으면 오류가 발생합니다. 단, 단일 일정인 경우 예외
                 - occurrenceDate가 없으면 오류가 발생합니다.
                 - 🔁 반복 일정에서 occurrenceDate가 실제 발생 날짜가 아니면 오류가 발생합니다.
                 """
@@ -1077,16 +1080,16 @@ public interface EventDocs {
             // =======================
             @ApiResponse(
                     responseCode = "200",
-                    description = "일정 수정 성공",
+                    description = "일정 삭제 성공",
                     content = @Content(
                             examples = @ExampleObject(
                                     name = "SUCCESS",
-                                    summary = "수정 성공",
+                                    summary = "삭제 성공",
                                     value = """
                                             {
                                               "isSuccess": true,
                                               "code": "200",
-                                              "message": "수정 완료",
+                                              "message": "삭제 완료",
                                               "result": null
                                             }
                                             """
@@ -1098,7 +1101,7 @@ public interface EventDocs {
             // =======================
             @ApiResponse(
                     responseCode = "400",
-                    description = "일정 수정 요청이 유효성 규칙을 위반한 경우",
+                    description = "일정 삭제 요청이 유효성 규칙을 위반한 경우",
                     content = @Content(
                             examples = {
 
@@ -1134,7 +1137,7 @@ public interface EventDocs {
                                                     {
                                                       "isSuccess": false,
                                                       "code": "EVENT400_5",
-                                                      "message": "수정 범위가 지정되지 않았습니다."
+                                                      "message": "UPDATE_SCOPE가 없습니다."
                                                     }
                                                     """
                                     )
@@ -1174,15 +1177,15 @@ public interface EventDocs {
             @PathVariable Long eventId,
 
             @Parameter(
-                    description = "캘린더에서 선택한 실제 발생 날짜 (YYYY-MM-DD)",
-                    example = "2026-03-26",
-                    required = false
+                    description = "캘린더에서 선택한 일정의 태생적 날짜 (YYYY-MM-DDThh-mm-ss)",
+                    example = "2026-02-06T14:00:00",
+                    required = true
             )
-            @RequestParam(required = false) LocalDate occurrenceDate,
+            @RequestParam LocalDateTime occurrenceDate,
 
             @Parameter(
                     description = "반복 일정 삭제 범위",
-                    example = "ALL_EVENTS",
+                    example = "THIS_EVENT",
                     required = false
             )
             @RequestParam(required = false) RecurrenceUpdateScope scope

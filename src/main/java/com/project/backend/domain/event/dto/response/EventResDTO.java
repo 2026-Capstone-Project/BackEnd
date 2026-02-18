@@ -18,10 +18,11 @@ public class EventResDTO {
     @Builder
     public record DetailRes(
             Long id,
+            LocalDateTime occurrenceDate, // 항상 원본 발생일
             boolean calculated,
             String title,
             String content,
-            LocalDateTime start,
+            LocalDateTime start, // 실제 표시/실행 시작시간
             LocalDateTime end,
             String location,
             Boolean isAllDay,

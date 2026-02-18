@@ -334,7 +334,6 @@ public interface TodoDocs {
                 |----|------|------|
                 | `THIS_TODO` | 이 할 일만 | 해당 날짜에 예외(OVERRIDE) 생성 |
                 | `THIS_AND_FOLLOWING` | 이 할 일 및 이후 | 기존 반복 종료 + 새 반복 생성 |
-                | `ALL_TODOS` | 모든 할 일 | 원본 할 일 직접 수정 |
 
                 ---
                 ## 📋 수정 가능한 필드 (모두 선택)
@@ -343,7 +342,7 @@ public interface TodoDocs {
                 |------|------|------|
                 | `title` | String | 제목 (최대 100자) |
                 | `startDate` | LocalDate | 시작일 |
-                | `endDate` | LocalDate | 종료일 (반복 할 일, THIS_AND_FOLLOWING/ALL_TODOS만 적용) |
+                | `endDate` | LocalDate | 종료일 (반복 할 일, THIS_AND_FOLLOWING만 적용) |
                 | `dueTime` | LocalTime | 마감 시간 |
                 | `isAllDay` | Boolean | 종일 여부 |
                 | `priority` | Priority | 우선순위 (HIGH, MEDIUM, LOW) |
@@ -365,7 +364,7 @@ public interface TodoDocs {
             @Parameter(description = "할 일 ID", example = "1") @PathVariable Long todoId,
             @Parameter(description = "반복 할 일의 수정 기준 날짜 (반복 할 일인 경우 필수)", example = "2025-01-15")
             @RequestParam(required = false) LocalDate occurrenceDate,
-            @Parameter(description = "반복 할 일 수정 범위 (반복 할 일인 경우 필수)", schema = @Schema(allowableValues = {"THIS_TODO", "THIS_AND_FOLLOWING", "ALL_TODOS"}))
+            @Parameter(description = "반복 할 일 수정 범위 (반복 할 일인 경우 필수)", schema = @Schema(allowableValues = {"THIS_TODO", "THIS_AND_FOLLOWING"}))
             @RequestParam(required = false) RecurrenceUpdateScope scope,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(
@@ -472,7 +471,6 @@ public interface TodoDocs {
                 |----|------|------|
                 | `THIS_TODO` | 이 할 일만 | 해당 날짜에 SKIP 예외 생성 (건너뛰기) |
                 | `THIS_AND_FOLLOWING` | 이 할 일 및 이후 | 반복 종료일을 전날로 변경 |
-                | `ALL_TODOS` | 모든 할 일 | 할 일과 반복 그룹 모두 삭제 |
 
                 ---
                 ## 💡 예시
@@ -487,9 +485,6 @@ public interface TodoDocs {
                 DELETE /api/v1/todos/1?occurrenceDate=2025-01-15&scope=THIS_AND_FOLLOWING
                 → 2025-01-15부터 모든 반복 삭제 (2025-01-14까지만 유지)
 
-                DELETE /api/v1/todos/1?occurrenceDate=2025-01-15&scope=ALL_TODOS
-                → 반복 할 일 전체 삭제
-                ```
                 """
     )
     @ApiResponses({
@@ -504,7 +499,7 @@ public interface TodoDocs {
             @Parameter(description = "할 일 ID", example = "1") @PathVariable Long todoId,
             @Parameter(description = "반복 할 일의 삭제 기준 날짜 (반복 할 일인 경우 필수)", example = "2025-01-15")
             @RequestParam(required = false) LocalDate occurrenceDate,
-            @Parameter(description = "반복 할 일 삭제 범위 (반복 할 일인 경우 필수)", schema = @Schema(allowableValues = {"THIS_TODO", "THIS_AND_FOLLOWING", "ALL_TODOS"}))
+            @Parameter(description = "반복 할 일 삭제 범위 (반복 할 일인 경우 필수)", schema = @Schema(allowableValues = {"THIS_TODO", "THIS_AND_FOLLOWING"}))
             @RequestParam(required = false) RecurrenceUpdateScope scope
     );
 }

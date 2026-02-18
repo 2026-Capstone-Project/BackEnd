@@ -17,6 +17,10 @@ import com.project.backend.domain.setting.entity.Setting;
 import com.project.backend.domain.setting.exception.SettingErrorCode;
 import com.project.backend.domain.setting.exception.SettingException;
 import com.project.backend.domain.setting.repository.SettingRepository;
+import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.entity.TodoRecurrenceException;
+import com.project.backend.domain.todo.exception.TodoErrorCode;
+import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -77,36 +81,45 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
     }
 
     private String resolveReminderTitle(Reminder reminder) {
-        Optional<RecurrenceException> re = Optional.empty();
-
         if (reminder.getTargetType() == TargetType.EVENT) {
             Event event = eventRepository.findById(reminder.getTargetId())
                     .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-            // 단일 일정이면 RecurrenceException은 존재하지 않는다.
-            if (!event.isRecurring()) {
+            // 단일 일정이면 그대로
+            if (!event.isRecurring() || event.getRecurrenceGroup() == null) {
                 return reminder.getTitle();
             }
 
-            re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
+            Optional<RecurrenceException> re = recurrenceExceptionRepository.findByRecurrenceGroupIdAndExceptionDate(
                     event.getRecurrenceGroup().getId(),
-                    reminder.getOccurrenceTime().toLocalDate()
+                    reminder.getOccurrenceTime()
             );
-        } else {
-            // Todo 반복그룹 통합 필요
-//            Todo todo = todoRepository.findById(reminder.getTargetId())
-//                    .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
-//            re = todoRecurrenceExceptionRepository.findByTodoRecurrenceGroupIdAndExceptionDate(
-//                    todo.getTodoRecurrenceGroup().getId(),
-//                    reminder.getOccurrenceTime().toLocalDate()
-//            )
-        }
 
-        // 예외에 제목이 있다면 제목 변경된 것이므로 조회시 해당 제목 사용
-        if (re.isEmpty()) {
+            if (re.isPresent() && re.get().getTitle() != null) {
+                return re.get().getTitle();
+            }
+
+            return reminder.getTitle();
+        }
+        // 할 일
+        Todo todo = todoRepository.findById(reminder.getTargetId())
+                .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_NOT_FOUND));
+
+        // 단일 할 일이면 그대로
+        if (!todo.isRecurring() || todo.getTodoRecurrenceGroup() == null) {
             return reminder.getTitle();
         }
 
-        return re.get().getTitle();
+        Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository
+                .findByTodoRecurrenceGroupIdAndExceptionDate(
+                        todo.getTodoRecurrenceGroup().getId(),
+                        reminder.getOccurrenceTime().toLocalDate()
+                );
+
+        if (re.isPresent() && re.get().getTitle() != null) {
+            return re.get().getTitle();
+        }
+
+        return reminder.getTitle();
     }
 }
