@@ -242,6 +242,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 reqDTO.dueTime(),
                 reqDTO.isAllDay(),
                 reqDTO.priority(),
+                reqDTO.color(),
                 reqDTO.memo()
         );
         log.debug("단일 할 일 수정 완료 - todoId: {}", todo.getId());
@@ -269,10 +270,12 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     : (existingException.getDueTime() != null ? existingException.getDueTime() : todo.getDueTime());
             com.project.backend.domain.todo.enums.Priority newPriority = reqDTO.priority() != null ? reqDTO.priority()
                     : (existingException.getPriority() != null ? existingException.getPriority() : todo.getPriority());
+            com.project.backend.domain.todo.enums.TodoColor newColor = reqDTO.color() != null ? reqDTO.color()
+                    : (existingException.getColor() != null ? existingException.getColor() : todo.getColor());
             String newMemo = reqDTO.memo() != null ? reqDTO.memo()
                     : (existingException.getMemo() != null ? existingException.getMemo() : todo.getMemo());
 
-            existingException.updateOverride(newTitle, newDueTime, newPriority, newMemo);
+            existingException.updateOverride(newTitle, newDueTime, newPriority, newColor, newMemo);
             exception = existingException;
 
             // Exception을 가진 할 일을 재 수정 했을 때 리마인더 처리 실행
@@ -294,6 +297,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
                     reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
                     reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
+                    reqDTO.color() != null ? reqDTO.color() : todo.getColor(),
                     reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo()
             );
             todoRecurrenceExceptionRepository.save(exception);
@@ -371,6 +375,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 startDate.toLocalTime(),
                 reqDTO.isAllDay() != null ? reqDTO.isAllDay() : todo.getIsAllDay(),
                 reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
+                reqDTO.color() != null ? reqDTO.color() : todo.getColor(),
                 reqDTO.memo() != null ? reqDTO.memo() : todo.getMemo(),
                 newGroup
         );
@@ -427,26 +432,27 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     /**
      * 반복 할 일 - 모든 할 일 수정
      */
-//    private TodoResDTO.TodoInfo updateAllTodos(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
-//        // 원본 Todo 수정
-//        todo.update(
-//                reqDTO.title(),
-//                reqDTO.startDate(),
-//                reqDTO.dueTime(),
-//                reqDTO.isAllDay(),
-//                reqDTO.priority(),
-//                reqDTO.memo()
-//        );
-//
-//        // 반복 종료일 변경
-//        if (reqDTO.endDate() != null && todo.getTodoRecurrenceGroup() != null) {
-//            todo.getTodoRecurrenceGroup().updateEndByDate(reqDTO.endDate());
-//        }
-//
-//        log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
-//
-//        return TodoConverter.toTodoInfo(todo);
-//    }
+//     private TodoResDTO.TodoInfo updateAllTodos(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
+//         // 원본 Todo 수정
+//         todo.update(
+//                 reqDTO.title(),
+//                 reqDTO.startDate(),
+//                 reqDTO.dueTime(),
+//                 reqDTO.isAllDay(),
+//                 reqDTO.priority(),
+//                 reqDTO.color(),
+//                 reqDTO.memo()
+//         );
+
+//         // 반복 종료일 변경
+//         if (reqDTO.endDate() != null && todo.getTodoRecurrenceGroup() != null) {
+//             todo.getTodoRecurrenceGroup().updateEndByDate(reqDTO.endDate());
+//         }
+
+//         log.debug("반복 할 일 전체 수정 완료 - todoId: {}", todo.getId());
+
+//         return TodoConverter.toTodoInfo(todo);
+//     }
 
     /**
      * 반복 할 일 - 이 할 일만 삭제 (SKIP 예외 생성)

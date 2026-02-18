@@ -4,6 +4,7 @@ import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +35,8 @@ public class TodoReqDTO {
 
             @NotNull(message = "우선순위는 필수입니다.")
             Priority priority,
+
+            TodoColor color,
 
             String memo,
 
@@ -84,6 +87,8 @@ public class TodoReqDTO {
             Boolean isAllDay,
 
             Priority priority,
+
+            TodoColor color,
 
             String memo,
 

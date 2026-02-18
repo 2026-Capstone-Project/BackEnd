@@ -7,6 +7,7 @@ import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,7 @@ public class TodoConverter {
                 .dueTime(reqDTO.dueTime())
                 .isAllDay(reqDTO.isAllDay() != null ? reqDTO.isAllDay() : false)
                 .priority(reqDTO.priority() != null ? reqDTO.priority() : Priority.MEDIUM)
+                .color(reqDTO.color() != null ? reqDTO.color() : TodoColor.BLUE)
                 .memo(reqDTO.memo())
                 .member(member)
                 .todoRecurrenceGroup(todoRecurrenceGroup)
@@ -95,6 +97,7 @@ public class TodoConverter {
                 .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
+                .color(todo.getColor())
                 .memo(todo.getMemo())
                 .isCompleted(todo.getIsCompleted())
                 .isRecurring(todo.isRecurring())
@@ -118,6 +121,7 @@ public class TodoConverter {
                 .dueTime(exception.getDueTime() != null ? exception.getDueTime() : todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(exception.getPriority() != null ? exception.getPriority() : todo.getPriority())
+                .color(exception.getColor() != null ? exception.getColor() : todo.getColor())
                 .memo(exception.getMemo() != null ? exception.getMemo() : todo.getMemo())
                 .isCompleted(exception.getIsCompleted())
                 .isRecurring(true)
@@ -137,6 +141,7 @@ public class TodoConverter {
                 .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
+                .color(todo.getColor())
                 .memo(todo.getMemo())
                 .isCompleted(isCompleted != null ? isCompleted : todo.getIsCompleted())
                 .isRecurring(todo.isRecurring())
@@ -159,6 +164,7 @@ public class TodoConverter {
                 .dueTime(exception.getDueTime() != null ? exception.getDueTime() : todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(exception.getPriority() != null ? exception.getPriority() : todo.getPriority())
+                .color(exception.getColor() != null ? exception.getColor() : todo.getColor())
                 .memo(exception.getMemo() != null ? exception.getMemo() : todo.getMemo())
                 .isCompleted(exception.getIsCompleted())
                 .isRecurring(true)
@@ -176,6 +182,7 @@ public class TodoConverter {
                 .dueTime(todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(todo.getPriority())
+                .color(todo.getColor())
                 .memo(todo.getMemo())
                 .isCompleted(todo.getIsCompleted())
                 .isRecurring(todo.isRecurring())
@@ -201,6 +208,7 @@ public class TodoConverter {
                 .dueTime(exception.getDueTime() != null ? exception.getDueTime() : todo.getDueTime())
                 .isAllDay(todo.getIsAllDay())
                 .priority(exception.getPriority() != null ? exception.getPriority() : todo.getPriority())
+                .color(exception.getColor() != null ? exception.getColor() : todo.getColor())
                 .memo(exception.getMemo() != null ? exception.getMemo() : todo.getMemo())
                 .isCompleted(exception.getIsCompleted())
                 .isRecurring(true)

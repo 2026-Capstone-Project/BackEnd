@@ -2,6 +2,7 @@ package com.project.backend.domain.todo.entity;
 
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.enums.TodoColor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,6 +47,10 @@ public class TodoRecurrenceException {
     @Column(name = "priority", length = 10)
     private Priority priority;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", length = 10)
+    private TodoColor color;
+
     @Column(name = "memo")
     private String memo;
     // ==============================
@@ -78,11 +83,12 @@ public class TodoRecurrenceException {
     /**
      * OVERRIDE 예외 정보 수정
      */
-    public void updateOverride(String title, LocalTime dueTime, Priority priority, String memo) {
+    public void updateOverride(String title, LocalTime dueTime, Priority priority, TodoColor color, String memo) {
         this.exceptionType = ExceptionType.OVERRIDE;
         this.title = title;
         this.dueTime = dueTime;
         this.priority = priority;
+        this.color = color;
         this.memo = memo;
     }
 
@@ -112,6 +118,7 @@ public class TodoRecurrenceException {
             String title,
             LocalTime dueTime,
             Priority priority,
+            TodoColor color,
             String memo
     ) {
         return TodoRecurrenceException.builder()
@@ -121,6 +128,7 @@ public class TodoRecurrenceException {
                 .title(title)
                 .dueTime(dueTime)
                 .priority(priority)
+                .color(color)
                 .memo(memo)
                 .isCompleted(false)
                 .build();
