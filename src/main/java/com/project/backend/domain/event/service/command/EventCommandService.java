@@ -11,7 +11,13 @@ public interface EventCommandService {
 
     EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId);
 
-    void updateEvent(EventReqDTO.UpdateReq req, Long eventId, Long memberId, LocalDateTime originalDate);
+    void updateEvent
+            (EventReqDTO.UpdateReq req,
+             Long eventId,
+             Long memberId,
+             RecurrenceUpdateScope scope,
+             LocalDateTime originalDate
+            );
 
     void deleteEvent(Long eventId, LocalDateTime occurrenceDate, RecurrenceUpdateScope scope, Long memberId);
 }

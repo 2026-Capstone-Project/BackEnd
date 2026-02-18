@@ -44,7 +44,6 @@ public class EventReqDTO {
             String location,
             EventColor color,
             Boolean isAllDay,
-            RecurrenceUpdateScope recurrenceUpdateScope,
             RecurrenceGroupReqDTO.UpdateReq recurrenceGroup
     ) {
     }
