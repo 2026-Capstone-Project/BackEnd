@@ -1,0 +1,17 @@
+package com.project.backend.domain.suggestion.enums;
+
+public enum SuggestionInvalidateReason {
+    EVENT_CREATED,
+    EVENT_UPDATED,
+    EVENT_DELETED,
+
+    TODO_CREATED,
+    TODO_UPDATED,
+    TODO_DELETED,
+
+    RECURRENCE_GROUP_UPDATED,
+    RECURRENCE_GROUP_DELETED,
+
+    TODO_RECURRENCE_GROUP_UPDATED,
+    TODO_RECURRENCE_GROUP_DELETED
+}
