@@ -20,7 +20,6 @@ import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
-import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,7 +58,7 @@ public class EventQueryServiceImpl implements EventQueryService {
             LocalDateTime occurrenceDate,
             Long memberId
     ) {
-        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventValidator.validateRead(event, occurrenceDate);

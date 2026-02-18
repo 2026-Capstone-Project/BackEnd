@@ -1,6 +1,6 @@
 package com.project.backend.domain.reminder.handler;
 
-import com.project.backend.domain.event.dto.PlanChanged;
+import com.project.backend.domain.common.reminder.dto.PlanChanged;
 import com.project.backend.domain.reminder.converter.ReminderConverter;
 import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;
@@ -17,7 +17,7 @@ public class PlanReminderHandler {
     @Transactional
     public void handle(PlanChanged pc) {
         ReminderSource rs = ReminderConverter.toReminderSource
-                (pc.targetId(), pc.targetType(), pc.title(), pc.occurrenceTime(), pc.isrRecurring());
+                (pc.targetId(), pc.targetType(), pc.title(), pc.occurrenceTime(), pc.isRecurring());
         switch (pc.changeType()){
             case CREATED -> reminderCommandService.createReminder(rs, pc.memberId());
             case UPDATE_SINGLE -> reminderCommandService.updateReminderOfSingle(rs, pc.memberId());

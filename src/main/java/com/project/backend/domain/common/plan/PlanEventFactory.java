@@ -1,7 +1,7 @@
 package com.project.backend.domain.common.plan;
 
-import com.project.backend.domain.event.dto.PlanChanged;
-import com.project.backend.domain.event.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.common.reminder.dto.PlanChanged;
+import com.project.backend.domain.common.reminder.dto.RecurrenceExceptionChanged;
 import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
@@ -27,7 +27,7 @@ public class PlanEventFactory {
                 .targetType(targetType)
                 .memberId(memberId)
                 .title(title)
-                .isrRecurring(isRecurring)
+                .isRecurring(isRecurring)
                 .occurrenceTime(occurrenceTime)
                 .changeType(changeType)
                 .build();
@@ -66,7 +66,7 @@ public class PlanEventFactory {
         return ReminderDeleted.builder()
                 .exceptionId(exceptionId)
                 .memberId(memberId)
-                .occurenceTime(occurrenceTime)
+                .occurrenceTime(occurrenceTime)
                 .targetId(targetId)
                 .targetType(targetType)
                 .deletedType(deletedType)

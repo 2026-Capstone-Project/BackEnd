@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.service.command;
 
-import com.project.backend.domain.common.reminder.ReminderEventBridge;
+import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventSpec;
 import com.project.backend.domain.event.converter.RecurrenceGroupConverter;
@@ -96,7 +96,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
-        Event event = eventRepository.findByMemberIdAndId(memberId, eventId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventValidator.validateUpdate(req, event, occurrenceDate);
@@ -162,9 +162,10 @@ public class EventCommandServiceImpl implements EventCommandService {
     public void deleteEvent(
             Long eventId,
             LocalDateTime occurrenceDate,
-            RecurrenceUpdateScope scope, Long memberId
+            RecurrenceUpdateScope scope,
+            Long memberId
     ) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);

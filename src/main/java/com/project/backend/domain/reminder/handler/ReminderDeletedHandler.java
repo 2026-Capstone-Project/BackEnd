@@ -16,12 +16,12 @@ public class ReminderDeletedHandler {
     public void handle(ReminderDeleted rd) {
         switch (rd.deletedType()){
             case DELETED_SINGLE -> reminderCommandService.
-                    deleteReminderOfSingle(rd.targetId(), rd.targetType(), rd.occurenceTime());
+                    deleteReminderOfSingle(rd.targetId(), rd.targetType(), rd.occurrenceTime());
             case DELETED_THIS_AND_FOLLOWING ->
                     reminderCommandService.deleteReminderOfThisAndFollowings(
-                            rd.targetId(), rd.targetType(), rd.occurenceTime());
+                            rd.targetId(), rd.targetType(), rd.occurrenceTime());
             case DELETED_ALL ->
-                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType(), rd.occurenceTime());
+                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType(), rd.occurrenceTime());
         }
     }
 }

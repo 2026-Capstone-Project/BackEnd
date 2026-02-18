@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public record ReminderDeleted(
         Long exceptionId,
         Long memberId,
-        LocalDateTime occurenceTime,
+        LocalDateTime occurrenceTime,
         Long targetId,
         TargetType targetType,
         DeletedType deletedType
