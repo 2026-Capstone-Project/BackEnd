@@ -67,6 +67,7 @@ public class TodoResDTO {
             Long todoId,
             LocalDate occurrenceDate,
             String title,
+            LocalDate startDate,
             LocalTime dueTime,
             Boolean isAllDay,
             Priority priority,

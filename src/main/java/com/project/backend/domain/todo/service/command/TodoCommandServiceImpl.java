@@ -232,6 +232,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             // 기존 예외가 있으면 업데이트
             String newTitle = reqDTO.title() != null ? reqDTO.title()
                     : (existingException.getTitle() != null ? existingException.getTitle() : todo.getTitle());
+            LocalDate newStartDate = reqDTO.startDate() != null ? reqDTO.startDate()
+                    : (existingException.getStartDate() != null ? existingException.getStartDate() : null);
             java.time.LocalTime newDueTime = reqDTO.dueTime() != null ? reqDTO.dueTime()
                     : (existingException.getDueTime() != null ? existingException.getDueTime() : todo.getDueTime());
             com.project.backend.domain.todo.enums.Priority newPriority = reqDTO.priority() != null ? reqDTO.priority()
@@ -241,7 +243,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             String newMemo = reqDTO.memo() != null ? reqDTO.memo()
                     : (existingException.getMemo() != null ? existingException.getMemo() : todo.getMemo());
 
-            existingException.updateOverride(newTitle, newDueTime, newPriority, newColor, newMemo);
+            existingException.updateOverride(newTitle, newStartDate, newDueTime, newPriority, newColor, newMemo);
             exception = existingException;
             log.debug("반복 할 일 예외 수정 완료 (업데이트) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
         } else {
@@ -250,6 +252,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     group,
                     occurrenceDate,
                     reqDTO.title() != null ? reqDTO.title() : todo.getTitle(),
+                    reqDTO.startDate(),
                     reqDTO.dueTime() != null ? reqDTO.dueTime() : todo.getDueTime(),
                     reqDTO.priority() != null ? reqDTO.priority() : todo.getPriority(),
                     reqDTO.color() != null ? reqDTO.color() : todo.getColor(),

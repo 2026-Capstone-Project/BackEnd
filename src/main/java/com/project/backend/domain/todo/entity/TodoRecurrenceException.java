@@ -39,6 +39,9 @@ public class TodoRecurrenceException {
     @Column(name = "title", length = 100)
     private String title;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @Column(name = "due_time")
     private LocalTime dueTime;
 
@@ -82,9 +85,10 @@ public class TodoRecurrenceException {
     /**
      * OVERRIDE 예외 정보 수정
      */
-    public void updateOverride(String title, LocalTime dueTime, Priority priority, TodoColor color, String memo) {
+    public void updateOverride(String title, LocalDate startDate, LocalTime dueTime, Priority priority, TodoColor color, String memo) {
         this.exceptionType = ExceptionType.OVERRIDE;
         this.title = title;
+        this.startDate = startDate;
         this.dueTime = dueTime;
         this.priority = priority;
         this.color = color;
@@ -115,6 +119,7 @@ public class TodoRecurrenceException {
             TodoRecurrenceGroup todoRecurrenceGroup,
             LocalDate exceptionDate,
             String title,
+            LocalDate startDate,
             LocalTime dueTime,
             Priority priority,
             TodoColor color,
@@ -125,6 +130,7 @@ public class TodoRecurrenceException {
                 .exceptionDate(exceptionDate)
                 .exceptionType(ExceptionType.OVERRIDE)
                 .title(title)
+                .startDate(startDate)
                 .dueTime(dueTime)
                 .priority(priority)
                 .color(color)
