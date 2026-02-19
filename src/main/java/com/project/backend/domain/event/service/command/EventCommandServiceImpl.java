@@ -106,6 +106,9 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        byte[] beforeHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        EventFingerPrint beforeFingerPrint = EventFingerPrint.from(event);
+
         eventValidator.validateUpdate(req, event, occurrenceDate);
         // occurrenceDate가 존재하는 일정의 계산된 날짜인지
         eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
@@ -149,6 +152,19 @@ public class EventCommandServiceImpl implements EventCommandService {
                         false,
                         start,
                         ChangeType.UPDATE_SINGLE);
+
+                // 이벤트 수정에 따른 제안 만료 이벤트 퍼블리싱
+                byte[] afterHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+                EventFingerPrint afterFingerPrint = EventFingerPrint.from(event);
+
+                boolean keyChanged = suggestionInvalidatePublisher.isHashChanged(beforeHash, afterHash);
+                boolean fingerPrintChanged = !beforeFingerPrint.equals(afterFingerPrint);
+                log.info("keyChanged: {}, fingerPrintChanged: {}", keyChanged, fingerPrintChanged);
+
+                // 키 변경 OR 시간(등) 변경이면 무효화
+                if (keyChanged || fingerPrintChanged) {
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeHash);
+                }
             }
             return;
         }
