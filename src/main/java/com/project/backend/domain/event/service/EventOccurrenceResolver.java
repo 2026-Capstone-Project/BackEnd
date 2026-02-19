@@ -46,11 +46,6 @@ public class EventOccurrenceResolver {
     }
 
     private ResolvedOccurrence resolveInternal(Event event, LocalDateTime occurrenceDate) {
-        // 반복 + 일정이 아닌경우
-        if (!event.isRecurring()) {
-            throw new EventException(EventErrorCode.NOT_RECURRING_EVENT);
-        }
-
         // occurrenceDate가 수정/삭제된 일정의 태생적 날짜+시간 인지
         Optional<RecurrenceException> exception = recurrenceExceptionRepository.
                 findByRecurrenceGroupIdAndExceptionDate(event.getRecurrenceGroup().getId(), occurrenceDate);

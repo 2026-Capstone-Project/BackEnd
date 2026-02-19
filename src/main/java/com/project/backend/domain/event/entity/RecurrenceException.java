@@ -3,6 +3,7 @@ package com.project.backend.domain.event.entity;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,7 +25,7 @@ import java.util.Objects;
                         columnNames = {"recurrence_group_id", "exception_date"}
                 )
         })
-public class RecurrenceException {
+public class RecurrenceException extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

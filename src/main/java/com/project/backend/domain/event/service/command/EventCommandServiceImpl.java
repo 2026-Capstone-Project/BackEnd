@@ -97,7 +97,13 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     @Override
-    public void updateEvent(EventReqDTO.UpdateReq req, Long eventId, Long memberId, LocalDateTime occurrenceDate) {
+    public void updateEvent(
+            EventReqDTO.UpdateReq req,
+            Long eventId,
+            Long memberId,
+            RecurrenceUpdateScope scope,
+            LocalDateTime occurrenceDate
+    ) {
         // 변경 사항 전혀 없음
         if (!hasEventChanged(req) && !hasRecurrenceGroupChanged(req.recurrenceGroup())) {
             return;
@@ -106,6 +112,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        eventValidator.validateUpdate(event, occurrenceDate, scope);
         byte[] beforeHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
         EventFingerPrint beforeFingerPrint = EventFingerPrint.from(event);
 
@@ -114,7 +121,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = calStartTime(req, event, occurrenceDate);
+        LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
@@ -169,12 +176,15 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
+        // occurrenceDate가 존재하는 일정의 계산된 날짜인지
+        eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
+
         // 반복 그룹 수정할때만 validator 적용하기
         if (req.recurrenceGroup() != null)
             rgValidator.validateUpdate(req.recurrenceGroup(), event.getRecurrenceGroup(), start);
 
         // 수정범위가 있는 수정일 때
-        switch (req.recurrenceUpdateScope()){
+        switch (scope){
             case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
             case THIS_AND_FOLLOWING_EVENTS -> updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
