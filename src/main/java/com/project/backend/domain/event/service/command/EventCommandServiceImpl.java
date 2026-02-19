@@ -156,18 +156,6 @@ public class EventCommandServiceImpl implements EventCommandService {
                         start,
                         ChangeType.UPDATE_SINGLE);
 
-                // 이벤트 수정에 따른 제안 만료 이벤트 퍼블리싱
-                byte[] afterHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-                EventFingerPrint afterFingerPrint = EventFingerPrint.from(event);
-
-                boolean keyChanged = suggestionInvalidatePublisher.isHashChanged(beforeHash, afterHash);
-                boolean fingerPrintChanged = !beforeFingerPrint.equals(afterFingerPrint);
-                log.info("keyChanged: {}, fingerPrintChanged: {}", keyChanged, fingerPrintChanged);
-
-                // 키 변경 OR 시간(등) 변경이면 무효화
-                if (keyChanged || fingerPrintChanged) {
-                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeHash);
-                }
             }
             return;
         }
@@ -184,6 +172,19 @@ public class EventCommandServiceImpl implements EventCommandService {
             case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
             case THIS_AND_FOLLOWING_EVENTS -> updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
+        }
+
+        // 이벤트 수정에 따른 제안 만료 이벤트 퍼블리싱
+        byte[] afterHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        EventFingerPrint afterFingerPrint = EventFingerPrint.from(event);
+
+        boolean keyChanged = suggestionInvalidatePublisher.isHashChanged(beforeHash, afterHash);
+        boolean fingerPrintChanged = !beforeFingerPrint.equals(afterFingerPrint);
+        log.info("keyChanged: {}, fingerPrintChanged: {}", keyChanged, fingerPrintChanged);
+
+        // 키 변경 OR 시간(등) 변경이면 무효화
+        if (keyChanged || fingerPrintChanged) {
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeHash);
         }
     }
 
