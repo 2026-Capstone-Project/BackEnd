@@ -116,10 +116,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         byte[] beforeHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
         EventFingerPrint beforeFingerPrint = EventFingerPrint.from(event);
 
-        eventValidator.validateUpdate(req, event, occurrenceDate);
-        // occurrenceDate가 존재하는 일정의 계산된 날짜인지
-        eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
-
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
         LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
