@@ -617,6 +617,7 @@ public interface EventDocs {
                 ---
                 ## 🔁 반복 일정 수정 (recurrenceUpdateScope)
         
+                - 단일 일정인 경우 recurrenceUpdateScope는 필요하지 않습니다.
                 - 반복 일정인 경우 recurrenceUpdateScope는 필수입니다.
                 - 사용 가능 값:
                   - THIS_EVENT
@@ -693,14 +694,9 @@ public interface EventDocs {
                                             """
                             ),
 
-
                             // 2-1. 반복 없는 일정 수정 (단일 일정)
                             @ExampleObject(
                                     name = "단일 일정 수정",
-                                    description = """
-                                            반복이 없는 단일 일정 수정.
-                                            occurrenceDate는 전달하지 않습니다.
-                                            """,
                                     value = """
                                             {
                                               "title": "팀 회의 (변경)",
@@ -735,14 +731,11 @@ public interface EventDocs {
                                     description = """
                                             반복 일정 중 선택한 계산된 회차의 시간만 수정합니다.
                                             원본 일정은 THIS_EVENT 수정 불가능합니다.
-                                            실제 eventId를 가진 일정을 수정하는 것이 아니라 occurrenceDate는 필수입니다.
                                             """,
                                     value = """
                                             {
                                               "startTime": "2026-02-06T14:00:00",
-                                              "endTime": "2026-02-06T15:00:00",
-                                              "recurrenceUpdateScope": "THIS_EVENT"
-                                            }
+                                              "endTime": "2026-02-06T15:00:00"                                            }
                                             """
                             ),
                             // 3-2. 반복 일정 - 이 일정만 수정 (제목 변경)
@@ -751,12 +744,10 @@ public interface EventDocs {
                                     description = """
                                             반복 일정 중 선택한 계산된 회차의 제목만 수정합니다.
                                             원본 일정은 THIS_EVENT 수정 불가능합니다.
-                                            실제 eventId를 가진 일정을 수정하는 것이 아니라 occurrenceDate는 필수입니다.
                                             """,
                                     value = """
                                             {
-                                              "title": "특별 회의",
-                                              "recurrenceUpdateScope": "THIS_EVENT"
+                                              "title": "특별 회의"
                                             }
                                             """
                             ),
@@ -769,7 +760,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
                                                 "daysOfWeek": ["THURSDAY"],
@@ -789,7 +779,6 @@ public interface EventDocs {
                                             """,
                                     value = """
                                             {
-                                              "recurrenceUpdateScope": "THIS_AND_FOLLOWING_EVENTS",
                                               "recurrenceGroup": {
                                                 "frequency": "WEEKLY",
                                                 "daysOfWeek": ["MONDAY", "THURSDAY"],
@@ -1010,6 +999,13 @@ public interface EventDocs {
                     required = true
             )
             @RequestParam LocalDateTime occurrenceDate,
+
+            @Parameter(
+                    description = "반복 일정 수정 범위 (반복 할 일인 경우 필수)",
+                    schema = @Schema(allowableValues = {"THIS_EVENT", "THIS_AND_FOLLOWING_EVENTS"}),
+                    required = false
+            )
+            @RequestParam RecurrenceUpdateScope scope,
 
             @RequestBody
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
