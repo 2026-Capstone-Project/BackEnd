@@ -92,4 +92,17 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     """)
     int rejectFinally(@Param("memberId") Long memberId,
                       @Param("suggestionId") Long suggestionId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Suggestion s
+           set s.active = null
+         where s.member.id = :memberId
+           and s.active = true
+           and s.targetKeyHash = :hash
+    """)
+    int bulkInvalidateOne(
+            @Param("memberId") Long memberId,
+            @Param("hash") byte[] hash
+    );
 }
