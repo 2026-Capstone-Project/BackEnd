@@ -5,6 +5,7 @@ import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -12,7 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@Tag(name = "선제적 제안 API", description = "선제적 제안(Suggestion) 관련 API")
+@Tag(name = "선제적 제안 API", description = "선제적 제안 관련 API")
 public interface SuggestionDocs {
 
     @Operation(
@@ -68,6 +69,8 @@ public interface SuggestionDocs {
                     특정 선제적 제안을 수락 처리합니다.
 
                     - suggestionId에 해당하는 제안을 수락합니다.
+                    - 이미 처리된 제안이거나 존재하지 않는 경우 404를 반환합니다.
+                    - 동시에 수락 요청이 들어와 경합이 발생하면 409를 반환합니다.
                     - 응답 본문 데이터는 없습니다(null).
                     """
     )
@@ -78,6 +81,42 @@ public interface SuggestionDocs {
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = String.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "이미 처리되었거나, 존재하지 않는 제안",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CustomResponse.class),
+                            examples = @ExampleObject(
+                                    name = "SUGGESTION_NOT_FOUND",
+                                    value = """
+                                            {
+                                              "isSuccess": false,
+                                              "code": "SUG404",
+                                              "message": "이미 처리되었거나, 존재하지 않는 제안입니다."
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "이미 진행중인 수락(동시 수락 충돌)",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CustomResponse.class),
+                            examples = @ExampleObject(
+                                    name = "SUGGESTION_CONFLICT",
+                                    value = """
+                                            {
+                                              "isSuccess": false,
+                                              "code": "SUG409",
+                                              "message": "이미 진행중인 수락입니다."
+                                            }
+                                            """
+                            )
                     )
             )
     })
@@ -99,6 +138,7 @@ public interface SuggestionDocs {
                     - 현재 상태가 SECONDARY인 제안을 거절하면:
                       - 해당 제안은 최종 REJECTED 처리됩니다.
 
+                    - 이미 처리된 제안이거나 존재하지 않는 경우 404를 반환합니다.
                     - 응답 본문 데이터는 없습니다(null).
                     """
     )
@@ -109,6 +149,24 @@ public interface SuggestionDocs {
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = String.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "이미 처리되었거나, 존재하지 않는 제안",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CustomResponse.class),
+                            examples = @ExampleObject(
+                                    name = "SUGGESTION_NOT_FOUND",
+                                    value = """
+                                            {
+                                              "isSuccess": false,
+                                              "code": "SUG404",
+                                              "message": "이미 처리되었거나, 존재하지 않는 제안입니다."
+                                            }
+                                            """
+                            )
                     )
             )
     })
