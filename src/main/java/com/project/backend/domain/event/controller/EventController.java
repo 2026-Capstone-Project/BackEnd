@@ -64,10 +64,11 @@ public class EventController implements EventDocs {
     public CustomResponse<Void> updateEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId,
-            @RequestParam LocalDateTime originalDate,
+            @RequestParam LocalDateTime occurrenceDate,
+            @RequestParam(required = false) RecurrenceUpdateScope scope,
             @RequestBody EventReqDTO.UpdateReq req
     ){
-        eventCommandService.updateEvent(req, eventId, customUserDetails.getId(), originalDate);
+        eventCommandService.updateEvent(req, eventId, customUserDetails.getId(), scope, occurrenceDate);
         return CustomResponse.onSuccess("수정 완료", null);
     }
 
