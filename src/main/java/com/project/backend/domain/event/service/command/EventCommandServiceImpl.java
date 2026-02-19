@@ -31,6 +31,9 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
+import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.vo.fingerprint.EventFingerPrint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +57,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
+    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -86,6 +90,9 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.getStartTime(),
                 ChangeType.CREATED
         );
+        byte[] hash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, hash);
+
         return EventConverter.toCreateRes(event);
     }
 
