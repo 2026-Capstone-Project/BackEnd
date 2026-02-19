@@ -12,7 +12,9 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -36,9 +38,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -98,7 +102,8 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDateTime occurrenceDate
     ) {
         // 변경 사항 전혀 없음
-        if (!hasEventChanged(req) && !hasRecurrenceGroupChanged(req.recurrenceGroup())) {
+        if (!hasAnyEventFieldProvided(req) && !hasAnyRecurrenceGroupFieldProvided(req.recurrenceGroup())) {
+            log.info("1.Event update request is not changed. eventId: {}", eventId);
             return;
         }
 
@@ -112,6 +117,13 @@ public class EventCommandServiceImpl implements EventCommandService {
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
+
+        // 입력한 값이 기존 단일 일정 or 반복 일정의 필드값과 동일한 경우
+        if (!hasEventChanged(event, req, start, end, occurrenceDate)
+                && !hasEventRecurrenceChanged(event.getRecurrenceGroup(), req.recurrenceGroup())) {
+            log.info("2.Event update request is not changed. eventId: {}", eventId);
+            return;
+        }
 
         Member member = event.getMember();
 
@@ -195,12 +207,8 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 반복 그룹을 가진 일정일 경우
         switch (scope) {
-            case THIS_EVENT -> {
-                deleteThisEventOnly(event, occurrenceDate, memberId);
-            }
-            case THIS_AND_FOLLOWING_EVENTS -> {
-                deleteThisAndFutureEvents(event, memberId, occurrenceDate);
-            }
+            case THIS_EVENT -> deleteThisEventOnly(event, occurrenceDate, memberId);
+            case THIS_AND_FOLLOWING_EVENTS -> deleteThisAndFutureEvents(event, memberId, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
     }
@@ -460,7 +468,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         return newEvent;
     }
 
-    private boolean hasEventChanged(EventReqDTO.UpdateReq req) {
+    private boolean hasAnyEventFieldProvided(EventReqDTO.UpdateReq req) {
         return req.title() != null
                 || req.content() != null
                 || req.startTime() != null
@@ -470,7 +478,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.isAllDay() != null;
     }
 
-    private boolean hasRecurrenceGroupChanged(RecurrenceGroupReqDTO.UpdateReq req) {
+    private boolean hasAnyRecurrenceGroupFieldProvided(RecurrenceGroupReqDTO.UpdateReq req) {
         if (req == null) return false;
 
         return req.frequency() != null
@@ -484,6 +492,130 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.daysOfMonth() != null
                 || req.dayOfWeekInMonth() != null
                 || req.intervalValue() != null;
+    }
+
+    private boolean hasEventChanged(
+            Event event,
+            EventReqDTO.UpdateReq req,
+            LocalDateTime start,
+            LocalDateTime end,
+            LocalDateTime occurrenceDate
+            ) {
+        boolean changed = false;
+
+        if (event.getRecurrenceGroup() != null) {
+            Optional<RecurrenceException> re =
+                    recurrenceExRepository.findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                            event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                    );
+
+            if (re.isPresent()) {
+                RecurrenceException ex = re.get();
+                if (req.title() != null) {
+                    String baseTitle = ex.getTitle() != null ? ex.getTitle() : event.getTitle();
+                    changed |= !Objects.equals(req.title(), baseTitle);
+                }
+                if (req.content() != null) {
+                    String baseContent = ex.getContent() != null ? ex.getContent() : event.getContent();
+                    changed |= !Objects.equals(req.content(), baseContent);
+                }
+                if (req.location() != null) {
+                    String baseLocation = ex.getLocation() != null ? ex.getLocation() : event.getLocation();
+                    changed |= !Objects.equals(req.location(), baseLocation);
+                }
+                if (req.color() != null) {
+                    EventColor baseColor = ex.getColor() != null ? ex.getColor() : event.getColor();
+                    changed |= req.color() != baseColor;
+                }
+                if (req.isAllDay() != null) {
+                    Boolean baseIsAllDay = ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay();
+                    changed |= !Objects.equals(req.isAllDay(), baseIsAllDay);
+                }
+                if (req.startTime() != null) {
+                    LocalDateTime baseStart = ex.getStartTime() != null ? ex.getStartTime() : occurrenceDate;
+                    changed |= !start.equals(baseStart);
+                }
+                if (req.endTime() != null) {
+                    LocalDateTime baseEnd = ex.getEndTime() != null
+                            ? ex.getEndTime() : occurrenceDate.plusMinutes(event.getDurationMinutes());
+                    changed |= !end.equals(baseEnd);
+                }
+
+                return changed;
+            }
+        }
+
+        if (req.title() != null) changed |= !Objects.equals(req.title(), event.getTitle());
+        if (req.content() != null) changed |= !Objects.equals(req.content(), event.getContent());
+        if (req.location() != null) changed |= !Objects.equals(req.location(), event.getLocation());
+        if (req.color() != null) changed |= req.color() != event.getColor();
+        if (req.isAllDay() != null) changed |= !Objects.equals(req.isAllDay(), event.getIsAllDay());
+        if (req.startTime() != null) changed |= !start.equals(occurrenceDate);
+        if (req.endTime() != null) changed |= !end.equals(occurrenceDate.plusMinutes(event.getDurationMinutes()));
+
+        return changed;
+    }
+
+    private boolean hasEventRecurrenceChanged(RecurrenceGroup rg, RecurrenceGroupReqDTO.UpdateReq req) {
+        // 단일 일정 -> 반복 일정으로 수정하는 경우
+        if (rg == null && req != null) return true;
+
+        // 단일 일정 -> 단일 일정 / 반복 일정 -> 반복 일정
+        if (rg == null || req == null) return false;
+
+        boolean changed = false;
+
+        if (req.frequency() != null) changed |= !Objects.equals(req.frequency(), rg.getFrequency());
+
+        if (req.endType() != null) changed |= !Objects.equals(req.endType(), rg.getEndType());
+
+        if (req.endDate() != null) changed |= !Objects.equals(req.endDate(), rg.getEndDate());
+
+        if (req.occurrenceCount() != null) changed |= !req.occurrenceCount().equals(rg.getOccurrenceCount());
+
+        if (req.monthlyType() != null) changed |= !Objects.equals(req.monthlyType(), rg.getMonthlyType());
+
+        if (req.weekOfMonth() != null) changed |= !req.weekOfMonth().equals(rg.getWeekOfMonth());
+
+        if (req.monthOfYear() != null) changed |= !req.monthOfYear().equals(rg.getMonthOfYear());
+
+        if (req.daysOfWeek() != null) {
+            String normalized = req.daysOfWeek().stream()
+                    .sorted()                 // DayOfWeek는 MONDAY..SUNDAY 순서로 정렬됨
+                    .map(DayOfWeek::name)     // "MONDAY"
+                    .collect(Collectors.joining(",")); // 구분자 규칙 고정 (공백 X)
+
+            changed |= !Objects.equals(normalized, rg.getDaysOfWeek());
+        }
+
+        if (req.daysOfMonth() != null) {
+            String normalized = req.daysOfMonth().stream()
+                    .sorted()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+
+            changed |= !Objects.equals(normalized, rg.getDaysOfMonth());
+        }
+
+        if (req.weekdayRule() != null) {
+            // SINGLE어도 요일이 다를 수 있으므로, SINGLE이 아닐때만 비교하기
+            if (req.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
+                changed |= req.weekdayRule() != rg.getMonthlyWeekdayRule();
+            }
+        }
+
+        if (req.dayOfWeekInMonth() != null) {
+            String normalized = req.dayOfWeekInMonth().stream()
+                    .sorted()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+
+            changed |= !Objects.equals(normalized, rg.getDayOfWeekInMonth());
+        }
+
+        if (req.intervalValue() != null) changed |= !req.intervalValue().equals(rg.getIntervalValue());
+
+        return changed;
     }
 
 
