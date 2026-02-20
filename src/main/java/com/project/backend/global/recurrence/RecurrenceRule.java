@@ -1,7 +1,6 @@
 package com.project.backend.global.recurrence;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 

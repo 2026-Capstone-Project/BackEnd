@@ -6,8 +6,6 @@ import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.*;
-import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
-import com.project.backend.domain.event.exception.RecurrenceGroupException;
 import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
