@@ -101,10 +101,21 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                                            RecurrenceUpdateScope scope, TodoReqDTO.UpdateTodo reqDTO) {
         Todo todo = getTodoWithPermissionCheck(memberId, todoId);
 
+        // 변경하기 전의 title + memo hash
+        byte[] beforeTodoHash = suggestionInvalidatePublisher.todoHash(todo.getTitle(), todo.getMemo());
+        TodoFingerPrint beforeTodoFp = TodoFingerPrint.from(todo);  // 변경하기 전의 할일 특정 정보
+
+        byte[] beforeTrgHash = null;
+        TodoRecurrenceGroupFingerPrint beforeTrgFp = null;
+        if (todo.getTodoRecurrenceGroup() != null) {   // 만약 반복 그룹이 존재한다면? 단일 할일이 아니라는 것
+            beforeTrgHash = suggestionInvalidatePublisher.trgHash(todo.getTodoRecurrenceGroup().getId());    // id 해시
+            beforeTrgFp = TodoRecurrenceGroupFingerPrint.from(todo.getTodoRecurrenceGroup());   // 할일 반복 그룹 정보
+        }
+
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
             updateSingleTodo(todo, reqDTO);
-            // 이벤트 생성에 따른 리스너 생성 로직 실행
+            // 할 일 생성에 따른 리스너 생성 로직 실행
             reminderEventBridge.handlePlanChanged(
                     todo.getId(),
                     TargetType.TODO,
@@ -114,6 +125,52 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     todo.getStartDate().atTime(todo.getDueTime()),
                     ChangeType.UPDATE_SINGLE
             );
+
+            // 단일 -> 단일 / 단일 -> 반복 변경의 경우
+            // 변경 후 할  title + memo hash
+            byte[] afterTodoHash = suggestionInvalidatePublisher.todoHash(todo.getTitle(), todo.getMemo());
+            TodoFingerPrint afterTodoFp = TodoFingerPrint.from(todo);   // 변경 후 할 일 특정 정보
+
+            byte[] afterTrgHash = null;
+            TodoRecurrenceGroupFingerPrint afterTrgFp = null;
+            if (todo.getTodoRecurrenceGroup() != null) {   // 단일 -> 반복인 경우
+                afterTrgHash = suggestionInvalidatePublisher.trgHash(todo.getTodoRecurrenceGroup().getId());
+                afterTrgFp = TodoRecurrenceGroupFingerPrint.from(todo.getTodoRecurrenceGroup());
+            }
+
+            boolean todoKeyChanged = !Arrays.equals(beforeTodoHash, afterTodoHash);  // title + memo가 변경되었는가?
+            boolean trgKeyChanged = !Arrays.equals(beforeTrgHash, afterTrgHash);   // trgId가 변경 되었는가? -> 새로운 반복 그룹이 생겼는가?
+
+            boolean todoFpChanged = !beforeTodoFp.equals(afterTodoFp);   // 할일 특정 정보가 변경 되었는가? (시간 등)
+            boolean trgFpChanged = !Objects.equals(beforeTrgFp, afterTrgFp);   // 반복 그룹 특정 정보가 변경되었는가?
+
+            boolean invalidateTodoAxis = todoKeyChanged || todoFpChanged;
+            boolean invalidateTrgAxis = trgKeyChanged || trgFpChanged;
+
+            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
+            // 만약 title + memo가 변경된 경우 이전과 이후 모두 비활성화
+            if (invalidateTodoAxis) {
+                log.info("todo updated");
+                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_UPDATED, afterTodoHash);
+                if (todoKeyChanged) {
+                    log.info("todo title memo updated");
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_UPDATED, beforeTodoHash);
+                }
+            }
+
+            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
+            // 만약 trg 자체가 변경된 경우 이전 trg 제안 비활성화
+            if (invalidateTrgAxis) {
+                if (afterTrgHash != null) {
+                    // 새 TRG 기준 만료
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED, afterTrgHash);
+                }
+                if (trgKeyChanged && beforeTrgHash != null) {
+                    // (이 브랜치에서 사실상 안 나오지만) old TRG 정리 케이스 대비
+                    log.info("trg updated");
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED, beforeTrgHash);
+                }
+            }
             return TodoConverter.toTodoInfo(todo);
         }
 
@@ -132,10 +189,82 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 
-        return switch (scope) {
-            case THIS_TODO -> updateThisTodoOnly(todo, occurrenceDate, reqDTO, memberId);
-            case THIS_AND_FOLLOWING -> updateThisAndFollowing(todo, occurrenceDate, reqDTO);
+        // TODO : 임시
+        // 모객체를 건드려서 완전 삭제되는 경우인가?
+        boolean hardDeleteGroup =
+                scope == RecurrenceUpdateScope.THIS_AND_FOLLOWING
+                        && todo.getStartDate().equals(occurrenceDate);
+
+        if (hardDeleteGroup) { // Suggestion 객체의 FK 연결해제
+            Long trgId = todo.getTodoRecurrenceGroup().getId();
+            suggestionRepository.detachPreviousTodo(memberId, todoId);
+            suggestionRepository.detachTodoRecurrenceGroup(memberId, trgId);
+        }
+
+        // THIS_AND_FOLLOWING이면 after 대상이 newTodo일 수 있음
+        Todo afterBase = todo;
+
+        // TODO : 임시
+        Todo returnTodo = null;
+
+        switch (scope) {
+            case THIS_TODO -> returnTodo = updateThisTodoOnly(todo, occurrenceDate, reqDTO, memberId);
+            case THIS_AND_FOLLOWING -> {
+                afterBase = updateThisAndFollowing(todo, occurrenceDate, reqDTO);
+                returnTodo = afterBase;
+            }
         };
+
+        // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
+        SuggestionInvalidateReason beforeTrgReason =
+                hardDeleteGroup
+                        ? SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_DELETED
+                        : SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED;
+
+        SuggestionInvalidateReason afterTrgReason = SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED;
+
+        // 반복 그룹이 잘려서 새로운 객체가 생성된 경우 -> after 해시는 새로 생성된 todo
+        byte[] afterTodoHash = suggestionInvalidatePublisher.todoHash(afterBase.getTitle(), afterBase.getMemo());
+        TodoFingerPrint afterTodoFp = TodoFingerPrint.from(afterBase); // 새로 생성된 할 일 특정 정보
+
+        byte[] afterTrgHash = null;
+        TodoRecurrenceGroupFingerPrint afterTrgFp = null;
+        if (afterBase.getTodoRecurrenceGroup() != null) {   // 새로 생성된 할 일의 새로 생성된 반복 그룹 정보
+            afterTrgHash = suggestionInvalidatePublisher.trgHash(afterBase.getTodoRecurrenceGroup().getId());
+            afterTrgFp = TodoRecurrenceGroupFingerPrint.from(afterBase.getTodoRecurrenceGroup());
+        }
+
+        boolean todoKeyChanged = !Arrays.equals(beforeTodoHash, afterTodoHash);  // title + memo 변경?
+        boolean trgKeyChanged = !Arrays.equals(beforeTrgHash, afterTrgHash);   // trgId 변경?
+
+        boolean todoFpChanged = !beforeTodoFp.equals(afterTodoFp);   // 할 일 정보 변경?
+        boolean trgFpChanged = !Objects.equals(beforeTrgFp, afterTrgFp);   // 반복 그룹 정보 변경?
+
+        boolean invalidateTodoAxis = todoKeyChanged || todoFpChanged;
+        boolean invalidateTrgAxis = trgKeyChanged || trgFpChanged;
+
+        // 반복 -> 단일 / 반복 -> 반복은 무조건 after 무효화
+        // 만약 키가 변경된 경우 before 무효화
+        if (invalidateTodoAxis) {
+            log.info("todo updated");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_UPDATED, afterTodoHash);
+            if (todoKeyChanged) {
+                log.info("todo title memo updated");
+                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_UPDATED, beforeTodoHash);
+            }
+        }
+
+        // 키가 변경되고, 이전 반복 그룹이 존재한다면 -> 이전 반복 그룹 제안 무효화
+        if (invalidateTrgAxis) {
+            if (afterTrgHash != null) {
+                suggestionInvalidatePublisher.publish(memberId, afterTrgReason, afterTrgHash);
+            }
+            if (trgKeyChanged && beforeTrgHash != null) {
+                log.info("trg deleted because new trg updated");
+                suggestionInvalidatePublisher.publish(memberId, beforeTrgReason, beforeTrgHash);
+            }
+        }
+        return TodoConverter.toTodoInfo(returnTodo);
     }
 
     @Override
@@ -265,9 +394,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     /**
      * 반복 할 일 - 이 할 일만 수정 (OVERRIDE 예외 생성/수정)
      */
-    private TodoResDTO.TodoInfo updateThisTodoOnly(Todo todo, LocalDate occurrenceDate,
+    private Todo updateThisTodoOnly(Todo todo, LocalDate occurrenceDate,
                                                     TodoReqDTO.UpdateTodo reqDTO, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
+
+        byte[] trgHash = suggestionInvalidatePublisher.trgHash(group.getId());
 
         // 기존 예외 조회
         TodoRecurrenceException existingException = todoRecurrenceExceptionRepository
@@ -332,14 +463,17 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             log.debug("반복 할 일 예외 수정 완료 (생성) - todoId: {}, date: {}", todo.getId(), occurrenceDate);
         }
 
+        log.info("exception updated");
+        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EXCEPTION_UPDATED, trgHash);
         // 수정된 예외 정보를 포함하여 반환
-        return TodoConverter.toTodoInfo(todo, occurrenceDate, exception);
+//        return TodoConverter.toTodoInfo(todo, occurrenceDate, exception);
+        return todo;
     }
 
     /**
      * 반복 할 일 - 이 할 일 및 이후 수정 (기존 종료 + 새 생성)
      */
-    private TodoResDTO.TodoInfo updateThisAndFollowing(Todo todo, LocalDate occurrenceDate,
+    private Todo updateThisAndFollowing(Todo todo, LocalDate occurrenceDate,
                                                         TodoReqDTO.UpdateTodo reqDTO) {
         TodoRecurrenceGroup oldGroup = todo.getTodoRecurrenceGroup();
         Member member = todo.getMember();
@@ -443,7 +577,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         );
 
         log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
-        return TodoConverter.toTodoInfo(newTodo);
+//        return TodoConverter.toTodoInfo(newTodo);
+        return newTodo;
     }
 
     /**
