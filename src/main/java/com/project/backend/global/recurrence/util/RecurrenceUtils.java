@@ -126,39 +126,36 @@ public class RecurrenceUtils {
      *    → Optional.empty() (5주차 자체가 없음)
      *
      * @param month       대상 연-월
-     * @param weekOfMonth 주차 (1부터 시작)
+     * @param ordinal 번째 (1부터 시작)
      * @param targetDays  허용된 요일 목록
      * @return 조건을 만족하는 날짜 (없으면 Optional.empty())
      */
-    public static Optional<LocalDate> calculateMonthlyNthWeekday(
+    public static Optional<LocalDate> calculateMonthlyNthOrdinalWeekday(
             YearMonth month,
-            int weekOfMonth,
-            List<DayOfWeek> targetDays
+            int ordinal,                 // 1~5
+            List<DayOfWeek> targetDays   // 허용 요일 집합(단일/주중/주말/전체/다중선택)
     ) {
-        // 해당 달의 1일
-        LocalDate firstDayOfMonth = month.atDay(1);
-
-        // 1주차 시작 = 그 주의 월요일 (ISO)
-        LocalDate startOfFirstWeek =
-                firstDayOfMonth.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-
-        // n주차 시작
-        LocalDate startOfTargetWeek =
-                startOfFirstWeek.plusWeeks(weekOfMonth - 1);
-
-        LocalDate endOfTargetWeek = startOfTargetWeek.plusDays(6);
-
-        // 그 주 안에서 target 요일 찾기 (단, 반드시 해당 월에 속해야 함)
-        for (LocalDate d = startOfTargetWeek;
-             !d.isAfter(endOfTargetWeek);
-             d = d.plusDays(1)) {
-
-            if (d.getMonth() == month.getMonth()
-                    && targetDays.contains(d.getDayOfWeek())) {
-                return Optional.of(d);
-            }
+        if (ordinal < 1) {
+            throw new IllegalArgumentException("ordinal must be >= 1");
+        }
+        if (targetDays == null || targetDays.isEmpty()) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        int count = 0;
+        LocalDate d = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+
+        while (!d.isAfter(end)) {
+            if (targetDays.contains(d.getDayOfWeek())) {
+                count++;
+                if (count == ordinal) {
+                    return Optional.of(d);
+                }
+            }
+            d = d.plusDays(1);
+        }
+
+        return Optional.empty(); // 그 달에는 ordinal번째가 없음
     }
 }

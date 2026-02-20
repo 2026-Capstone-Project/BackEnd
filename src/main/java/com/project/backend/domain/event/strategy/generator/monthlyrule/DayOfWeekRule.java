@@ -37,7 +37,7 @@ public class DayOfWeekRule implements MonthlyRule {
             YearMonth targetMonth = baseMonth.plusMonths((long) interval * step);
 
             Optional<LocalDate> date =
-                    RecurrenceUtils.calculateMonthlyNthWeekday(targetMonth, weekOfMonth, targetDays);
+                    RecurrenceUtils.calculateMonthlyNthOrdinalWeekday(targetMonth, weekOfMonth, targetDays);
 
             if (date.isPresent()) {
                 return LocalDateTime.of(date.get(), current.toLocalTime());

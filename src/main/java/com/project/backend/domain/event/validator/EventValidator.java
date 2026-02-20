@@ -80,7 +80,7 @@ public class EventValidator {
     ) {
         boolean isRecurring = event.getRecurrenceGroup() != null;
         // 단일 일정의 원본 삭제인 경우
-        if (!isRecurring && scope != null) {
+        if (!isRecurring && req == null && scope != null) {
             throw new EventException(EventErrorCode.UPDATE_SCOPE_NOT_REQUIRED);
         }
 

@@ -67,13 +67,13 @@ public interface EventDocs {
                 ## 📌 recurrenceGroup 필드 (CreateReq 기준)
                 
                 ### 공통 필드
-                - frequency (RecurrenceFrequency) ✅
+                - frequency (RecurrenceFrequency) 
                   - DAILY / WEEKLY / MONTHLY / YEARLY
                 
-                - intervalValue (Integer) ❌
+                - intervalValue (Integer) 
                   - 기본값 1 (생략 가능)
                 
-                - endType (RecurrenceEndType) ❌
+                - endType (RecurrenceEndType) 
                   - NEVER / END_BY_DATE / END_BY_COUNT
                   - null로 보내면 NEVER로 저장됩니다.
                   - endType이 null인 경우 endDate, occurrenceCount도 반드시 null이어야 합니다.
@@ -90,33 +90,33 @@ public interface EventDocs {
                 
                 ---
                 ### WEEKLY (매주 반복)
-                - daysOfWeek (List<DayOfWeek>) ❌
+                - daysOfWeek (List<DayOfWeek>) 
                   - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
                   - null로 보내면 일정의 startTime 기준 요일로 자동 설정됩니다.
                 
                 ---
                 ### MONTHLY (매월 반복)
-                - monthlyType (MonthlyType) ❌
+                - monthlyType (MonthlyType)
                   - DAY_OF_MONTH : 매월 N일
                   - DAY_OF_WEEK  : 매월 N번째 X요일
                   - null로 보내면 DAY_OF_MONTH로 저장됩니다.
                 
-                - weekdayRule (MonthlyWeekdayRule) ❌
-                  - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
-                  - null로 보내면 SINGLE로 저장됩니다.
-                
                 #### monthlyType = DAY_OF_MONTH (매월 N일)
-                - daysOfMonth (List<Integer>) ❌
+                - daysOfMonth (List<Integer>) 
                   - 1~31
                   - null이면 startTime 기준 '일'로 자동 설정됩니다.
                   - 예: [15], [15, 30]
                 
                 #### monthlyType = DAY_OF_WEEK (매월 N번째 X요일)
-                - weekOfMonth (Integer) ✅
+                - weekOfMonth (Integer) 
                   - 1~5
                   - null이면 startTime 기준 주차로 자동 설정됩니다.
                 
-                - dayOfWeekInMonth (List<DayOfWeek>) ✅
+                - weekdayRule (MonthlyWeekdayRule) 
+                  - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
+                  - null로 보내면 SINGLE로 저장됩니다.
+                  
+                - dayOfWeekInMonth (List<DayOfWeek>) 
                   - 예: ["TUESDAY"]
                   - **요일은 하나만 입력 가능합니다.** (리스트 길이 1만 허용)
                   - null이면 startTime 기준 요일로 자동 설정됩니다.
@@ -127,7 +127,7 @@ public interface EventDocs {
                 
                 ---
                 ### YEARLY (매년 반복)
-                - monthOfYear (Integer) ❌
+                - monthOfYear (Integer) 
                   - 1~12
                   - null이면 startTime 기준 월로 자동 설정됩니다.
                 

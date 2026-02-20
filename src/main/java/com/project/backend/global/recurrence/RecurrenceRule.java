@@ -43,6 +43,11 @@ public interface RecurrenceRule {
      */
     Integer getWeekOfMonth();
 
+//    /**
+//     * 매달 n번째 주, n요일 반복 기준 - SINGLE, WEEKDAY, WEEKEND, ALL_DAYS
+//     */
+//    MonthlyWeekdayRule getWeekdayRule();
+
     /**
      * MONTHLY 반복 (DAY_OF_WEEK): 반복 요일 (예: "MONDAY")
      */

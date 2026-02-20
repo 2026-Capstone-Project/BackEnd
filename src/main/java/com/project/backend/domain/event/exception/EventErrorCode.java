@@ -21,7 +21,9 @@ public enum EventErrorCode implements BaseErrorCode {
     OCCURRENCE_DATE_REQUIRED(HttpStatus.BAD_REQUEST, "EVENT400_5", "OCCURRENCE_DATE가 없습니다."),
     UPDATE_SCOPE_REQUIRED(HttpStatus.BAD_REQUEST, "EVENT400_7", "UPDATE_SCOPE가 없습니다."),
     INVALID_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "EVENT400_8", "존재하지 않는UPDATE_SCOPE 값입니다."),
-    NOT_RECURRING_EVENT(HttpStatus.BAD_REQUEST, "EVENT400_9", "단일 일정입니다.")
+    NOT_RECURRING_EVENT(HttpStatus.BAD_REQUEST, "EVENT400_9", "단일 일정입니다."),
+    THIS_AND_FOLLOWING_EVENTS_ONLY
+            (HttpStatus.BAD_REQUEST, "EVENT400_10", "반복 필드 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다.")
     ;
 
 
