@@ -271,8 +271,15 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     public void deleteTodo(Long memberId, Long todoId, LocalDate occurrenceDate, RecurrenceUpdateScope scope) {
         Todo todo = getTodoWithPermissionCheck(memberId, todoId);
 
+        byte[] beforeTodoHash = suggestionInvalidatePublisher.todoHash(todo.getTitle(), todo.getMemo());
+        byte[] beforeTrgHash = null;
+        if (todo.getTodoRecurrenceGroup() != null) {
+            beforeTrgHash = suggestionInvalidatePublisher.trgHash(todo.getTodoRecurrenceGroup().getId());
+        }
+
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
+            suggestionRepository.detachPreviousTodo(memberId, todoId);
             todoRepository.delete(todo);
             log.debug("단일 할 일 삭제 완료 - todoId: {}", todoId);
             reminderEventBridge.handleReminderDeleted(
@@ -282,6 +289,9 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     todoId,
                     TargetType.TODO,
                     DeletedType.DELETED_SINGLE);
+            // 단일은 그냥 해시 겹치면 바로 만료
+            log.info("todo deleted");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_DELETED, beforeTodoHash);
             return;
         }
 
@@ -300,9 +310,45 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 
+        // 객체를 지워야 할 상황인지
+        boolean hardDeleteGroup =
+                scope == RecurrenceUpdateScope.THIS_AND_FOLLOWING
+                        && todo.getStartDate().equals(occurrenceDate);
+
+        // hard delete면 todo + trg 둘 다 FK 걸릴 수 있으니 둘 다 detach
+        if (hardDeleteGroup) {
+            Long trgId = todo.getTodoRecurrenceGroup().getId();
+            suggestionRepository.detachPreviousTodo(memberId, todoId);
+            suggestionRepository.detachTodoRecurrenceGroup(memberId, trgId);
+        }
+
         switch (scope) {
             case THIS_TODO -> deleteThisTodoOnly(todo, occurrenceDate, memberId);
             case THIS_AND_FOLLOWING -> deleteThisAndFollowing(todo, occurrenceDate, memberId);
+        }
+
+        // reason 결정
+        SuggestionInvalidateReason reason;
+        if (scope == RecurrenceUpdateScope.THIS_TODO) {
+            // 그 날만 skip/override -> 그룹 삭제가 아니라 변경임
+            reason = SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED;
+        } else {
+            // THIS_AND_FOLLOWING
+            reason = hardDeleteGroup
+                    ? SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_DELETED
+                    : SuggestionInvalidateReason.TODO_RECURRENCE_GROUP_UPDATED;
+        }
+
+        // 반복은 TrgH 축 무조건 정리
+        if (beforeTrgHash != null) {
+            log.info("before trg deleted");
+            suggestionInvalidatePublisher.publish(memberId, reason, beforeTrgHash);
+        }
+
+        // (선택) 그룹 통째 삭제면 TodoH 축도 같이 정리하고 싶으면 켜
+        if (hardDeleteGroup) {
+            log.info("todo deleted");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_DELETED, beforeTodoHash);
         }
     }
 
