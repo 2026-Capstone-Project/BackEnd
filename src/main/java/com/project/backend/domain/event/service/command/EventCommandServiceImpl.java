@@ -312,8 +312,15 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);
 
+        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        byte[] beforeRgHash = null;
+        if (event.getRecurrenceGroup() != null) {
+            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
+        }
+
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
+            suggestionRepository.detachPreviousEvent(memberId, eventId);
             eventRepository.delete(event);
             reminderEventBridge.handleReminderDeleted(
                     null,
@@ -322,11 +329,26 @@ public class EventCommandServiceImpl implements EventCommandService {
                     eventId,
                     TargetType.EVENT,
                     DeletedType.DELETED_SINGLE);
+            // 단일은 그냥 해시 겹치면 바로 만료
+            log.info("event deleted");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
             return;
         }
 
         // occurrenceDate가 존재하는 일정의 계산된 날짜인지
         eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
+
+        // 객체를 지워야 할 상황인지
+        boolean hardDeleteGroup =
+                scope == RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS
+                        && event.getStartTime().equals(occurrenceDate);
+
+        // hard delete면 event + rg 둘 다 FK 걸릴 수 있으니 둘 다 detach
+        if (hardDeleteGroup) {
+            Long rgId = event.getRecurrenceGroup().getId();
+            suggestionRepository.detachPreviousEvent(memberId, eventId);
+            suggestionRepository.detachRecurrenceGroup(memberId, rgId);
+        }
 
         // 반복 그룹을 가진 일정일 경우
         switch (scope) {
@@ -338,6 +360,30 @@ public class EventCommandServiceImpl implements EventCommandService {
             }
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
+
+        // reason 결정
+        SuggestionInvalidateReason reason;
+        if (scope == RecurrenceUpdateScope.THIS_EVENT) {
+            // 그 날만 skip/override -> 그룹 삭제가 아니라 변경임
+            reason = SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+        } else {
+            // THIS_AND_FOLLOWING_EVENT
+            reason = hardDeleteGroup
+                    ? SuggestionInvalidateReason.RECURRENCE_GROUP_DELETED
+                    : SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+        }
+
+        // 반복은 RGH 축 무조건 정리
+        if (beforeRgHash != null) {
+            log.info("before rg deleted");
+            suggestionInvalidatePublisher.publish(memberId, reason, beforeRgHash);
+        }
+
+        // (선택) 그룹 통째 삭제면 EH 축도 같이 정리하고 싶으면 켜
+         if (hardDeleteGroup) {
+             log.info("event deleted");
+             suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
+         }
     }
 
     // 반복그룹이 없는 일정을 수정할 경우
