@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.validator;
 
 import com.project.backend.domain.event.dto.request.EventReqDTO;
+import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
@@ -21,9 +22,14 @@ public class EventValidator {
         validateMother(event, time);
     }
 
-    public void validateUpdate(Event event, LocalDateTime occurrenceDate, RecurrenceUpdateScope scope) {
+    public void validateUpdate(
+            Event event,
+            RecurrenceGroupReqDTO.UpdateReq req,
+            LocalDateTime occurrenceDate,
+            RecurrenceUpdateScope scope
+    ) {
         validateOccurrenceDate(event, occurrenceDate);
-        validateScope(event, occurrenceDate, scope);
+        validateScope(event, req, occurrenceDate, scope);
     }
 
     public void validateDelete(
@@ -32,7 +38,7 @@ public class EventValidator {
             RecurrenceUpdateScope scope
     ) {
         validateOccurrenceDate(event, occurrenceDate);
-        validateScope(event, occurrenceDate, scope);
+        validateScope(event, null, occurrenceDate, scope);
     }
 
     public void validateTime(LocalDateTime start, LocalDateTime end) {
@@ -68,6 +74,7 @@ public class EventValidator {
 
     private void validateScope(
             Event event,
+            RecurrenceGroupReqDTO.UpdateReq req,
             LocalDateTime occurrenceDate,
             RecurrenceUpdateScope scope
     ) {
@@ -80,6 +87,11 @@ public class EventValidator {
         // 반복 일정에 대한 삭제인데 범위 지정 안한 경우
         if (isRecurring && occurrenceDate != null && scope == null) {
             throw new EventException(EventErrorCode.UPDATE_SCOPE_REQUIRED);
+        }
+
+        // 반복 일정에 특정 날짜를 기준으로 반복 필드를 수정할 때, THIS_AND_FOLLOWING_EVENTS가 아닌경우
+        if (req != null && scope != RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS) {
+            throw new EventException(EventErrorCode.THIS_AND_FOLLOWING_EVENTS_ONLY);
         }
     }
 
