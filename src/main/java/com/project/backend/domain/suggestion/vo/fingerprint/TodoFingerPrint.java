@@ -9,13 +9,15 @@ import java.time.LocalTime;
 public record TodoFingerPrint (
     LocalDate startDate,
     LocalTime dueTime,
-    TodoRecurrenceGroup todoRecurrenceGroup
+    Boolean isAllDay,
+    Long todoRecurrenceGroupId
 ) {
     public static TodoFingerPrint from(Todo todo) {
         return new TodoFingerPrint(
                 todo.getStartDate(),
                 todo.getDueTime(),
-                todo.getTodoRecurrenceGroup()
+                todo.getIsAllDay(),
+                todo.getTodoRecurrenceGroup() != null ? todo.getTodoRecurrenceGroup().getId() : null
         );
     }
 }

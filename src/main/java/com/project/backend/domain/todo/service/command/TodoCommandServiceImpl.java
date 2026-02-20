@@ -10,6 +10,11 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
+import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.suggestion.vo.fingerprint.TodoFingerPrint;
+import com.project.backend.domain.suggestion.vo.fingerprint.TodoRecurrenceGroupFingerPrint;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
@@ -30,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -44,6 +51,8 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
     private final TodoQueryService todoQueryService;
     private final ReminderEventBridge reminderEventBridge;
+    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
+    private final SuggestionRepository suggestionRepository;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -79,6 +88,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 todo.getStartDate().atTime(todo.getDueTime()),
                 ChangeType.CREATED
         );
+        // 반복의 유무와 상관없이 동일한 이름 + 메모로 생성된 할 일이 있으면 비활성화
+        byte[] createdHash = suggestionInvalidatePublisher.todoHash(todo.getTitle(), todo.getMemo());
+        log.info("todo created");
+        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_CREATED, createdHash);
+
         return TodoConverter.toTodoInfo(todo);
     }
 
