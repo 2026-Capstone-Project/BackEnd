@@ -18,6 +18,6 @@ public class SuggestionInvalidateEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(SuggestionInvalidateEvent event) {
-        suggestionRepository.bulkInvalidateOne(event.memberId(), event.targetKeyHash());
+        suggestionRepository.bulkInvalidateOne(event.memberId(), event.targetKeyHash(), event.reason());
     }
 }

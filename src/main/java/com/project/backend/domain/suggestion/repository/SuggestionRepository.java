@@ -1,7 +1,9 @@
 package com.project.backend.domain.suggestion.repository;
 
+import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Status;
+import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -96,13 +98,68 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         update Suggestion s
-           set s.active = null
+           set s.active = null, s.invalidateReason = :reason
          where s.member.id = :memberId
            and s.active = true
            and s.targetKeyHash = :hash
     """)
     int bulkInvalidateOne(
             @Param("memberId") Long memberId,
-            @Param("hash") byte[] hash
+            @Param("hash") byte[] hash,
+            @Param("reason") SuggestionInvalidateReason reason
     );
+
+    // suggestion.previous_event -> null
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Suggestion s
+           set s.previousEvent = null
+         where s.member.id = :memberId
+           and s.previousEvent.id = :eventId
+    """)
+    int detachPreviousEvent(
+            @Param("memberId") Long memberId,
+            @Param("eventId") Long eventId
+    );
+
+    // suggestion.previous_todo -> null
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Suggestion s
+           set s.previousTodo = null
+         where s.member.id = :memberId
+           and s.previousTodo.id = :todoId
+    """)
+    int detachPreviousTodo(
+            @Param("memberId") Long memberId,
+            @Param("todoId") Long todoId
+    );
+
+    // suggestion.recurrence_group -> null (이벤트 반복 그룹)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Suggestion s
+           set s.recurrenceGroup = null
+         where s.member.id = :memberId
+           and s.recurrenceGroup.id = :rgId
+    """)
+    int detachRecurrenceGroup(
+            @Param("memberId") Long memberId,
+            @Param("rgId") Long rgId
+    );
+
+    // suggestion.todo_recurrence_group -> null (투두 반복 그룹)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Suggestion s
+           set s.todoRecurrenceGroup = null
+         where s.member.id = :memberId
+           and s.todoRecurrenceGroup.id = :trgId
+    """)
+    int detachTodoRecurrenceGroup(
+            @Param("memberId") Long memberId,
+            @Param("trgId") Long trgId
+    );
+
+    Long member(Member member);
 }

@@ -1,16 +1,11 @@
 package com.project.backend.domain.suggestion.vo.fingerprint;
 
-import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.event.enums.*;
 
 import java.time.LocalDate;
-import java.util.Set;
 
-public record RecurrenceGroupFingerPrint (
+public record RecurrenceGroupFingerPrint(
         RecurrenceFrequency frequency,
         Integer intervalValue,
         String daysOfWeek,
@@ -22,8 +17,7 @@ public record RecurrenceGroupFingerPrint (
         Integer monthOfYear,
         RecurrenceEndType endType,
         LocalDate endDate,
-        Integer occurrenceCount,
-        Set<RecurrenceException> exceptionsDate
+        Integer occurrenceCount
 ) {
     public static RecurrenceGroupFingerPrint from(RecurrenceGroup rg) {
         return new RecurrenceGroupFingerPrint(
@@ -38,8 +32,7 @@ public record RecurrenceGroupFingerPrint (
                 rg.getMonthOfYear(),
                 rg.getEndType(),
                 rg.getEndDate(),
-                rg.getOccurrenceCount(),
-                rg.getExceptionDates()
+                rg.getOccurrenceCount()
         );
     }
 }

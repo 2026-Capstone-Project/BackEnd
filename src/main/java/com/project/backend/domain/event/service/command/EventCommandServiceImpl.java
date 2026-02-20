@@ -33,13 +33,16 @@ import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.vo.fingerprint.EventFingerPrint;
+import com.project.backend.domain.suggestion.vo.fingerprint.RecurrenceGroupFingerPrint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -58,6 +61,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
     private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
+    private final SuggestionRepository suggestionRepository;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -90,8 +94,10 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.getStartTime(),
                 ChangeType.CREATED
         );
-        byte[] hash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, hash);
+        // 반복의 유무와 상관없이 동일한 이름 + 장소로 생성된 이벤트가 있으면 비활성화
+        byte[] createdHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        log.info("event created");
+        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, createdHash);
 
         return EventConverter.toCreateRes(event);
     }

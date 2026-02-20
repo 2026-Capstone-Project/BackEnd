@@ -39,10 +39,4 @@ public class SuggestionInvalidatePublisher {
         if (hash == null || hash.length == 0) return;
         publisher.publishEvent(new SuggestionInvalidateEvent(memberId, hash, reason));
     }
-
-    // convenience
-    public boolean isHashChanged(byte[] beforeHash, byte[] afterHash) {
-        if (beforeHash == null || afterHash == null) return false;
-        return !Arrays.equals(beforeHash, afterHash);
-    }
 }
