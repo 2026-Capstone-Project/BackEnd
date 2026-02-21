@@ -238,8 +238,8 @@ public class TodoConverter {
                 : null;
 
         // "MONDAY" → DayOfWeek
-        DayOfWeek dayOfWeekInMonth = group.getDayOfWeekInMonth() != null
-                ? DayOfWeek.valueOf(group.getDayOfWeekInMonth())
+        List<DayOfWeek> dayOfWeekInMonth = group.getDayOfWeekInMonth() != null
+                ? RecurrenceUtils.parseDaysOfWeek(group.getDayOfWeekInMonth())
                 : null;
 
         return TodoResDTO.RecurrenceGroupRes.builder()

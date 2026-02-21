@@ -90,6 +90,7 @@ public class TodoResDTO {
             List<Integer> daysOfMonth,
             Integer weekOfMonth,
             DayOfWeek dayOfWeekInMonth,
+            List<DayOfWeek> dayOfWeekInMonth,
             RecurrenceEndType endType,
             LocalDate endDate,
             Integer occurrenceCount
