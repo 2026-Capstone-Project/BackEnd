@@ -2,7 +2,7 @@ package com.project.backend.domain.event.service;
 
 import com.project.backend.domain.event.converter.RecurrenceGroupSpec;
 import com.project.backend.domain.event.dto.AdjustedTime;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
 import com.project.backend.domain.event.exception.RecurrenceGroupException;

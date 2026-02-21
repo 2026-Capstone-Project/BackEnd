@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.converter;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;

@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.dto.request;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import jakarta.validation.constraints.Max;
