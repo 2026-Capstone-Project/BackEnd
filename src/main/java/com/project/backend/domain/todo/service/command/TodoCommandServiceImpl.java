@@ -76,7 +76,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 memberId,
                 todo.getTitle(),
                 recurrenceGroup != null,
-                todo.getStartDate().atTime(todo.getDueTime()),
+                todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
                 ChangeType.CREATED
         );
         return TodoConverter.toTodoInfo(todo);
@@ -97,7 +97,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     memberId,
                     todo.getTitle(),
                     false,
-                    todo.getStartDate().atTime(todo.getDueTime()),
+                    todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
                     ChangeType.UPDATE_SINGLE
             );
             return TodoConverter.toTodoInfo(todo);
