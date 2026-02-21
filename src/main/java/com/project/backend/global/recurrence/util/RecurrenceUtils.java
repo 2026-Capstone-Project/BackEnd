@@ -84,6 +84,76 @@ public class RecurrenceUtils {
     }
 
     /**
+     * 월 반복(DAY_OF_WEEK)에서 저장된 요일 집합을 기반으로
+     * 해당 집합이 어떤 MonthlyWeekdayRule에 해당하는지 역추론한다.
+     *
+     * 동작 방식:
+     *  1. 전달된 요일 리스트에서 null 및 중복을 제거한다.
+     *  2. 요일 개수 및 구성(Set)을 기준으로 rule을 판별한다.
+     *
+     * 판별 규칙:
+     *  - 1개          → SINGLE
+     *  - [SATURDAY, SUNDAY] → WEEKEND
+     *  - [MONDAY ~ FRIDAY]  → WEEKDAY
+     *  - [MONDAY ~ SUNDAY]  → ALL_DAYS
+     *
+     * 예외 처리:
+     *  - null 또는 빈 리스트 → IllegalArgumentException
+     *  - 위 규칙에 해당하지 않는 임의 조합 → IllegalArgumentException
+     *
+     * @param dayOfWeekInMonth 월 반복에서 사용된 요일 목록
+     * @return 추론된 MonthlyWeekdayRule
+     */
+    public static MonthlyWeekdayRule inferWeekdayRule(List<DayOfWeek> dayOfWeekInMonth) {
+        if (dayOfWeekInMonth == null || dayOfWeekInMonth.isEmpty()) {
+            throw new IllegalArgumentException("dayOfWeekInMonth is empty");
+        }
+
+        // 중복 제거 + null 방지
+        EnumSet<DayOfWeek> set = EnumSet.noneOf(DayOfWeek.class);
+        for (DayOfWeek d : dayOfWeekInMonth) {
+            if (d == null) throw new IllegalArgumentException("dayOfWeekInMonth contains null");
+            set.add(d);
+        }
+
+        if (set.size() == 1) return MonthlyWeekdayRule.SINGLE;
+        if (set.equals(WEEKEND_SET)) return MonthlyWeekdayRule.WEEKEND;
+        if (set.equals(WEEKDAY_SET)) return MonthlyWeekdayRule.WEEKDAY;
+        if (set.equals(ALL_DAYS_SET)) return MonthlyWeekdayRule.ALL_DAYS;
+
+        throw new IllegalArgumentException("Unsupported dayOfWeekInMonth set: " + set);
+    }
+
+    /**
+     * MonthlyWeekdayRule과 단일 요일 정보를 기반으로
+     * DB에 저장할 dayOfWeekInMonth 문자열을 생성한다.
+     *
+     * 동작 방식:
+     *  - SINGLE  → singleDay 1개를 문자열로 반환 ("MONDAY")
+     *  - WEEKDAY → "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY"
+     *  - WEEKEND → "SATURDAY,SUNDAY"
+     *  - ALL_DAYS → "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY"
+     *
+     * 정책:
+     *  - rule이 null이고 singleDay가 존재하면 하위 호환으로 단일 요일로 처리한다.
+     *  - SINGLE인데 singleDay가 null이면 IllegalArgumentException 발생
+     *
+     * 사용 목적:
+     *  - DTO → Entity 변환 시 weekdayRule을 실제 저장 문자열로 정규화하기 위함
+     *
+     * @param rule        적용할 MonthlyWeekdayRule
+     * @return 콤마로 구분된 요일 문자열 (DB 저장용)
+     */
+    public static String normalizeDayOfWeekInMonth(MonthlyWeekdayRule rule) {
+        return switch (rule) {
+            case SINGLE -> throw new IllegalArgumentException("SINGLE requires dayOfWeekInMonth");
+            case WEEKDAY -> "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY";
+            case WEEKEND -> "SATURDAY,SUNDAY";
+            case ALL_DAYS -> "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY";
+        };
+    }
+
+    /**
      * 콤마로 구분된 월 문자열을 Integer 리스트로 변환한다.
      * 예: "1,6,12" → [1, 6, 12]
      *
@@ -101,33 +171,31 @@ public class RecurrenceUtils {
     }
 
     /**
-     * MONTHLY - DAY_OF_WEEK 규칙에 따라
-     * 특정 월에서 "n번째 주차"에 해당하는 요일을 계산한다.
-
-     * 주차 정의:
-     *  - 해당 달의 "1일이 속한 주"를 1주차로 간주한다.
-     *  - 주의 시작 요일은 ISO 기준(MONDAY)이다.
-
+     * MONTHLY - DAY_OF_WEEK (ORDINAL 기반) 규칙에 따라
+     * 특정 월에서 "n번째(ordinal)" 요일을 계산한다.
+     * 정의:
+     *  - weekOfMonth 값은 "n번째 주차"가 아니라,
+     *    해당 월 안에서 조건을 만족하는 날짜의 "n번째 등장 순서"를 의미한다.
      * 동작 방식:
-     *  1. 해당 달의 1일을 기준으로,
-     *     그 날짜가 속한 주의 월요일을 1주차 시작일로 계산한다.
-     *  2. weekOfMonth 값만큼 주차를 이동하여 대상 주의 시작일을 구한다.
-     *  3. 해당 주(월~일) 범위 안에서,
-     *     targetDays에 포함된 요일 중 "해당 월에 속한 날짜"만 선택한다.
-
-     * 반환 규칙 (SKIP 정책):
-     *  - 해당 주차에 targetDays가 존재하면 → 해당 날짜 반환
-     *  - 존재하지 않으면 → Optional.empty()
-
+     *  1. 해당 월의 1일부터 말일까지 날짜를 순차적으로 탐색한다.
+     *  2. 각 날짜의 요일이 targetDays에 포함되는 경우만 카운트한다.
+     *  3. 조건을 만족하는 날짜가 ordinal번째에 도달하면 해당 날짜를 반환한다.
      * 예시:
-     *  - 2026년 4월, weekOfMonth=1, targetDays=[FRIDAY]
-     *    → 2026-04-03 반환
-     *  - 2026년 2월, weekOfMonth=5, targetDays=[FRIDAY]
-     *    → Optional.empty() (5주차 자체가 없음)
+     *  - 2026년 4월, ordinal=1, targetDays=[FRIDAY]
+     *    → 2026-04-03 반환 (해당 월의 첫 번째 금요일)
+     *  - 2026년 2월, ordinal=5, targetDays=[MONDAY]
+     *    → Optional.empty()
+     *      (2026년 2월에는 월요일이 4번만 존재)
+     *  - 2026년 2월, ordinal=5, targetDays=[MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY]
+     *    → 2026-02-06 반환 (해당 월의 5번째 평일)
+     * 반환 정책 (SKIP):
+     *  - 해당 월에 ordinal번째 조건 만족 날짜가 존재하면 → 해당 날짜 반환
+     *  - 존재하지 않으면 → Optional.empty() 반환
+     *    (다음 달 계산은 상위 로직에서 처리)
      *
      * @param month       대상 연-월
-     * @param ordinal 번째 (1부터 시작)
-     * @param targetDays  허용된 요일 목록
+     * @param ordinal     n번째 (1부터 시작)
+     * @param targetDays  허용된 요일 목록 (단일/주중/주말/전체/다중 선택 가능)
      * @return 조건을 만족하는 날짜 (없으면 Optional.empty())
      */
     public static Optional<LocalDate> calculateMonthlyNthOrdinalWeekday(
@@ -158,4 +226,15 @@ public class RecurrenceUtils {
 
         return Optional.empty(); // 그 달에는 ordinal번째가 없음
     }
+
+    // =============== private ===================
+
+    private static final Set<DayOfWeek> WEEKDAY_SET = EnumSet.of(
+            DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
+    );
+    private static final Set<DayOfWeek> WEEKEND_SET = EnumSet.of(
+            DayOfWeek.SATURDAY, DayOfWeek.SUNDAY
+    );
+    private static final Set<DayOfWeek> ALL_DAYS_SET = EnumSet.allOf(DayOfWeek.class);
 }

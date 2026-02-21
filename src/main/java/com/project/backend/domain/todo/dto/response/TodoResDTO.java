@@ -1,5 +1,6 @@
 package com.project.backend.domain.todo.dto.response;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
@@ -89,7 +90,7 @@ public class TodoResDTO {
             MonthlyType monthlyType,
             List<Integer> daysOfMonth,
             Integer weekOfMonth,
-            DayOfWeek dayOfWeekInMonth,
+            MonthlyWeekdayRule weekdayRule,
             List<DayOfWeek> dayOfWeekInMonth,
             RecurrenceEndType endType,
             LocalDate endDate,

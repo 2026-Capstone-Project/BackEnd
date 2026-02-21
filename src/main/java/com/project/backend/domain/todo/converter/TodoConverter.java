@@ -62,10 +62,15 @@ public class TodoConverter {
                         .collect(Collectors.joining(","))
                 : null;
 
+        // SINGLE이 아닌데, dayOfWeekInMonth 입력 시 예외처리
+        if (reqDTO.dayOfWeekInMonth() == null && reqDTO.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
+            throw new IllegalArgumentException("dayOfWeekInMonth must be null when weekdayRule is not SINGLE.");
+        }
+
         // DayOfWeek → "MONDAY" 형태로 변환
         String dayOfWeekInMonth = reqDTO.dayOfWeekInMonth() != null
                 ? reqDTO.dayOfWeekInMonth().name()
-                : null;
+                : RecurrenceUtils.normalizeDayOfWeekInMonth(reqDTO.weekdayRule());
 
         return TodoRecurrenceGroup.create(
                 member,
@@ -242,6 +247,9 @@ public class TodoConverter {
                 ? RecurrenceUtils.parseDaysOfWeek(group.getDayOfWeekInMonth())
                 : null;
 
+        // "MONDAY,WEDNESDAY" → List<DayOfWeek>
+        MonthlyWeekdayRule weekdayRule = RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth);
+
         return TodoResDTO.RecurrenceGroupRes.builder()
                 .frequency(group.getFrequency())
                 .intervalValue(group.getIntervalValue())
@@ -249,6 +257,7 @@ public class TodoConverter {
                 .monthlyType(group.getMonthlyType())
                 .daysOfMonth(daysOfMonth)
                 .weekOfMonth(group.getWeekOfMonth())
+                .weekdayRule(weekdayRule)
                 .dayOfWeekInMonth(dayOfWeekInMonth)
                 .endType(group.getEndType())
                 .endDate(group.getEndDate())
