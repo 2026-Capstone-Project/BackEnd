@@ -115,7 +115,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
+        LocalDateTime start = calStartTime(req, event, occurrenceDate);
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
@@ -627,12 +627,14 @@ public class EventCommandServiceImpl implements EventCommandService {
             return req.startTime();
         }
 
-        Optional<RecurrenceException> re = recurrenceExRepository.
-                findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-                event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
-        );
-        if (re.isPresent() && re.get().getStartTime() != null) {
-            return re.get().getStartTime();
+        if (event.isRecurring()) {
+            Optional<RecurrenceException> re = recurrenceExRepository.
+                    findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                            event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                    );
+            if (re.isPresent() && re.get().getStartTime() != null) {
+                return re.get().getStartTime();
+            }
         }
 
         return occurrenceDate;
