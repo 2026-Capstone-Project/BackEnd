@@ -251,7 +251,7 @@ public interface EventDocs {
                                                 "frequency": "MONTHLY",
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
-                                                "dayOfWeekInMonth": ["TUESDAY"]
+                                                "dayOfWeekInMonth": "TUESDAY"
                                               }
                                             }
                                             """
