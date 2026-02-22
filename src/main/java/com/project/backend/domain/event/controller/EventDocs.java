@@ -633,6 +633,7 @@ public interface EventDocs {
                 - 선택한 occurrenceDate(태생) 회차와 그 이후를 수정합니다.
                 - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
                 - occurrenceDate는 새 반복의 기준점(base)이 됩니다.
+                - 반복 일정을 대상으로 반복 관련 필드를 수정하는 경우 THIS_AND_FOLLOWING_EVENTS를 통해서만 수정가능합니다.
                 ---
                 ## ⏱️ 시간(startTime / endTime) 처리 규칙 (업데이트)
                 
