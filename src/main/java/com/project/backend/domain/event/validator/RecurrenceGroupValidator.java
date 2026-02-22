@@ -8,6 +8,7 @@ import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
 import com.project.backend.domain.event.exception.RecurrenceGroupException;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -143,21 +144,23 @@ public class RecurrenceGroupValidator {
                 if ( req.daysOfWeek() != null || req.monthOfYear() != null) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
+
                 if (req.intervalValue() !=null && (req.intervalValue() <= 0 || req.intervalValue() >= 12)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_MONTHLY_INTERVAL_VALUE);
                 }
+
                 if (req.monthlyType() == MonthlyType.DAY_OF_MONTH
                         && (req.weekOfMonth() != null || req.dayOfWeekInMonth() != null || req.weekdayRule() != null)) {
                     throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                 }
-                if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE) {
-                    if (req.dayOfWeekInMonth() != null && req.dayOfWeekInMonth().size() != 1) {
-                        throw new RecurrenceGroupException(
-                                RecurrenceGroupErrorCode.INVALID_SIZE_OF_DAY_OF_WEEK_IN_MONTH
-                        );
+
+                if (req.monthlyType() == MonthlyType.DAY_OF_WEEK) {
+                    if (req.daysOfMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                     }
-                } else {
-                    if (req.weekdayRule() != null && req.dayOfWeekInMonth() != null) {
+
+                    if (req.weekdayRule() != null && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
+                            && req.dayOfWeekInMonth() != null) {
                         throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
                     }
                 }
@@ -180,7 +183,8 @@ public class RecurrenceGroupValidator {
 
         List<DayOfWeek> daysOfWeek =
                 req.daysOfWeek() != null ? req.daysOfWeek()
-                        : (frequency == RecurrenceFrequency.WEEKLY ? toDayOfWeekList(baseRg.getDaysOfWeek()) : null);
+                        : (frequency == RecurrenceFrequency.WEEKLY
+                        ? RecurrenceUtils.parseDaysOfWeek(baseRg.getDaysOfWeek()) : null);
 
         MonthlyType monthlyType =
                 req.monthlyType() != null ? req.monthlyType()
@@ -192,10 +196,10 @@ public class RecurrenceGroupValidator {
                         ? baseRg.getWeekOfMonth() : null);
 
         List<DayOfWeek> dayOfWeekInMonth =
-                req.dayOfWeekInMonth() != null ? req.dayOfWeekInMonth()
+                req.dayOfWeekInMonth() != null ? List.of(req.dayOfWeekInMonth())
                         : (frequency == RecurrenceFrequency.MONTHLY
                         && monthlyType == MonthlyType.DAY_OF_WEEK
-                        ? toDayOfWeekList(baseRg.getDayOfWeekInMonth()) : null);
+                        ? RecurrenceUtils.parseDaysOfWeek(baseRg.getDayOfWeekInMonth()) : null);
 
         List<Integer> daysOfMonth =
                 req.daysOfMonth() != null ? req.daysOfMonth()
@@ -245,16 +249,9 @@ public class RecurrenceGroupValidator {
                         throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_FREQUENCY_CONDITION);
                     }
 
-                    if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE) {
-                        if (req.dayOfWeekInMonth() != null && req.dayOfWeekInMonth().size() != 1) {
-                            throw new RecurrenceGroupException(
-                                    RecurrenceGroupErrorCode.INVALID_SIZE_OF_DAY_OF_WEEK_IN_MONTH
-                            );
-                        }
-                    } else {
-                        if (req.weekdayRule() != null && req.dayOfWeekInMonth() != null) {
-                            throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
-                        }
+                    if (req.weekdayRule() != null && req.weekdayRule() != MonthlyWeekdayRule.SINGLE
+                            && req.dayOfWeekInMonth() != null) {
+                        throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
                     }
                 }
             }
@@ -298,7 +295,7 @@ public class RecurrenceGroupValidator {
         if (frequency != RecurrenceFrequency.WEEKLY) return;
 
         List<DayOfWeek> days =
-                req.daysOfWeek() != null ? req.daysOfWeek() : toDayOfWeekList(baseRg.getDaysOfWeek());
+                req.daysOfWeek() != null ? req.daysOfWeek() : RecurrenceUtils.parseDaysOfWeek(baseRg.getDaysOfWeek());
 
         if (days.isEmpty()) return;
 
@@ -313,13 +310,15 @@ public class RecurrenceGroupValidator {
         if (req.frequency() != RecurrenceFrequency.MONTHLY
                 || req.monthlyType() != MonthlyType.DAY_OF_WEEK) return;
 
-        List<DayOfWeek> days = req.dayOfWeekInMonth();
+        DayOfWeek dow = req.dayOfWeekInMonth();
 
-        if (days == null || days.isEmpty()) return;
+        if (dow == null) return;
 
-        for (DayOfWeek day : req.dayOfWeekInMonth()) {
+        List<DayOfWeek> days = List.of(dow);
+
+        for (DayOfWeek day : days) {
             if (!VALID_DAYS.contains(day)) {
-                throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
+                throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
             }
         }
     }
@@ -339,8 +338,8 @@ public class RecurrenceGroupValidator {
 
         List<DayOfWeek> days =
                 req.dayOfWeekInMonth() != null
-                        ? req.dayOfWeekInMonth()
-                        : toDayOfWeekList(baseRg.getDayOfWeekInMonth());
+                        ? List.of(req.dayOfWeekInMonth())
+                        : RecurrenceUtils.parseDaysOfWeek(baseRg.getDayOfWeekInMonth());
 
         if (days.isEmpty()) return;
 
@@ -349,12 +348,5 @@ public class RecurrenceGroupValidator {
                 throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK);
             }
         }
-    }
-
-    private static List<DayOfWeek> toDayOfWeekList(String daysOfWeek) {
-        return Arrays.stream(daysOfWeek.split(","))
-                .map(String::trim)
-                .map(DayOfWeek::valueOf)
-                .toList();
     }
 }

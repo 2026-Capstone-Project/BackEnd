@@ -33,7 +33,7 @@ public class RecurrenceGroupReqDTO {
             @Max(5)
             Integer weekOfMonth,
             MonthlyWeekdayRule weekdayRule,
-            List<DayOfWeek> dayOfWeekInMonth,
+            DayOfWeek dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)
@@ -72,7 +72,7 @@ public class RecurrenceGroupReqDTO {
             @Max(5)
             Integer weekOfMonth,
             MonthlyWeekdayRule weekdayRule,
-            List<DayOfWeek> dayOfWeekInMonth,
+            DayOfWeek dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)

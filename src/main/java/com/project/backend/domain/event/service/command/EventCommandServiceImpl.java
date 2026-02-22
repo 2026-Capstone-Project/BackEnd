@@ -33,6 +33,7 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -598,17 +600,18 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         if (req.weekdayRule() != null) {
-            // SINGLE어도 요일이 다를 수 있으므로, SINGLE이 아닐때만 비교하기
-            if (req.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
-                changed |= req.weekdayRule() != rg.getMonthlyWeekdayRule();
+            // SINGLE만 보냈고 dayOfWeekInMonth가 없으면 '수정 안 함'으로 간주 → 비교 자체를 안 함
+            if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE && req.dayOfWeekInMonth() == null) {
+                // do nothing
+            } else {
+                List<DayOfWeek> daysOfWeek = RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth());
+                log.info("weekdayRule: {}, daysOfWeek: {}", req.weekdayRule(), daysOfWeek);
+                changed |= req.weekdayRule() != RecurrenceUtils.inferWeekdayRule(daysOfWeek);
             }
         }
 
         if (req.dayOfWeekInMonth() != null) {
-            String normalized = req.dayOfWeekInMonth().stream()
-                    .sorted()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining(","));
+            String normalized = req.dayOfWeekInMonth().name();
 
             changed |= !Objects.equals(normalized, rg.getDayOfWeekInMonth());
         }

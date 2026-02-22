@@ -20,7 +20,6 @@ public record RecurrenceGroupSpec(
         MonthlyType monthlyType,
         List<Integer> daysOfMonth,
         Integer weekOfMonth,
-        MonthlyWeekdayRule weekdayRule,
         List<DayOfWeek> dayOfWeekInMonth,
 
         Integer monthOfYear,

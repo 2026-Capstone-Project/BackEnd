@@ -6,6 +6,7 @@ import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import lombok.Builder;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -18,13 +19,13 @@ public class RecurrenceGroupResDTO {
             Boolean isCustom,
             Integer interval,
 
-            List<String> daysOfWeek,
+            List<DayOfWeek> daysOfWeek,
 
             MonthlyType monthlyType,
             List<Integer> daysOfMonth,
             Integer weekOfMonth,
             MonthlyWeekdayRule weekdayRule,
-            List<String> dayOfWeekInMonth,
+            List<DayOfWeek> dayOfWeekInMonth,
 
             Integer monthOfYear,
 

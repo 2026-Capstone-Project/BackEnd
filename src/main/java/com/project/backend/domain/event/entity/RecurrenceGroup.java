@@ -10,6 +10,7 @@ import com.project.backend.global.recurrence.RecurrenceRule;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -50,10 +51,6 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
 
     @Column(name = "week_of_month")
     private Integer weekOfMonth;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "monthly_weekday_rule", length = 20)
-    private MonthlyWeekdayRule monthlyWeekdayRule;
 
     @Column(name = "day_of_week_in_month", length = 60)
     private String dayOfWeekInMonth;
@@ -138,21 +135,11 @@ public class RecurrenceGroup extends BaseEntity implements RecurrenceRule {
         this.event = event;
     }
 
-    public List<String> getDaysOfWeekAsList() {
-        if (daysOfWeek == null) return null;
-        return List.of(daysOfWeek.split(","));
-    }
-
     public List<Integer> getDaysOfMonthAsList() {
         if (daysOfMonth == null) return null;
         return Arrays.stream(daysOfMonth.split(","))
                 .map(Integer::valueOf)
                 .toList();
-    }
-
-    public List<String> getDayOfWeekInMonthAsList() {
-        if (dayOfWeekInMonth == null) return null;
-        return List.of(dayOfWeekInMonth.split(","));
     }
 
     public void extendEndDate(long dayDiff) {

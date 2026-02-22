@@ -23,7 +23,8 @@ public enum EventErrorCode implements BaseErrorCode {
     INVALID_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "EVENT400_8", "존재하지 않는UPDATE_SCOPE 값입니다."),
     NOT_RECURRING_EVENT(HttpStatus.BAD_REQUEST, "EVENT400_9", "단일 일정입니다."),
     THIS_AND_FOLLOWING_EVENTS_ONLY
-            (HttpStatus.BAD_REQUEST, "EVENT400_10", "반복 필드 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다.")
+            (HttpStatus.BAD_REQUEST, "EVENT400_10",
+                    "반복 필드 수정, 단일 일정 -> 반복 일정으로 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다.")
     ;
 
 
