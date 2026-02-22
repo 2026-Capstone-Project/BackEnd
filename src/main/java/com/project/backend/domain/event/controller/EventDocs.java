@@ -116,14 +116,20 @@ public interface EventDocs {
                   - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
                   - null로 보내면 SINGLE로 저장됩니다.
                   
-                - dayOfWeekInMonth (List<DayOfWeek>) 
-                  - 예: ["TUESDAY"]
-                  - **요일은 하나만 입력 가능합니다.** (리스트 길이 1만 허용)
+                - dayOfWeekInMonth (DayOfWeek) 
+                  - 예: "TUESDAY"
+                  - **요일은 하나만 입력 가능합니다.**
                   - null이면 startTime 기준 요일로 자동 설정됩니다.
                 
-                ✅ 추가 제한 사항(중요)
-                - 현재 리마인더 문제로 인해 weekdayRule에 WEEKDAY / WEEKEND / ALL_DAYS 값을 입력하여 일정 생성 시 오류가 발생합니다.
-                - 따라서 현재는 weekdayRule을 **SINGLE 또는 null**로 보내서 생성해야 합니다.
+                **일정 생성, 수정시 weekDayRule 사용법**
+                
+                  **단일 요일**
+                  - 단일 요일 선택시에는 weekDayRule = SINGLE, dayOfWeekInMonth = "MONDAY" 입니다.
+                  - weekDayRule = SINGLE만 보내면, dayOfweekINMonth 값은 해당 일정의 startTime의 요일로 초기화됩니다.
+                  - dayOfWeekInMonth = "MONDAY"만 보내면, weekDayRule 값은 무조건 SINGLE로 초기화됩니다.
+                  
+                  **평일, 주말, 1주 전체**
+                  - weekDayRule = "WEEKDAY or WEEKEND or ALL_DAYS" 이면 dayOfWeekInMonth = null 입니다.
                 
                 ---
                 ### YEARLY (매년 반복)
