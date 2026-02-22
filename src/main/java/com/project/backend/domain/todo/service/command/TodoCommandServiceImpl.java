@@ -85,7 +85,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 memberId,
                 todo.getTitle(),
                 recurrenceGroup != null,
-                todo.getStartDate().atTime(todo.getDueTime()),
+                todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
                 ChangeType.CREATED
         );
         // 반복의 유무와 상관없이 동일한 이름 + 메모로 생성된 할 일이 있으면 비활성화
@@ -122,7 +122,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     memberId,
                     todo.getTitle(),
                     false,
-                    todo.getStartDate().atTime(todo.getDueTime()),
+                    todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
                     ChangeType.UPDATE_SINGLE
             );
 
@@ -285,7 +285,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             reminderEventBridge.handleReminderDeleted(
                     null,
                     memberId,
-                    occurrenceDate.atTime(todo.getDueTime()),
+                    todo.getDueTime() != null ? occurrenceDate.atTime(todo.getDueTime()) : occurrenceDate.atStartOfDay(),
                     todoId,
                     TargetType.TODO,
                     DeletedType.DELETED_SINGLE);
@@ -658,7 +658,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private void deleteThisTodoOnly(Todo todo, LocalDate occurrenceDate, Long memberId) {
         TodoRecurrenceGroup group = todo.getTodoRecurrenceGroup();
 
-        LocalDateTime startTime = occurrenceDate.atTime(todo.getDueTime());
+        LocalDateTime startTime = todo.getDueTime() != null ? occurrenceDate.atTime(todo.getDueTime()) : occurrenceDate.atStartOfDay();
 
         Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository
                 .findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate);
@@ -716,7 +716,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         Optional<TodoRecurrenceException> re = todoRecurrenceExceptionRepository.
                 findByTodoRecurrenceGroupIdAndExceptionDate(group.getId(), occurrenceDate);
 
-        LocalDateTime startDate = occurrenceDate.atTime(todo.getDueTime());
+        LocalDateTime startDate = todo.getDueTime() != null ? occurrenceDate.atTime(todo.getDueTime()) : occurrenceDate.atStartOfDay();
 
         // 수정/삭제된 할 일일때
         if (re.isPresent()) {
