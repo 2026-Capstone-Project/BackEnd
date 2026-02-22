@@ -2,6 +2,7 @@ package com.project.backend.domain.suggestion.entity;
 
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import com.project.backend.domain.suggestion.enums.SuggestionType;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.domain.todo.entity.Todo;
@@ -55,6 +56,10 @@ public class Suggestion extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "suggestion_type", nullable = false, length = 30)
     private SuggestionType suggestionType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invalidate_reason")
+    private SuggestionInvalidateReason invalidateReason;
 
     @Builder.Default
     @Column(name = "active")
