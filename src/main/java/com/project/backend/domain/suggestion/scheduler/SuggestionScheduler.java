@@ -2,6 +2,7 @@ package com.project.backend.domain.suggestion.scheduler;
 
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.suggestion.service.batch.SuggestionBatchService;
 import com.project.backend.domain.suggestion.service.command.SuggestionCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,7 @@ import java.util.List;
 public class SuggestionScheduler {
 
     private final MemberRepository memberRepository;
-    private final SuggestionCommandService suggestionCommandService;
-    private final SuggestionRepository suggestionRepository;
+    private final SuggestionBatchService suggestionBatchService;
 
     @Value("${spring.scheduler.suggestion.enabled}")
     private boolean enabled;
@@ -35,12 +35,7 @@ public class SuggestionScheduler {
 
         for (Long memberId : memberIds) {
             try {
-                log.info("[Suggestion Scheduler] : 개발 단계에 있으므로 모든 제안을 삭제 후 재생성 합니다");
-                suggestionRepository.deleteAllByMemberId(memberId);
-                suggestionCommandService.createEventSuggestion(memberId);
-                suggestionCommandService.createTodoSuggestion(memberId);
-                suggestionCommandService.createRecurrenceSuggestion(memberId);
-                suggestionCommandService.createTodoRecurrenceSuggestion(memberId);
+                suggestionBatchService.regenerateAllForMember(memberId);
             } catch (Exception e) {
                 log.warn("[Suggestion Scheduler] : 실패 | memberId = {} | failed = {}", memberId, e.getMessage());
             }
