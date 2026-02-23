@@ -249,7 +249,9 @@ public class TodoConverter {
                 : null;
 
         // "MONDAY,WEDNESDAY" → List<DayOfWeek>
-        MonthlyWeekdayRule weekdayRule = RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth);
+        MonthlyWeekdayRule weekdayRule = dayOfWeekInMonth != null
+                ? RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth)
+                : null;
 
         return TodoResDTO.RecurrenceGroupRes.builder()
                 .frequency(group.getFrequency())

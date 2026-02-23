@@ -106,14 +106,13 @@ public class RecurrenceUtils {
      */
     public static MonthlyWeekdayRule inferWeekdayRule(List<DayOfWeek> dayOfWeekInMonth) {
         if (dayOfWeekInMonth == null || dayOfWeekInMonth.isEmpty()) {
-            throw new IllegalArgumentException("dayOfWeekInMonth is empty");
+            return null;
         }
 
         // 중복 제거 + null 방지
         EnumSet<DayOfWeek> set = EnumSet.noneOf(DayOfWeek.class);
         for (DayOfWeek d : dayOfWeekInMonth) {
-            if (d == null) throw new IllegalArgumentException("dayOfWeekInMonth contains null");
-            set.add(d);
+            if (d != null) set.add(d);
         }
 
         if (set.size() == 1) return MonthlyWeekdayRule.SINGLE;
@@ -121,7 +120,7 @@ public class RecurrenceUtils {
         if (set.equals(WEEKDAY_SET)) return MonthlyWeekdayRule.WEEKDAY;
         if (set.equals(ALL_DAYS_SET)) return MonthlyWeekdayRule.ALL_DAYS;
 
-        throw new IllegalArgumentException("Unsupported dayOfWeekInMonth set: " + set);
+        return null;
     }
 
     /**
