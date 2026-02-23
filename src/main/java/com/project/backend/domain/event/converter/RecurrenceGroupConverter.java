@@ -99,7 +99,9 @@ public class RecurrenceGroupConverter {
                 : null;
 
         // "MONDAY,WEDNESDAY" → List<DayOfWeek>
-        MonthlyWeekdayRule weekdayRule = RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth);
+        MonthlyWeekdayRule weekdayRule = dayOfWeekInMonth != null
+                ? RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth)
+                : null;
 
 
         return RecurrenceGroupResDTO.DetailRes.builder()

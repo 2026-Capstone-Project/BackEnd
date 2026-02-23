@@ -29,7 +29,9 @@ public record RecurrenceGroupFingerPrint(
                 rg.getMonthlyType(),
                 rg.getDaysOfMonth(),
                 rg.getWeekOfMonth(),
-                RecurrenceUtils.inferWeekdayRule(RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth())),
+                rg.getDayOfWeekInMonth() != null
+                        ? RecurrenceUtils.inferWeekdayRule(RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth()))
+                        : null,
                 rg.getDayOfWeekInMonth(),
                 rg.getMonthOfYear(),
                 rg.getEndType(),
