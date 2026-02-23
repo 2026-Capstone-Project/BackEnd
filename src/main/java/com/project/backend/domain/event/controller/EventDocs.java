@@ -67,13 +67,13 @@ public interface EventDocs {
                 ## 📌 recurrenceGroup 필드 (CreateReq 기준)
                 
                 ### 공통 필드
-                - frequency (RecurrenceFrequency) ✅
+                - frequency (RecurrenceFrequency) 
                   - DAILY / WEEKLY / MONTHLY / YEARLY
                 
-                - intervalValue (Integer) ❌
+                - intervalValue (Integer) 
                   - 기본값 1 (생략 가능)
                 
-                - endType (RecurrenceEndType) ❌
+                - endType (RecurrenceEndType) 
                   - NEVER / END_BY_DATE / END_BY_COUNT
                   - null로 보내면 NEVER로 저장됩니다.
                   - endType이 null인 경우 endDate, occurrenceCount도 반드시 null이어야 합니다.
@@ -90,44 +90,50 @@ public interface EventDocs {
                 
                 ---
                 ### WEEKLY (매주 반복)
-                - daysOfWeek (List<DayOfWeek>) ❌
+                - daysOfWeek (List<DayOfWeek>) 
                   - 예: ["MONDAY", "WEDNESDAY", "FRIDAY"]
                   - null로 보내면 일정의 startTime 기준 요일로 자동 설정됩니다.
                 
                 ---
                 ### MONTHLY (매월 반복)
-                - monthlyType (MonthlyType) ❌
+                - monthlyType (MonthlyType)
                   - DAY_OF_MONTH : 매월 N일
                   - DAY_OF_WEEK  : 매월 N번째 X요일
                   - null로 보내면 DAY_OF_MONTH로 저장됩니다.
                 
-                - weekdayRule (MonthlyWeekdayRule) ❌
-                  - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
-                  - null로 보내면 SINGLE로 저장됩니다.
-                
                 #### monthlyType = DAY_OF_MONTH (매월 N일)
-                - daysOfMonth (List<Integer>) ❌
+                - daysOfMonth (List<Integer>) 
                   - 1~31
                   - null이면 startTime 기준 '일'로 자동 설정됩니다.
                   - 예: [15], [15, 30]
                 
                 #### monthlyType = DAY_OF_WEEK (매월 N번째 X요일)
-                - weekOfMonth (Integer) ✅
+                - weekOfMonth (Integer) 
                   - 1~5
                   - null이면 startTime 기준 주차로 자동 설정됩니다.
                 
-                - dayOfWeekInMonth (List<DayOfWeek>) ✅
-                  - 예: ["TUESDAY"]
-                  - **요일은 하나만 입력 가능합니다.** (리스트 길이 1만 허용)
+                - weekdayRule (MonthlyWeekdayRule) 
+                  - SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
+                  - null로 보내면 SINGLE로 저장됩니다.
+                  
+                - dayOfWeekInMonth (DayOfWeek) 
+                  - 예: "TUESDAY"
+                  - **요일은 하나만 입력 가능합니다.**
                   - null이면 startTime 기준 요일로 자동 설정됩니다.
                 
-                ✅ 추가 제한 사항(중요)
-                - 현재 리마인더 문제로 인해 weekdayRule에 WEEKDAY / WEEKEND / ALL_DAYS 값을 입력하여 일정 생성 시 오류가 발생합니다.
-                - 따라서 현재는 weekdayRule을 **SINGLE 또는 null**로 보내서 생성해야 합니다.
+                **일정 생성, 수정시 weekDayRule 사용법**
+                
+                  **단일 요일**
+                  - 단일 요일 선택시에는 weekDayRule = SINGLE, dayOfWeekInMonth = "MONDAY" 입니다.
+                  - weekDayRule = SINGLE만 보내면, dayOfweekINMonth 값은 해당 일정의 startTime의 요일로 초기화됩니다.
+                  - dayOfWeekInMonth = "MONDAY"만 보내면, weekDayRule 값은 무조건 SINGLE로 초기화됩니다.
+                  
+                  **평일, 주말, 1주 전체**
+                  - weekDayRule = "WEEKDAY or WEEKEND or ALL_DAYS" 이면 dayOfWeekInMonth = null 입니다.
                 
                 ---
                 ### YEARLY (매년 반복)
-                - monthOfYear (Integer) ❌
+                - monthOfYear (Integer) 
                   - 1~12
                   - null이면 startTime 기준 월로 자동 설정됩니다.
                 
@@ -251,7 +257,7 @@ public interface EventDocs {
                                                 "frequency": "MONTHLY",
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
-                                                "dayOfWeekInMonth": ["TUESDAY"]
+                                                "dayOfWeekInMonth": "TUESDAY"
                                               }
                                             }
                                             """
@@ -633,6 +639,7 @@ public interface EventDocs {
                 - 선택한 occurrenceDate(태생) 회차와 그 이후를 수정합니다.
                 - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
                 - occurrenceDate는 새 반복의 기준점(base)이 됩니다.
+                - 반복 일정을 대상으로 반복 관련 필드를 수정하는 경우 THIS_AND_FOLLOWING_EVENTS를 통해서만 수정가능합니다.
                 ---
                 ## ⏱️ 시간(startTime / endTime) 처리 규칙 (업데이트)
                 

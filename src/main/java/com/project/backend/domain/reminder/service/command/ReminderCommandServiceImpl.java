@@ -198,8 +198,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
         // 현재보다 해당 일정의 startTime이 이전이라면 리마인더 생성 x
         if (rs.occurrenceTime().isBefore(LocalDateTime.now())) return;
 
-        // 기존 리마인더 삭제
-        deleteReminder(rs.targetId(), rs.targetType(), rs.occurrenceTime());
+        // 기존 단일 일정에 대한 리마인더 삭제
+        reminderRepository.deleteByTargetIdAndTargetType(rs.targetId(), rs.targetType());
 
         saveReminder(rs, memberId, null, ReminderRole.BASE);
     }
@@ -207,6 +207,9 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     @Override
     public void updateReminderOfRecurrence(ReminderSource rs, Long memberId, LocalDateTime occurrenceTime) {
         LocalDateTime now = LocalDateTime.now();
+
+        // 기존 단일 일정에 대한 리마인더 삭제
+        reminderRepository.deleteByTargetIdAndTargetType(rs.targetId(), rs.targetType());
 
         // 이미 지난 일정에 반복을 추가할 경우
         if (rs.occurrenceTime().isBefore(now)) {

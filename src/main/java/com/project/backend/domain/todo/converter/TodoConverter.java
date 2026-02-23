@@ -1,5 +1,6 @@
 package com.project.backend.domain.todo.converter;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
@@ -14,6 +15,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,7 +31,7 @@ public class TodoConverter {
         return Todo.builder()
                 .title(reqDTO.title())
                 .startDate(reqDTO.startDate())
-                .dueTime(reqDTO.dueTime())
+                .dueTime(reqDTO.isAllDay() ? LocalTime.of(9,0) : reqDTO.dueTime())
                 .isAllDay(reqDTO.isAllDay() != null ? reqDTO.isAllDay() : false)
                 .priority(reqDTO.priority() != null ? reqDTO.priority() : Priority.MEDIUM)
                 .color(reqDTO.color() != null ? reqDTO.color() : TodoColor.BLUE)
@@ -61,10 +63,15 @@ public class TodoConverter {
                         .collect(Collectors.joining(","))
                 : null;
 
+        // SINGLE이 아닌데, dayOfWeekInMonth 입력 시 예외처리
+        if (reqDTO.dayOfWeekInMonth() == null && reqDTO.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
+            throw new IllegalArgumentException("dayOfWeekInMonth must be null when weekdayRule is not SINGLE.");
+        }
+
         // DayOfWeek → "MONDAY" 형태로 변환
         String dayOfWeekInMonth = reqDTO.dayOfWeekInMonth() != null
                 ? reqDTO.dayOfWeekInMonth().name()
-                : null;
+                : RecurrenceUtils.normalizeDayOfWeekInMonth(reqDTO.weekdayRule());
 
         return TodoRecurrenceGroup.create(
                 member,
@@ -237,9 +244,12 @@ public class TodoConverter {
                 : null;
 
         // "MONDAY" → DayOfWeek
-        DayOfWeek dayOfWeekInMonth = group.getDayOfWeekInMonth() != null
-                ? DayOfWeek.valueOf(group.getDayOfWeekInMonth())
+        List<DayOfWeek> dayOfWeekInMonth = group.getDayOfWeekInMonth() != null
+                ? RecurrenceUtils.parseDaysOfWeek(group.getDayOfWeekInMonth())
                 : null;
+
+        // "MONDAY,WEDNESDAY" → List<DayOfWeek>
+        MonthlyWeekdayRule weekdayRule = RecurrenceUtils.inferWeekdayRule(dayOfWeekInMonth);
 
         return TodoResDTO.RecurrenceGroupRes.builder()
                 .frequency(group.getFrequency())
@@ -248,6 +258,7 @@ public class TodoConverter {
                 .monthlyType(group.getMonthlyType())
                 .daysOfMonth(daysOfMonth)
                 .weekOfMonth(group.getWeekOfMonth())
+                .weekdayRule(weekdayRule)
                 .dayOfWeekInMonth(dayOfWeekInMonth)
                 .endType(group.getEndType())
                 .endDate(group.getEndDate())

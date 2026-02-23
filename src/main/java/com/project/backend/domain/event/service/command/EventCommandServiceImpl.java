@@ -12,7 +12,9 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -31,14 +33,24 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
+import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
+import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.repository.SuggestionRepository;
+import com.project.backend.domain.suggestion.vo.fingerprint.EventFingerPrint;
+import com.project.backend.domain.suggestion.vo.fingerprint.RecurrenceGroupFingerPrint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -54,6 +66,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
+    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
+    private final SuggestionRepository suggestionRepository;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -86,6 +100,11 @@ public class EventCommandServiceImpl implements EventCommandService {
                 event.getStartTime(),
                 ChangeType.CREATED
         );
+        // 반복의 유무와 상관없이 동일한 이름 + 장소로 생성된 이벤트가 있으면 비활성화
+        byte[] createdHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        log.info("event created");
+        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, createdHash);
+
         return EventConverter.toCreateRes(event);
     }
 
@@ -98,20 +117,39 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDateTime occurrenceDate
     ) {
         // 변경 사항 전혀 없음
-        if (!hasEventChanged(req) && !hasRecurrenceGroupChanged(req.recurrenceGroup())) {
+        if (!hasAnyEventFieldProvided(req) && !hasAnyRecurrenceGroupFieldProvided(req.recurrenceGroup())) {
+            log.info("1.Event update request is not changed. eventId: {}", eventId);
             return;
         }
 
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        eventValidator.validateUpdate(event, occurrenceDate, scope);
+        eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
+
+        // 변경하기 전의 title + location hash
+        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        EventFingerPrint beforeEventFp = EventFingerPrint.from(event);  // 변경하기 전의 이벤트 특정 정보
+
+        byte[] beforeRgHash = null;
+        RecurrenceGroupFingerPrint beforeRgFp = null;
+        if (event.getRecurrenceGroup() != null) {   // 만약 반복 그룹이 존재한다면? 단일 이벤트가 아니라는 것
+            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());    // id 해시
+            beforeRgFp = RecurrenceGroupFingerPrint.from(event.getRecurrenceGroup());   // 반복 그룹 정보
+        }
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
+        LocalDateTime start = calStartTime(req, event, occurrenceDate);
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
+
+        // 입력한 값이 기존 단일 일정 or 반복 일정의 필드값과 동일한 경우
+        if (!hasEventChanged(event, req, start, end, occurrenceDate)
+                && !hasEventRecurrenceChanged(event.getRecurrenceGroup(), req.recurrenceGroup())) {
+            log.info("2.Event update request is not changed. eventId: {}", eventId);
+            return;
+        }
 
         Member member = event.getMember();
 
@@ -146,7 +184,54 @@ public class EventCommandServiceImpl implements EventCommandService {
                         false,
                         start,
                         ChangeType.UPDATE_SINGLE);
+
             }
+            // 단일 -> 단일 / 단일 -> 반복 변경의 경우
+            // 변경 후 이벤트 title + location hash
+            byte[] afterEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+            EventFingerPrint afterEventFp = EventFingerPrint.from(event);   // 변경 후 이벤트 특정 정보
+
+            byte[] afterRgHash = null;
+            RecurrenceGroupFingerPrint afterRgFp = null;
+            if (event.getRecurrenceGroup() != null) {   // 단일 -> 반복인 경우
+                afterRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
+                afterRgFp = RecurrenceGroupFingerPrint.from(event.getRecurrenceGroup());
+            }
+
+            boolean eventKeyChanged = !Arrays.equals(beforeEventHash, afterEventHash);  // title + location이 변경되었는가?
+            boolean rgKeyChanged = !Arrays.equals(beforeRgHash, afterRgHash);   // rgId가 변경 되었는가? -> 새로운 반복 그룹이 생겼는가?
+
+            boolean eventFpChanged = !beforeEventFp.equals(afterEventFp);   // 이벤트 특정 정보가 변경 되었는가? (시간 등)
+            boolean rgFpChanged = !Objects.equals(beforeRgFp, afterRgFp);   // 반복 그룹 특정 정보가 변경되었는가?
+
+            boolean invalidateEventAxis = eventKeyChanged || eventFpChanged;
+            boolean invalidateRgAxis = rgKeyChanged || rgFpChanged;
+
+            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
+            // 만약 title + location이 변경된 경우 이전과 이후 모두 비활성화
+            if (invalidateEventAxis) {
+                log.info("event updated");
+                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, afterEventHash);
+                if (eventKeyChanged) {
+                    log.info("event title location updated");
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeEventHash);
+                }
+            }
+
+            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
+            // 만약 rg 자체가 변경된 경우 이전 rg 제안 비활성화
+            if (invalidateRgAxis) {
+                if (afterRgHash != null) {
+                    // 새 RG 기준 만료
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED, afterRgHash);
+                }
+                if (rgKeyChanged && beforeRgHash != null) {
+                    // (이 브랜치에서 사실상 안 나오지만) old RG 정리 케이스 대비
+                    log.info("rg updated");
+                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED, beforeRgHash);
+                }
+            }
+
             return;
         }
 
@@ -157,11 +242,75 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (req.recurrenceGroup() != null)
             rgValidator.validateUpdate(req.recurrenceGroup(), event.getRecurrenceGroup(), start);
 
+        // TODO : 임시
+        // 모객체를 건드려서 완전 삭제되는 경우인가?
+        boolean hardDeleteGroup =
+                scope == RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS
+                        && event.getStartTime().equals(occurrenceDate);
+
+        if (hardDeleteGroup) { // Suggestion 객체의 FK 연결해제
+            Long rgId = event.getRecurrenceGroup().getId();
+            suggestionRepository.detachPreviousEvent(memberId, eventId);
+            suggestionRepository.detachRecurrenceGroup(memberId, rgId);
+        }
+
+        // THIS_AND_FOLLOWING이면 after 대상이 newEvent일 수 있음
+        Event afterBase = event;
+
         // 수정범위가 있는 수정일 때
         switch (scope){
             case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
-            case THIS_AND_FOLLOWING_EVENTS -> updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
+            case THIS_AND_FOLLOWING_EVENTS -> afterBase = updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
+        }
+        // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
+        SuggestionInvalidateReason beforeRgReason =
+                hardDeleteGroup
+                        ? SuggestionInvalidateReason.RECURRENCE_GROUP_DELETED
+                        : SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+
+        SuggestionInvalidateReason afterRgReason = SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+
+        // 반복 그룹이 잘려서 새로운 객체가 생성된 경우 -> after 해시는 새로 생성된 event
+        byte[] afterEventHash = suggestionInvalidatePublisher.eventHash(afterBase.getTitle(), afterBase.getLocation());
+        EventFingerPrint afterEventFp = EventFingerPrint.from(afterBase); // 새로 생성된 이벤트 특정 정보
+
+        byte[] afterRgHash = null;
+        RecurrenceGroupFingerPrint afterRgFp = null;
+        if (afterBase.getRecurrenceGroup() != null) {   // 새로 생성된 이벤트의 새로 생성된 반복 그룹 정보
+            afterRgHash = suggestionInvalidatePublisher.rgHash(afterBase.getRecurrenceGroup().getId());
+            afterRgFp = RecurrenceGroupFingerPrint.from(afterBase.getRecurrenceGroup());
+        }
+
+        boolean eventKeyChanged = !Arrays.equals(beforeEventHash, afterEventHash);  // title + location 변경?
+        boolean rgKeyChanged = !Arrays.equals(beforeRgHash, afterRgHash);   // rgId 변경?
+
+        boolean eventFpChanged = !beforeEventFp.equals(afterEventFp);   // 이벤트 정보 변경?
+        boolean rgFpChanged = !Objects.equals(beforeRgFp, afterRgFp);   // 반복 그룹 정보 변경?
+
+        boolean invalidateEventAxis = eventKeyChanged || eventFpChanged;
+        boolean invalidateRgAxis = rgKeyChanged || rgFpChanged;
+
+        // 반복 -> 단일 / 반복 -> 반복은 무조건 after 무효화
+        // 만약 키가 변경된 경우 before 무효화
+        if (invalidateEventAxis) {
+            log.info("event updated");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, afterEventHash);
+            if (eventKeyChanged) {
+                log.info("event title location updated");
+                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeEventHash);
+            }
+        }
+
+        // 키가 변경되고, 이전 반복 그룹이 존재한다면 -> 이전 반복 그룹 제안 무효화
+        if (invalidateRgAxis) {
+            if (afterRgHash != null) {
+                suggestionInvalidatePublisher.publish(memberId, afterRgReason, afterRgHash);
+            }
+            if (rgKeyChanged && beforeRgHash != null) {
+                log.info("rg deleted because new rg updated");
+                suggestionInvalidatePublisher.publish(memberId, beforeRgReason, beforeRgHash);
+            }
         }
     }
 
@@ -177,8 +326,15 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);
 
+        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        byte[] beforeRgHash = null;
+        if (event.getRecurrenceGroup() != null) {
+            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
+        }
+
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
+            suggestionRepository.detachPreviousEvent(memberId, eventId);
             eventRepository.delete(event);
             reminderEventBridge.handleReminderDeleted(
                     null,
@@ -187,22 +343,57 @@ public class EventCommandServiceImpl implements EventCommandService {
                     eventId,
                     TargetType.EVENT,
                     DeletedType.DELETED_SINGLE);
+            // 단일은 그냥 해시 겹치면 바로 만료
+            log.info("event deleted");
+            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
             return;
         }
 
         // occurrenceDate가 존재하는 일정의 계산된 날짜인지
         eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
 
+        // 객체를 지워야 할 상황인지
+        boolean hardDeleteGroup =
+                scope == RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS
+                        && event.getStartTime().equals(occurrenceDate);
+
+        // hard delete면 event + rg 둘 다 FK 걸릴 수 있으니 둘 다 detach
+        if (hardDeleteGroup) {
+            Long rgId = event.getRecurrenceGroup().getId();
+            suggestionRepository.detachPreviousEvent(memberId, eventId);
+            suggestionRepository.detachRecurrenceGroup(memberId, rgId);
+        }
+
         // 반복 그룹을 가진 일정일 경우
         switch (scope) {
-            case THIS_EVENT -> {
-                deleteThisEventOnly(event, occurrenceDate, memberId);
-            }
-            case THIS_AND_FOLLOWING_EVENTS -> {
-                deleteThisAndFutureEvents(event, memberId, occurrenceDate);
-            }
+            case THIS_EVENT -> deleteThisEventOnly(event, occurrenceDate, memberId);
+            case THIS_AND_FOLLOWING_EVENTS -> deleteThisAndFutureEvents(event, memberId, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
+
+        // reason 결정
+        SuggestionInvalidateReason reason;
+        if (scope == RecurrenceUpdateScope.THIS_EVENT) {
+            // 그 날만 skip/override -> 그룹 삭제가 아니라 변경임
+            reason = SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+        } else {
+            // THIS_AND_FOLLOWING_EVENT
+            reason = hardDeleteGroup
+                    ? SuggestionInvalidateReason.RECURRENCE_GROUP_DELETED
+                    : SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
+        }
+
+        // 반복은 RGH 축 무조건 정리
+        if (beforeRgHash != null) {
+            log.info("before rg deleted");
+            suggestionInvalidatePublisher.publish(memberId, reason, beforeRgHash);
+        }
+
+        // (선택) 그룹 통째 삭제면 EH 축도 같이 정리하고 싶으면 켜
+         if (hardDeleteGroup) {
+             log.info("event deleted");
+             suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
+         }
     }
 
     // 반복그룹이 없는 일정을 수정할 경우
@@ -248,6 +439,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
+        byte[] rgHash = suggestionInvalidatePublisher.rgHash(rg.getId());
+
         // 만약 이미 수정된 일정을 또 수정하는 경우
         Optional<RecurrenceException> re = recurrenceExRepository
                 .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
@@ -268,6 +461,8 @@ public class EventCommandServiceImpl implements EventCommandService {
                     ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
                     ExceptionChangeType.UPDATE_THIS_AGAIN
             );
+            log.info("exception updated");
+            suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
             return;
         }
 
@@ -284,6 +479,9 @@ public class EventCommandServiceImpl implements EventCommandService {
                 ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
                 ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
                 ExceptionChangeType.UPDATED_THIS);
+
+        log.info("exception updated");
+        suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
     }
 
     // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우
@@ -330,7 +528,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     // 반복 그룹이 있는 일정에서 해당 일정과 그 이후 일정들을 수정하는 경우
-    private void updateThisAndFutureEvents(
+    private Event updateThisAndFutureEvents(
             EventReqDTO.UpdateReq req,
             Event event,
             Member member,
@@ -383,6 +581,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 newEvent.getStartTime(),
                 ChangeType.CREATED
         );
+        return newEvent;
     }
 
     // 반복그룹이 있는 해당 일정과 그 이후 일정 삭제 하는 경우
@@ -460,7 +659,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         return newEvent;
     }
 
-    private boolean hasEventChanged(EventReqDTO.UpdateReq req) {
+    private boolean hasAnyEventFieldProvided(EventReqDTO.UpdateReq req) {
         return req.title() != null
                 || req.content() != null
                 || req.startTime() != null
@@ -470,7 +669,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.isAllDay() != null;
     }
 
-    private boolean hasRecurrenceGroupChanged(RecurrenceGroupReqDTO.UpdateReq req) {
+    private boolean hasAnyRecurrenceGroupFieldProvided(RecurrenceGroupReqDTO.UpdateReq req) {
         if (req == null) return false;
 
         return req.frequency() != null
@@ -486,18 +685,145 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.intervalValue() != null;
     }
 
+    private boolean hasEventChanged(
+            Event event,
+            EventReqDTO.UpdateReq req,
+            LocalDateTime start,
+            LocalDateTime end,
+            LocalDateTime occurrenceDate
+            ) {
+        boolean changed = false;
+
+        if (event.getRecurrenceGroup() != null) {
+            Optional<RecurrenceException> re =
+                    recurrenceExRepository.findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                            event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                    );
+
+            if (re.isPresent()) {
+                RecurrenceException ex = re.get();
+                if (req.title() != null) {
+                    String baseTitle = ex.getTitle() != null ? ex.getTitle() : event.getTitle();
+                    changed |= !Objects.equals(req.title(), baseTitle);
+                }
+                if (req.content() != null) {
+                    String baseContent = ex.getContent() != null ? ex.getContent() : event.getContent();
+                    changed |= !Objects.equals(req.content(), baseContent);
+                }
+                if (req.location() != null) {
+                    String baseLocation = ex.getLocation() != null ? ex.getLocation() : event.getLocation();
+                    changed |= !Objects.equals(req.location(), baseLocation);
+                }
+                if (req.color() != null) {
+                    EventColor baseColor = ex.getColor() != null ? ex.getColor() : event.getColor();
+                    changed |= req.color() != baseColor;
+                }
+                if (req.isAllDay() != null) {
+                    Boolean baseIsAllDay = ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay();
+                    changed |= !Objects.equals(req.isAllDay(), baseIsAllDay);
+                }
+                if (req.startTime() != null) {
+                    LocalDateTime baseStart = ex.getStartTime() != null ? ex.getStartTime() : occurrenceDate;
+                    changed |= !start.equals(baseStart);
+                }
+                if (req.endTime() != null) {
+                    LocalDateTime baseEnd = ex.getEndTime() != null
+                            ? ex.getEndTime() : occurrenceDate.plusMinutes(event.getDurationMinutes());
+                    changed |= !end.equals(baseEnd);
+                }
+
+                return changed;
+            }
+        }
+
+        if (req.title() != null) changed |= !Objects.equals(req.title(), event.getTitle());
+        if (req.content() != null) changed |= !Objects.equals(req.content(), event.getContent());
+        if (req.location() != null) changed |= !Objects.equals(req.location(), event.getLocation());
+        if (req.color() != null) changed |= req.color() != event.getColor();
+        if (req.isAllDay() != null) changed |= !Objects.equals(req.isAllDay(), event.getIsAllDay());
+        if (req.startTime() != null) changed |= !start.equals(occurrenceDate);
+        if (req.endTime() != null) changed |= !end.equals(occurrenceDate.plusMinutes(event.getDurationMinutes()));
+
+        return changed;
+    }
+
+    private boolean hasEventRecurrenceChanged(RecurrenceGroup rg, RecurrenceGroupReqDTO.UpdateReq req) {
+        // 단일 일정 -> 반복 일정으로 수정하는 경우
+        if (rg == null && req != null) return true;
+
+        // 단일 일정 -> 단일 일정 / 반복 일정 -> 반복 일정
+        if (rg == null || req == null) return false;
+
+        boolean changed = false;
+
+        if (req.frequency() != null) changed |= !Objects.equals(req.frequency(), rg.getFrequency());
+
+        if (req.endType() != null) changed |= !Objects.equals(req.endType(), rg.getEndType());
+
+        if (req.endDate() != null) changed |= !Objects.equals(req.endDate(), rg.getEndDate());
+
+        if (req.occurrenceCount() != null) changed |= !req.occurrenceCount().equals(rg.getOccurrenceCount());
+
+        if (req.monthlyType() != null) changed |= !Objects.equals(req.monthlyType(), rg.getMonthlyType());
+
+        if (req.weekOfMonth() != null) changed |= !req.weekOfMonth().equals(rg.getWeekOfMonth());
+
+        if (req.monthOfYear() != null) changed |= !req.monthOfYear().equals(rg.getMonthOfYear());
+
+        if (req.daysOfWeek() != null) {
+            String normalized = req.daysOfWeek().stream()
+                    .sorted()                 // DayOfWeek는 MONDAY..SUNDAY 순서로 정렬됨
+                    .map(DayOfWeek::name)     // "MONDAY"
+                    .collect(Collectors.joining(",")); // 구분자 규칙 고정 (공백 X)
+
+            changed |= !Objects.equals(normalized, rg.getDaysOfWeek());
+        }
+
+        if (req.daysOfMonth() != null) {
+            String normalized = req.daysOfMonth().stream()
+                    .sorted()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+
+            changed |= !Objects.equals(normalized, rg.getDaysOfMonth());
+        }
+
+        if (req.weekdayRule() != null) {
+            // SINGLE만 보냈고 dayOfWeekInMonth가 없으면 '수정 안 함'으로 간주 → 비교 자체를 안 함
+            if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE && req.dayOfWeekInMonth() == null) {
+                // do nothing
+            } else {
+                List<DayOfWeek> daysOfWeek = RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth());
+                log.info("weekdayRule: {}, daysOfWeek: {}", req.weekdayRule(), daysOfWeek);
+                changed |= req.weekdayRule() != RecurrenceUtils.inferWeekdayRule(daysOfWeek);
+            }
+        }
+
+        if (req.dayOfWeekInMonth() != null) {
+            String normalized = req.dayOfWeekInMonth().name();
+
+            changed |= !Objects.equals(normalized, rg.getDayOfWeekInMonth());
+        }
+
+        if (req.intervalValue() != null) changed |= !req.intervalValue().equals(rg.getIntervalValue());
+
+        return changed;
+    }
+
 
     private LocalDateTime calStartTime(EventReqDTO.UpdateReq req, Event event, LocalDateTime occurrenceDate) {
         if (req.startTime() != null) {
             return req.startTime();
         }
 
-        Optional<RecurrenceException> re = recurrenceExRepository.
-                findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-                event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
-        );
-        if (re.isPresent() && re.get().getStartTime() != null) {
-            return re.get().getStartTime();
+        if (event.isRecurring()) {
+            Optional<RecurrenceException> re = recurrenceExRepository.
+                    findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                            event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                    );
+            if (re.isPresent() && re.get().getStartTime() != null) {
+                return re.get().getStartTime();
+            }
         }
 
         return occurrenceDate;

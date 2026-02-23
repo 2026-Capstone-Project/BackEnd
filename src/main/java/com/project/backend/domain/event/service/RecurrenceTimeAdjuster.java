@@ -2,10 +2,11 @@ package com.project.backend.domain.event.service;
 
 import com.project.backend.domain.event.converter.RecurrenceGroupSpec;
 import com.project.backend.domain.event.dto.AdjustedTime;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
 import com.project.backend.domain.event.exception.RecurrenceGroupException;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -150,7 +151,7 @@ public class RecurrenceTimeAdjuster {
             RecurrenceGroupSpec spec
     ) {
         int week = spec.weekOfMonth();
-        MonthlyWeekdayRule rule = spec.weekdayRule();
+        MonthlyWeekdayRule rule = RecurrenceUtils.inferWeekdayRule(spec.dayOfWeekInMonth());
 
         if (rule == null) {
             return base;

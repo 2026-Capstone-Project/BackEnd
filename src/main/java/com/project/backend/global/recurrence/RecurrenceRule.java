@@ -1,7 +1,6 @@
 package com.project.backend.global.recurrence;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 
@@ -42,6 +41,11 @@ public interface RecurrenceRule {
      * MONTHLY 반복 (DAY_OF_WEEK): N번째 주
      */
     Integer getWeekOfMonth();
+
+//    /**
+//     * 매달 n번째 주, n요일 반복 기준 - SINGLE, WEEKDAY, WEEKEND, ALL_DAYS
+//     */
+//    MonthlyWeekdayRule getWeekdayRule();
 
     /**
      * MONTHLY 반복 (DAY_OF_WEEK): 반복 요일 (예: "MONDAY")
