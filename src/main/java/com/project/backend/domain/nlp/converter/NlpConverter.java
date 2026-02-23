@@ -7,6 +7,7 @@ import com.project.backend.domain.nlp.dto.response.LlmResDTO;
 import com.project.backend.domain.nlp.dto.response.NlpResDTO;
 import com.project.backend.domain.nlp.enums.ItemType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -137,6 +138,8 @@ public class NlpConverter {
                 .monthlyType(parseMonthlyType(llmRule.monthlyType()))
                 .daysOfMonth(llmRule.daysOfMonth())
                 .weekOfMonth(llmRule.weekOfMonth())
+                .weekdayRule(RecurrenceUtils.inferWeekdayRule( // dayOfWeekInMonth로 추론
+                        RecurrenceUtils.parseDaysOfWeek(llmRule.dayOfWeekInMonth())))
                 .dayOfWeekInMonth(convertDayOfWeek(llmRule.dayOfWeekInMonth()))
                 .monthOfYear(llmRule.monthOfYear())
                 .endType(parseEndType(llmRule.endType(), llmRule.endDate()))

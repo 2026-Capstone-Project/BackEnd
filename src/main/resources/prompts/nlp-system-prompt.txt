@@ -113,9 +113,36 @@
 **DAY_OF_WEEK (매월 N번째 X요일)**
 - 필수: weekOfMonth, dayOfWeekInMonth
 - weekOfMonth: 1~5 (1=첫째, 5=다섯째), -1은 마지막
+- 단일 요일(예: 월요일/화요일 등)인 경우
+- dayOfWeekInMonth는 반드시 단일 값 1개만 출력
 - 예시: "매월 첫째 월요일 회의" → monthlyType: "DAY_OF_WEEK", weekOfMonth: 1, dayOfWeekInMonth: "MONDAY"
 - 예시: "매월 마지막 금요일 정산" → monthlyType: "DAY_OF_WEEK", weekOfMonth: -1, dayOfWeekInMonth: "FRIDAY"
 - 예시: "매월 셋째 주 화요일" → monthlyType: "DAY_OF_WEEK", weekOfMonth: 3, dayOfWeekInMonth: "TUESDAY"
+
+- 평일/주중(weekday) 표현인 경우
+- dayOfWeekInMonth를 반드시 "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" 로 출력
+- 예시: "매월 셋째 평일 7시 헬스"
+  → monthlyType: "DAY_OF_WEEK",
+    weekOfMonth: 3,
+    dayOfWeekInMonth: "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY"
+
+- 주말(weekend) 표현인 경우
+- dayOfWeekInMonth를 반드시 "SATURDAY,SUNDAY" 로 출력
+- 예시: "매월 둘째 주말 정리"
+  → monthlyType: "DAY_OF_WEEK",
+    weekOfMonth: 2,
+    dayOfWeekInMonth: "SATURDAY,SUNDAY"
+
+- 매일/1주 전체(all days) 표현인 경우
+- dayOfWeekInMonth를 반드시 "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY" 로 출력
+- 예시: "매월 첫째 주는 매일 물 마시기"
+  → monthlyType: "DAY_OF_WEEK",
+    weekOfMonth: 1,
+    dayOfWeekInMonth: "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY"
+
+- 공통 규칙
+- 요일은 반드시 전체 이름(MONDAY...)만 사용
+- 쉼표(,)로만 구분하며 공백을 넣지 않는다
 
 #### YEARLY (매년)
 - 필수 필드: frequency, monthOfYear
@@ -260,6 +287,32 @@
     "daysOfMonth": null,
     "weekOfMonth": 3,
     "dayOfWeekInMonth": "TUESDAY",
+    "monthOfYear": null,
+    "endType": "NEVER",
+    "endDate": null,
+    "occurrenceCount": null
+  },
+  "confidence": 0.9
+}
+
+입력: "매월 셋째 평일 오후 7시 헬스"
+{
+  "type": "EVENT",
+  "title": "헬스",
+  "date": "2025-01-20",
+  "startTime": "19:00",
+  "endTime": null,
+  "durationMinutes": 60,
+  "isAllDay": false,
+  "isRecurring": true,
+  "recurrenceRule": {
+    "frequency": "MONTHLY",
+    "intervalValue": 1,
+    "daysOfWeek": null,
+    "monthlyType": "DAY_OF_WEEK",
+    "daysOfMonth": null,
+    "weekOfMonth": 3,
+    "dayOfWeekInMonth": "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY",
     "monthOfYear": null,
     "endType": "NEVER",
     "endDate": null,

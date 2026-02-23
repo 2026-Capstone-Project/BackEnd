@@ -113,7 +113,16 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "6. 반복 일정 (매년)",
+                                    name = "6. 반복 일정 (매월 N번째 평일)",
+                                    summary = "매월 셋째 평일 오후 7시 헬스",
+                                    value = """
+                                        {
+                                            "text": "매월 셋째 평일 오후 7시 헬스"
+                                        }
+                                        """
+                            ),
+                            @ExampleObject(
+                                    name = "7. 반복 일정 (매년)",
                                     summary = "매년 3월 15일 결혼기념일",
                                     value = """
                                         {
@@ -122,7 +131,7 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "7. 종료 조건 (N회)",
+                                    name = "8. 종료 조건 (N회)",
                                     summary = "PT 10회 등록",
                                     value = """
                                         {
@@ -131,7 +140,7 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "8. 복수 항목",
+                                    name = "9. 복수 항목",
                                     summary = "내일 치과, 금요일까지 보고서",
                                     value = """
                                         {
@@ -408,6 +417,7 @@ public interface NlpDocs {
                     "frequency": "MONTHLY",
                     "monthlyType": "DAY_OF_WEEK",
                     "weekOfMonth": 3,
+                    "weekdayRule": "SINGLE",
                     "dayOfWeekInMonth": "TUESDAY",
                     "endType": "NEVER"
                 }
@@ -428,6 +438,9 @@ public interface NlpDocs {
 
                 ## 색상 값 (color)
                 `BLUE` (기본값), `GREEN`, `PINK`, `PURPLE`, `GRAY`, `YELLOW`
+                
+                ## weekdayRule
+                `SINGLE`, `WEEKDAY`, `WEEKEND`, `ALL_DAYS`
                 """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -542,6 +555,7 @@ public interface NlpDocs {
                                                         "intervalValue": 1,
                                                         "monthlyType": "DAY_OF_WEEK",
                                                         "weekOfMonth": 3,
+                                                        "weekdayRule": "SINGLE",
                                                         "dayOfWeekInMonth": "TUESDAY",
                                                         "endType": "NEVER"
                                                     }
@@ -551,7 +565,35 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "6. 반복 일정 (매년)",
+                                    name = "6. 반복 일정 (매월 셋째 평일)",
+                                    summary = "헬스 - 매월 셋째 평일",
+                                    value = """
+                                        {
+                                            "items": [
+                                                {
+                                                    "type": "EVENT",
+                                                    "title": "헬스",
+                                                    "date": "2025-01-21",
+                                                    "startTime": "19:00",
+                                                    "endTime": "20:00",
+                                                    "isAllDay": false,
+                                                    "isRecurring": true,
+                                                    "recurrenceRule": {
+                                                        "frequency": "MONTHLY",
+                                                        "intervalValue": 1,
+                                                        "monthlyType": "DAY_OF_WEEK",
+                                                        "weekOfMonth": 3,
+                                                        "weekdayRule": "WEEKDAY",
+                                                        "dayOfWeekInMonth": "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY",
+                                                        "endType": "NEVER"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                        """
+                            ),
+                            @ExampleObject(
+                                    name = "7. 반복 일정 (매년)",
                                     summary = "결혼기념일 - 매년 3월 15일",
                                     value = """
                                         {
@@ -576,7 +618,7 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "7. 종료 조건 (N회 반복)",
+                                    name = "8. 종료 조건 (N회 반복)",
                                     summary = "PT 10회",
                                     value = """
                                         {
@@ -602,7 +644,7 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "8. 종료 조건 (특정 날짜까지)",
+                                    name = "9. 종료 조건 (특정 날짜까지)",
                                     summary = "스터디 - 6월까지 매주 토요일",
                                     value = """
                                         {
@@ -629,7 +671,7 @@ public interface NlpDocs {
                                         """
                             ),
                             @ExampleObject(
-                                    name = "9. 복수 항목 저장",
+                                    name = "10. 복수 항목 저장",
                                     summary = "일정 + 할 일 동시 저장",
                                     value = """
                                         {
