@@ -1,5 +1,6 @@
 package com.project.backend.domain.nlp.service;
 
+import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
@@ -10,6 +11,8 @@ import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.nlp.dto.request.NlpReqDTO;
 import com.project.backend.domain.nlp.exception.NlpErrorCode;
 import com.project.backend.domain.nlp.exception.NlpException;
+import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
@@ -33,6 +36,7 @@ public class NlpSaverService {
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final TodoRepository todoRepository;
     private final TodoRecurrenceGroupRepository todoRecurrenceGroupRepository;
+    private final ReminderEventBridge reminderEventBridge;
 
     /**
      * 파싱된 항목을 저장하고 생성된 ID를 반환한다.
@@ -72,6 +76,17 @@ public class NlpSaverService {
         );
 
         eventRepository.save(event);
+
+        // 이벤트 생성에 따른 리스너 생성 로직 실행
+        reminderEventBridge.handlePlanChanged(
+                event.getId(),
+                TargetType.EVENT,
+                member.getId(),
+                event.getTitle(),
+                false,
+                event.getStartTime(),
+                ChangeType.CREATED
+        );
         return event.getId();
     }
 
@@ -106,6 +121,17 @@ public class NlpSaverService {
         group.setEvent(event);
 
         log.debug("반복 일정 생성 완료 - eventId: {}, groupId: {}", event.getId(), group.getId());
+
+        // 이벤트 생성에 따른 리스너 생성 로직 실행
+        reminderEventBridge.handlePlanChanged(
+                event.getId(),
+                TargetType.EVENT,
+                member.getId(),
+                event.getTitle(),
+                true,
+                event.getStartTime(),
+                ChangeType.CREATED
+        );
         return event.getId();
     }
 
@@ -148,7 +174,7 @@ public class NlpSaverService {
                 member,
                 item.title(),
                 startDate,
-                dueTime,
+                item.isAllDay() ? LocalTime.of(9,0) : dueTime, // 종일 일때, 기본 시간 9시로 설정
                 item.isAllDay(),
                 null,  // priority: NLP에서 파싱하지 않음, 기본값 사용
                 null,  // color: 기본값 사용
@@ -156,6 +182,18 @@ public class NlpSaverService {
         );
 
         todoRepository.save(todo);
+
+        // 투두 생성에 따른 리스너 생성 로직 실행
+        reminderEventBridge.handlePlanChanged(
+                todo.getId(),
+                TargetType.TODO,
+                member.getId(),
+                todo.getTitle(),
+                false,
+                todo.getStartDate().atTime(todo.getDueTime() != null
+                        ? todo.getDueTime() : LocalTime.of(9, 0)), // 종일 일때, 기본 시간 9시로 설정
+                ChangeType.CREATED
+        );
         return todo.getId();
     }
 
@@ -178,7 +216,7 @@ public class NlpSaverService {
                 member,
                 item.title(),
                 startDate,
-                dueTime,
+                item.isAllDay() ? LocalTime.of(9,0) : dueTime, // 종일 일때, 기본 시간 9시로 설정
                 item.isAllDay(),
                 null,  // priority
                 null,  // color
@@ -191,6 +229,18 @@ public class NlpSaverService {
         group.setTodo(todo);
 
         log.debug("반복 할 일 생성 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
+
+        // 투두 생성에 따른 리스너 생성 로직 실행
+        reminderEventBridge.handlePlanChanged(
+                todo.getId(),
+                TargetType.TODO,
+                member.getId(),
+                todo.getTitle(),
+                true,
+                todo.getStartDate().atTime(todo.getDueTime() != null
+                        ? todo.getDueTime() : LocalTime.of(9, 0)), // 종일 일때, 기본 시간 9시로 설정
+                ChangeType.CREATED
+        );
         return todo.getId();
     }
 

@@ -1,7 +1,9 @@
 package com.project.backend.domain.suggestion.vo.fingerprint;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.*;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 
 import java.time.LocalDate;
 
@@ -27,7 +29,7 @@ public record RecurrenceGroupFingerPrint(
                 rg.getMonthlyType(),
                 rg.getDaysOfMonth(),
                 rg.getWeekOfMonth(),
-                rg.getMonthlyWeekdayRule(),
+                RecurrenceUtils.inferWeekdayRule(RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth())),
                 rg.getDayOfWeekInMonth(),
                 rg.getMonthOfYear(),
                 rg.getEndType(),
