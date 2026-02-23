@@ -346,7 +346,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
                 continue;
             }
             // 마지막 반복이 시작되는 날로부터 7일전이 아니면 생성할 시점이 아님
-            if (!last.toLocalDate().isEqual(now.plusDays(7))) {
+            Integer leadDays = SuggestionAnchorUtil.computeLeadDays(candidate);
+            if (!last.toLocalDate().isEqual(now.plusDays(leadDays))) {
                 continue;
             }
             // LLM 요청 바디에 추가

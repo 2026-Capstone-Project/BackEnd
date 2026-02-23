@@ -1,6 +1,8 @@
 package com.project.backend.domain.suggestion.util;
 
+import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
+import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -82,6 +84,16 @@ public final class SuggestionAnchorUtil {
             return Math.min(dayDiff, 7);
         }
         return 7;
+    }
+
+    public static Integer computeLeadDays(
+            RecurrenceSuggestionCandidate candidate
+    ) {
+        if (candidate.getFrequency() == RecurrenceFrequency.DAILY) {
+            return Math.min(candidate.getIntervalValue(), 7);
+        } else {
+            return 7;
+        }
     }
 
     private static LocalDate fromEpochWeekStart(long epochWeek) {
