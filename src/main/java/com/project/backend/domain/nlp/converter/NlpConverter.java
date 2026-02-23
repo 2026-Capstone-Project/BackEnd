@@ -1,5 +1,6 @@
 package com.project.backend.domain.nlp.converter;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.dto.request.NlpReqDTO;
@@ -7,6 +8,7 @@ import com.project.backend.domain.nlp.dto.response.LlmResDTO;
 import com.project.backend.domain.nlp.dto.response.NlpResDTO;
 import com.project.backend.domain.nlp.enums.ItemType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -130,6 +132,10 @@ public class NlpConverter {
             return null;
         }
 
+        MonthlyWeekdayRule weekdayRule = llmRule.dayOfWeekInMonth() != null
+                ? RecurrenceUtils.inferWeekdayRule(RecurrenceUtils.parseDaysOfWeek(llmRule.dayOfWeekInMonth()))
+                : null;
+
         return NlpReqDTO.RecurrenceRule.builder()
                 .frequency(parseFrequency(llmRule.frequency()))
                 .intervalValue(llmRule.intervalValue())
@@ -137,6 +143,7 @@ public class NlpConverter {
                 .monthlyType(parseMonthlyType(llmRule.monthlyType()))
                 .daysOfMonth(llmRule.daysOfMonth())
                 .weekOfMonth(llmRule.weekOfMonth())
+                .weekdayRule(weekdayRule)
                 .dayOfWeekInMonth(convertDayOfWeek(llmRule.dayOfWeekInMonth()))
                 .monthOfYear(llmRule.monthOfYear())
                 .endType(parseEndType(llmRule.endType(), llmRule.endDate()))
