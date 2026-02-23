@@ -1,5 +1,6 @@
 package com.project.backend.domain.nlp.dto.request;
 
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
@@ -82,6 +83,9 @@ public class NlpReqDTO {
 
             // MONTHLY (DAY_OF_WEEK): N번째 주 (1~5, -1은 마지막)
             Integer weekOfMonth,
+
+            // MONTHLY (DAY_OF_WEEK): SINGLE / WEEKDAY / WEEKEND / ALL_DAYS
+            MonthlyWeekdayRule weekdayRule,
 
             // MONTHLY (DAY_OF_WEEK): 반복 요일 "MONDAY"
             String dayOfWeekInMonth,
