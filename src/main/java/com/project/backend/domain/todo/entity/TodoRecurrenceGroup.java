@@ -1,7 +1,6 @@
 package com.project.backend.domain.todo.entity;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
@@ -51,7 +50,7 @@ public class TodoRecurrenceGroup extends BaseEntity implements RecurrenceRule {
     private Integer weekOfMonth;
 
     // MONTHLY (DAY_OF_WEEK): 반복 요일 (예: "MONDAY")
-    @Column(name = "day_of_week_in_month", length = 20)
+    @Column(name = "day_of_week_in_month", length = 60)
     private String dayOfWeekInMonth;
 
     // 종료 조건

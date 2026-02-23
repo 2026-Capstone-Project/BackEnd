@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.converter;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import lombok.Builder;
@@ -20,7 +20,6 @@ public record RecurrenceGroupSpec(
         MonthlyType monthlyType,
         List<Integer> daysOfMonth,
         Integer weekOfMonth,
-        MonthlyWeekdayRule weekdayRule,
         List<DayOfWeek> dayOfWeekInMonth,
 
         Integer monthOfYear,

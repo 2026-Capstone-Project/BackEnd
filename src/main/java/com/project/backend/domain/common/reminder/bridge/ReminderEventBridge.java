@@ -1,6 +1,6 @@
 package com.project.backend.domain.common.reminder.bridge;
 
-import com.project.backend.domain.common.plan.PlanEventFactory;
+import com.project.backend.domain.common.plan.factory.PlanEventFactory;
 import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
