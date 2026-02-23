@@ -96,10 +96,11 @@ public interface TodoDocs {
                 | 필드 | 타입 | 필수 | 설명 |
                 |------|------|------|------|
                 | `weekOfMonth` | Integer | ✅ | 몇 번째 주 (1~5, -1=마지막) |
-                | `dayOfWeekInMonth` | DayOfWeek | ✅ | 요일 |
+                | `weekdayRule` | MonthlyWeekDayRule | ✅ | 단일요일(SINGLE), 평일(WEEKEND), 주말(WEEKEND), 1주 전체(ALL_DAYS)
+                | `dayOfWeekInMonth` | List<DayOfWeek> | ✅ | 요일 |
 
-                예: 매월 두 번째 화요일 → `weekOfMonth: 2`, `dayOfWeekInMonth: "TUESDAY"`
-
+                예: 매월 두 번째 화요일 → `weekOfMonth: 2`, `weekdayRule: "SINGLE"`, `dayOfWeekInMonth: "TUESDAY"` <br>
+                   매월 두 번째 평일 -> `weekOfMonth: 2`, `weekdayRule: "WEEKDAY"`, `dayOfWeekInMonth: null`
                 ---
                 ## 📅 연간 반복 (YEARLY)
 
@@ -209,6 +210,7 @@ public interface TodoDocs {
                                                 "intervalValue": 1,
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
+                                                "weekDayRule": "SINGLE",
                                                 "dayOfWeekInMonth": "TUESDAY",
                                                 "endType": "END_BY_COUNT",
                                                 "occurrenceCount": 12

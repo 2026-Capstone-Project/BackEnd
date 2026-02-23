@@ -1,4 +1,4 @@
-package com.project.backend.domain.common.plan;
+package com.project.backend.domain.common.plan.factory;
 
 import com.project.backend.domain.common.reminder.dto.PlanChanged;
 import com.project.backend.domain.common.reminder.dto.RecurrenceExceptionChanged;

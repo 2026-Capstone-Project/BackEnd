@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.dto.request;
 
 import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import jakarta.validation.constraints.Max;
@@ -33,7 +33,7 @@ public class RecurrenceGroupReqDTO {
             @Max(5)
             Integer weekOfMonth,
             MonthlyWeekdayRule weekdayRule,
-            List<DayOfWeek> dayOfWeekInMonth,
+            DayOfWeek dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)
@@ -72,7 +72,7 @@ public class RecurrenceGroupReqDTO {
             @Max(5)
             Integer weekOfMonth,
             MonthlyWeekdayRule weekdayRule,
-            List<DayOfWeek> dayOfWeekInMonth,
+            DayOfWeek dayOfWeekInMonth,
 
             // YEARLY: 반복 월
             @Min(1)

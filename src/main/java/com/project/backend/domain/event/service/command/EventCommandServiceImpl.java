@@ -14,7 +14,7 @@ import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.ExceptionType;
-import com.project.backend.domain.event.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -33,6 +33,7 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
@@ -45,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -123,7 +125,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        eventValidator.validateUpdate(event, occurrenceDate, scope);
+        eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
 
         // 변경하기 전의 title + location hash
         byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
@@ -137,7 +139,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = event.isRecurring() ? calStartTime(req, event, occurrenceDate): event.getStartTime();
+        LocalDateTime start = calStartTime(req, event, occurrenceDate);
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
@@ -787,17 +789,18 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         if (req.weekdayRule() != null) {
-            // SINGLE어도 요일이 다를 수 있으므로, SINGLE이 아닐때만 비교하기
-            if (req.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
-                changed |= req.weekdayRule() != rg.getMonthlyWeekdayRule();
+            // SINGLE만 보냈고 dayOfWeekInMonth가 없으면 '수정 안 함'으로 간주 → 비교 자체를 안 함
+            if (req.weekdayRule() == MonthlyWeekdayRule.SINGLE && req.dayOfWeekInMonth() == null) {
+                // do nothing
+            } else {
+                List<DayOfWeek> daysOfWeek = RecurrenceUtils.parseDaysOfWeek(rg.getDayOfWeekInMonth());
+                log.info("weekdayRule: {}, daysOfWeek: {}", req.weekdayRule(), daysOfWeek);
+                changed |= req.weekdayRule() != RecurrenceUtils.inferWeekdayRule(daysOfWeek);
             }
         }
 
         if (req.dayOfWeekInMonth() != null) {
-            String normalized = req.dayOfWeekInMonth().stream()
-                    .sorted()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining(","));
+            String normalized = req.dayOfWeekInMonth().name();
 
             changed |= !Objects.equals(normalized, rg.getDayOfWeekInMonth());
         }
@@ -813,12 +816,14 @@ public class EventCommandServiceImpl implements EventCommandService {
             return req.startTime();
         }
 
-        Optional<RecurrenceException> re = recurrenceExRepository.
-                findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
-                event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
-        );
-        if (re.isPresent() && re.get().getStartTime() != null) {
-            return re.get().getStartTime();
+        if (event.isRecurring()) {
+            Optional<RecurrenceException> re = recurrenceExRepository.
+                    findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
+                            event.getRecurrenceGroup().getId(), occurrenceDate, ExceptionType.OVERRIDE
+                    );
+            if (re.isPresent() && re.get().getStartTime() != null) {
+                return re.get().getStartTime();
+            }
         }
 
         return occurrenceDate;

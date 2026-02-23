@@ -7,6 +7,7 @@ import com.project.backend.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Entity
@@ -143,11 +144,17 @@ public class Event extends BaseEntity {
     ) {
         if (title != null) this.title = title;
         if (content != null) this.content = content;
-        if (startTime != null) this.startTime = startTime;
+        if (startTime != null) {
+            this.startTime = startTime;
+            this.endTime = startTime.plusMinutes(durationMinutes);
+        }
         if (endTime != null) this.endTime = endTime;
         if (location != null) this.location = location;
         if (color != null) this.color = color;
         if (isAllDay != null) this.isAllDay = isAllDay;
+        if (startTime != null && endTime != null) {
+            this.durationMinutes = (int) Duration.between(startTime, endTime).toMinutes();
+        }
     }
 
     public void updateRecurrenceGroup(RecurrenceGroup recurrenceGroup) {
