@@ -174,7 +174,7 @@ public class NlpSaverService {
                 member,
                 item.title(),
                 startDate,
-                dueTime,
+                item.isAllDay() ? LocalTime.of(9,0) : dueTime, // 종일 일때, 기본 시간 9시로 설정
                 item.isAllDay(),
                 null,  // priority: NLP에서 파싱하지 않음, 기본값 사용
                 null,  // color: 기본값 사용
@@ -190,7 +190,8 @@ public class NlpSaverService {
                 member.getId(),
                 todo.getTitle(),
                 false,
-                todo.getStartDate().atTime(todo.getDueTime()),
+                todo.getStartDate().atTime(todo.getDueTime() != null
+                        ? todo.getDueTime() : LocalTime.of(9, 0)), // 종일 일때, 기본 시간 9시로 설정
                 ChangeType.CREATED
         );
         return todo.getId();
@@ -215,7 +216,7 @@ public class NlpSaverService {
                 member,
                 item.title(),
                 startDate,
-                dueTime,
+                item.isAllDay() ? LocalTime.of(9,0) : dueTime, // 종일 일때, 기본 시간 9시로 설정
                 item.isAllDay(),
                 null,  // priority
                 null,  // color
@@ -229,8 +230,6 @@ public class NlpSaverService {
 
         log.debug("반복 할 일 생성 완료 - todoId: {}, groupId: {}", todo.getId(), group.getId());
 
-        log.info("todo.startDate : {}", todo.getStartDate());
-        log.info("todo.getDueTime : {}", todo.getDueTime());
         // 투두 생성에 따른 리스너 생성 로직 실행
         reminderEventBridge.handlePlanChanged(
                 todo.getId(),
@@ -238,7 +237,8 @@ public class NlpSaverService {
                 member.getId(),
                 todo.getTitle(),
                 true,
-                todo.getStartDate().atTime(todo.getDueTime()),
+                todo.getStartDate().atTime(todo.getDueTime() != null
+                        ? todo.getDueTime() : LocalTime.of(9, 0)), // 종일 일때, 기본 시간 9시로 설정
                 ChangeType.CREATED
         );
         return todo.getId();
