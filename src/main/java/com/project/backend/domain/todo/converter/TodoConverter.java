@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,7 +31,7 @@ public class TodoConverter {
         return Todo.builder()
                 .title(reqDTO.title())
                 .startDate(reqDTO.startDate())
-                .dueTime(reqDTO.dueTime())
+                .dueTime(reqDTO.isAllDay() ? LocalTime.of(9,0) : reqDTO.dueTime())
                 .isAllDay(reqDTO.isAllDay() != null ? reqDTO.isAllDay() : false)
                 .priority(reqDTO.priority() != null ? reqDTO.priority() : Priority.MEDIUM)
                 .color(reqDTO.color() != null ? reqDTO.color() : TodoColor.BLUE)
