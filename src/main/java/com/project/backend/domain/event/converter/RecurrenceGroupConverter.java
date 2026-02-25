@@ -350,13 +350,15 @@ public class RecurrenceGroupConverter {
 
         b.frequency(frequency);
 
-        Integer interval;
+        int interval;
         if (frequency == RecurrenceFrequency.WEEKLY) {
             // WEEKLY는 무조건 1
             interval = 1;
         } else {
             // WEEKLY가 아닌 경우만 req → rg 순으로 선택
-            interval = req.intervalValue() != null ? req.intervalValue() : rg.getIntervalValue();
+            interval = req.intervalValue() != null
+                    ? req.intervalValue()
+                    : rg != null ? rg.getIntervalValue() : 1;
         }
 
         b.interval(interval);

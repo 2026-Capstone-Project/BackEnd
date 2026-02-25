@@ -178,27 +178,44 @@ public class RecurrenceTimeAdjuster {
             return base;
         }
 
+        // 이번 달 먼저, 후보가 base보다 이전이면 다음 달로 1번 더 시도
         YearMonth month = YearMonth.from(base);
 
-        // 해당 월의 n번째 주 시작 (월요일 기준)
-        LocalDate startOfNthWeek = getNthWeekday(month, week, DayOfWeek.MONDAY);
-        if (startOfNthWeek == null) {
-            throw new IllegalStateException("Invalid weekOfMonth");
-        }
-
-        LocalDate endOfNthWeek = startOfNthWeek.plusDays(6);
-
-        // 그 주 안에서 rule에 맞는 첫 번째 요일 선택
-        for (LocalDate d = startOfNthWeek;
-             !d.isAfter(endOfNthWeek);
-             d = d.plusDays(1)) {
-
-            if (targetDays.contains(d.getDayOfWeek())) {
-                return LocalDateTime.of(d, base.toLocalTime());
+        LocalDate candidateDate = findNthWeekCandidate(month, week, targetDays);
+        if (candidateDate != null) {
+            LocalDateTime candidate = LocalDateTime.of(candidateDate, base.toLocalTime());
+            if (!candidate.isBefore(base)) {
+                return candidate; // candidate >= base 이면 이번 달 확정
             }
         }
 
+        // 이번 달 후보가 base보다 이전이거나(= 과거), 아예 없으면 다음 달
+        YearMonth nextMonth = month.plusMonths(1);
+        LocalDate nextCandidateDate = findNthWeekCandidate(nextMonth, week, targetDays);
+        if (nextCandidateDate != null) {
+            return LocalDateTime.of(nextCandidateDate, base.toLocalTime());
+        }
+
         throw new RecurrenceGroupException(RecurrenceGroupErrorCode.FAIL_ADJUSTMENT_DAY_OF_WEEK);
+    }
+
+    private static LocalDate findNthWeekCandidate(
+            YearMonth month,
+            int week,
+            List<DayOfWeek> targetDays
+    ) {
+        // 해당 월의 n번째 주 시작(월요일 기준)
+        LocalDate startOfNthWeek = getNthWeekday(month, week, DayOfWeek.MONDAY);
+        if (startOfNthWeek == null) return null;
+
+        LocalDate endOfNthWeek = startOfNthWeek.plusDays(6);
+
+        for (LocalDate d = startOfNthWeek; !d.isAfter(endOfNthWeek); d = d.plusDays(1)) {
+            if (targetDays.contains(d.getDayOfWeek())) {
+                return d; // 그 주 안에서 rule에 맞는 첫 날짜
+            }
+        }
+        return null;
     }
 
     private static LocalDate getNthWeekday(
