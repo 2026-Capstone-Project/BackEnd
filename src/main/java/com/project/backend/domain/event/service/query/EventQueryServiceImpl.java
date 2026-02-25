@@ -335,9 +335,27 @@ public class EventQueryServiceImpl implements EventQueryService {
                 recurrenceExceptions =
                         recurrenceExceptionRepository.findAllByRecurrenceGroupId(event.getRecurrenceGroup().getId());
             }
+            LocalDateTime tempStartTime = event.getStartTime();
+            LocalDateTime tempEndTime = event.getEndTime();
+            boolean isSkip = false;
+            for (RecurrenceException ex : recurrenceExceptions) {
+                // 만약 부모 익셉션이 존재한다면
+                if (ex.getExceptionDate().isEqual(event.getStartTime())) {
+                    if (ex.getExceptionType() == OVERRIDE) {
+                        tempStartTime = ex.getStartTime() != null ? ex.getStartTime() : event.getStartTime();
+                        tempEndTime = ex.getEndTime() != null ? ex.getEndTime() : event.getEndTime();
+                        break;
+                    }
+                    else if (ex.getExceptionType() == SKIP) {
+                        isSkip = true;
+                        break;
+                    }
+                }
+            }
+
             // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
-            if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {
-                expandedEvents.add(EventConverter.toDetailRes(event));
+            if (!isSkip && !tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
+                expandedEvents.add(EventConverter.toDetailRes(event, tempStartTime, tempEndTime));
             }
             // 부모 이벤트 포함
             int count = 1;
