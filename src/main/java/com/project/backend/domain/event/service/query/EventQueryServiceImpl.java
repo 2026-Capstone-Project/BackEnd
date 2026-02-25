@@ -335,10 +335,39 @@ public class EventQueryServiceImpl implements EventQueryService {
                 recurrenceExceptions =
                         recurrenceExceptionRepository.findAllByRecurrenceGroupId(event.getRecurrenceGroup().getId());
             }
-            // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
-            if (!event.getEndTime().isBefore(startRange) && !event.getStartTime().isAfter(endRange)) {
-                expandedEvents.add(EventConverter.toDetailRes(event));
+            LocalDateTime tempStartTime = event.getStartTime();
+            LocalDateTime tempEndTime = event.getEndTime();
+            RecurrenceException tempEx = null;
+            boolean isSkip = false;
+            for (RecurrenceException ex : recurrenceExceptions) {
+                // 만약 부모 익셉션이 존재한다면
+                if (ex.getExceptionDate().isEqual(event.getStartTime())) {
+                    log.debug("부모 익셉션 존재");
+                    tempEx = ex;
+                }
             }
+            if (tempEx != null) {
+                if (tempEx.getExceptionType() == OVERRIDE) {
+                    log.debug("오버라이드 존재");
+                    tempStartTime = tempEx.getStartTime() != null ? tempEx.getStartTime() : event.getStartTime();
+                    tempEndTime = tempEx.getEndTime() != null ? tempEx.getEndTime() : event.getEndTime();
+                }
+                else if (tempEx.getExceptionType() == SKIP) {
+                    log.debug("스킵 존재");
+                    isSkip = true;
+                }
+                // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
+                if (!isSkip && !tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
+                    log.debug("예외 부모가 범위에 포함되었습니다");
+                    expandedEvents.add(EventConverter.toDetailRes(tempEx, event));
+                }
+            } else {
+                if (!tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
+                    log.debug("원본 부모가 범위에 포함되었습니다");
+                    expandedEvents.add(EventConverter.toDetailRes(event));
+                }
+            }
+
             // 부모 이벤트 포함
             int count = 1;
             // 생성기에 최초로 들어갈 기준 시간
