@@ -142,14 +142,19 @@ public class RecurrenceGroupConverter {
     public static RecurrenceException toRecurrenceExceptionForUpdate(
             EventReqDTO.UpdateReq req,
             RecurrenceGroup recurrenceGroup,
-            LocalDateTime occurrenceDate
+            LocalDateTime occurrenceDate,
+            Integer duration
     ) {
+        LocalDateTime startTime = req.startTime() != null ? req.startTime() : null;
+        LocalDateTime endTime = req.endTime() != null
+                ? req.endTime()
+                : startTime != null ? startTime.plusMinutes(duration) : null;
         return RecurrenceException.builder()
                 .exceptionDate(occurrenceDate)
                 .title(req.title() != null ? req.title() : null)
                 .content(req.content() != null ? req.content() : null)
-                .startTime(req.startTime() != null ? req.startTime() : null)
-                .endTime(req.endTime() != null ? req.endTime() : null)
+                .startTime(startTime)
+                .endTime(endTime)
                 .exceptionType(ExceptionType.OVERRIDE)
                 .location(req.location() != null ? req.location() : null)
                 .color(req.color() != null ? req.color() : null)

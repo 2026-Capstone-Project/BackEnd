@@ -466,7 +466,8 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
-        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(req, rg, occurrenceDate);
+        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(
+                req, rg, occurrenceDate, event.getDurationMinutes());
         recurrenceExRepository.save(ex);
         rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
 
