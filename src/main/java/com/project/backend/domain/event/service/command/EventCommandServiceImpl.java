@@ -161,7 +161,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 RecurrenceGroupReqDTO.CreateReq createReq =
                         RecurrenceGroupConverter.toCreateReq(req.recurrenceGroup());
                 rgValidator.validateCreate(createReq, start);
-                RecurrenceGroup rg = updateToRecurrenceEvent(req, req.recurrenceGroup(), member, start);
+                RecurrenceGroup rg = updateToRecurrenceEvent(req, req.recurrenceGroup(), event, member, start);
                 event.updateRecurrenceGroup(rg);
                 rg.updateEvent(event);
                 // 이벤트 + 반복 생성에 따른 리스너 수정 로직 실행
@@ -424,9 +424,16 @@ public class EventCommandServiceImpl implements EventCommandService {
     private RecurrenceGroup updateToRecurrenceEvent(
             EventReqDTO.UpdateReq eventReq,
             RecurrenceGroupReqDTO.UpdateReq rgReq,
+            Event event,
             Member member,
             LocalDateTime start) {
         RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(eventReq, rgReq, null, start);
+
+        AdjustedTime adjusted = RecurrenceTimeAdjuster.adjust(event.getStartTime(), event.getEndTime(), rgSpec);
+
+        // 생성된 반복에 따른 일정 start,endTime 업데이트
+        event.updateTime(adjusted.start(), adjusted.end());
+
         return createRecurrenceGroup(rgSpec, member);
     }
 
@@ -466,7 +473,8 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
-        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(req, rg, occurrenceDate);
+        RecurrenceException ex = RecurrenceGroupConverter.toRecurrenceExceptionForUpdate(
+                req, rg, occurrenceDate, event.getDurationMinutes());
         recurrenceExRepository.save(ex);
         rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
 
