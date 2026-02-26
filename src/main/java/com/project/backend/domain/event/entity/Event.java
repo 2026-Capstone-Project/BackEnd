@@ -161,4 +161,9 @@ public class Event extends BaseEntity {
         this.recurrenceGroup = recurrenceGroup;
         this.recurrenceFrequency = recurrenceGroup.getFrequency();
     }
+
+    public void updateTime(LocalDateTime startTime, LocalDateTime endTime) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
 }
