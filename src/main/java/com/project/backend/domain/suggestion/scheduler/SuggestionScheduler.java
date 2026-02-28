@@ -28,6 +28,7 @@ public class SuggestionScheduler {
 
         if (!enabled) {
             log.warn("선제적 제안 스케줄러가 비활성화 상태입니다");
+            return;
         }
 
         List<Long> memberIds = memberRepository.findActiveMemberIdsWithSuggestionEnabled();

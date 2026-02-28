@@ -49,7 +49,8 @@ public class CreateTodoExecutor implements SuggestionExecutor {
             );
 
             if (exist) {
-                return;
+                return; // anchor 중에 이미 생성된게 하나라도 있다면 전부 생성하지 않음 (같은 키 객체 생성시 애초에 선제적 제안이 만료됨)
+//                continue; // anchor 중에 이미 생성된 것은 제외하고 나머지만 생성
             }
 
             toSave.add(Todo.builder()
