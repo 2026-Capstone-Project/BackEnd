@@ -26,8 +26,7 @@ public class OAuthController implements OAuthDocs {
 
     private final OAuthService oAuthService;
 
-    // TODO: 프론트 배포 후 설정 파일로 분리
-    private static final String FRONTEND_BASE_URL = "http://localhost:5173";
+    private static final String FRONTEND_BASE_URL = "https://calio.co.kr";
     private static final String FRONTEND_LOGIN_SUCCESS_URL = FRONTEND_BASE_URL + "/";
     private static final String FRONTEND_LOGIN_ERROR_URL = FRONTEND_BASE_URL + "/login";
 
