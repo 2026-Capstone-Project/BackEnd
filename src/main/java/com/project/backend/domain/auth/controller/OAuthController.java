@@ -26,7 +26,7 @@ public class OAuthController implements OAuthDocs {
 
     private final OAuthService oAuthService;
 
-    private static final String FRONTEND_BASE_URL = "https://calio.kr";
+    private static final String FRONTEND_BASE_URL = "https://calio.co.kr";
     private static final String FRONTEND_LOGIN_SUCCESS_URL = FRONTEND_BASE_URL + "/";
     private static final String FRONTEND_LOGIN_ERROR_URL = FRONTEND_BASE_URL + "/login";
 
