@@ -63,10 +63,10 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         eventValidator.validateRead(event, occurrenceDate);
 
-//        // 찾고자 하는 것이 부모 이벤트인 경우
-//        if (event.getStartTime().isEqual(occurrenceDate)) {
-//            return EventConverter.toDetailRes(event);
-//        }
+        // 찾고자 하는 것이 부모 이벤트인 경우
+        if (event.getStartTime().isEqual(occurrenceDate) && event.getRecurrenceGroup() == null) {
+            return EventConverter.toDetailRes(event);
+        }
 
         return eventOccurrenceResolver.resolveForRead(event, occurrenceDate);
     }
