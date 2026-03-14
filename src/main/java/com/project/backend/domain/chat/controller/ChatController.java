@@ -23,6 +23,6 @@ public class ChatController {
     @PostMapping("")
     public CustomResponse<ChatResDTO.SendRes> sendMessage(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                           @Valid @RequestBody ChatReqDTO.SendReq reqDTO) {
-        return CustomResponse.onSuccess("챗봇 응답 성공", chatService.sendMessage(reqDTO));
+        return CustomResponse.onSuccess("챗봇 응답 성공", chatService.sendMessage(customUserDetails.getId(), reqDTO));
     }
 }
