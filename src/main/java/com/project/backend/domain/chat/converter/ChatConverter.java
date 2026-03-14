@@ -7,10 +7,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChatConverter {
 
-    public static ChatResDTO.SendRes toSendResDTO(String reply, String conversationId) {
+    public static ChatResDTO.SendRes toSendResDTO(String reply) {
         return ChatResDTO.SendRes.builder()
                 .reply(reply)
-                .conversationId(conversationId)
                 .build();
     }
 }
