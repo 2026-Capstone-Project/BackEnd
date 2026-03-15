@@ -150,6 +150,7 @@ public class EventConverter {
                 .start(start)
                 .end(end)
                 .location(event.getLocation())
+                .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
@@ -167,6 +168,7 @@ public class EventConverter {
                 .start(ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate())
                 .end(ex.getEndTime() != null ? ex.getEndTime() : getEndTime(event, ex.getExceptionDate()))
                 .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
+                .address(ex.getAddress() != null ? ex.getAddress() : event.getAddress())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
                 .recurrenceGroup(
