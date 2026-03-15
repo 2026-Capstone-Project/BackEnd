@@ -37,6 +37,7 @@ public class EventConverter {
                 .startTime(spec.startTime())
                 .endTime(spec.endTime())
                 .location(spec.location())
+                .address(spec.address())
                 .recurrenceFrequency(rG)
                 .color(color)
                 .isAllDay(isAllDay)
@@ -53,6 +54,7 @@ public class EventConverter {
                 .startTime(start)
                 .endTime(end)
                 .location(req.location())
+                .address(req.address())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
                 .build();

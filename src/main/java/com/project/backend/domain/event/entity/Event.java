@@ -37,6 +37,9 @@ public class Event extends BaseEntity {
     @Column(name = "location")
     private String location;
 
+    @Column(name = "address")
+    private String address;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", nullable = false, length = 10)
     private RecurrenceFrequency recurrenceFrequency;

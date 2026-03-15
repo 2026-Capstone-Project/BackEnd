@@ -79,8 +79,8 @@ public class EventCommandServiceImpl implements EventCommandService {
         RecurrenceGroup recurrenceGroup = null;
         RecurrenceGroupSpec rgSpec;
 
+        // 반복 일정 생성일 때
         if (req.recurrenceGroup() != null) {
-
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
 
             rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
