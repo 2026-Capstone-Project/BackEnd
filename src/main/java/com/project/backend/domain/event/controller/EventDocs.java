@@ -711,7 +711,8 @@ public interface EventDocs {
                                     value = """
                                             {
                                               "title": "팀 회의 (변경)",
-                                              "location": "회의실 B"
+                                              "location": "회의실 B",
+                                              "address": "서울특별시 종로구 홍지문2길 20"
                                             }
                                             """
                             ),
