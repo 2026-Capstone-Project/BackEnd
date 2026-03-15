@@ -67,6 +67,7 @@ public class EventConverter {
                 .startTime(start)
                 .endTime(end)
                 .location(req.location() != null ? req.location() : event.getLocation())
+                .address(req.address() != null ? req.address() : event.getAddress())
                 .color(req.color() != null ? req.color() : event.getColor())
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : event.getIsAllDay())
                 .build();

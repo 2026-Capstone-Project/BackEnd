@@ -404,6 +404,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 req.startTime(),
                 req.endTime(),
                 req.location(),
+                req.address(),
                 req.color(),
                 req.isAllDay()
         );
@@ -673,6 +674,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.startTime() != null
                 || req.endTime() != null
                 || req.location() != null
+                || req.address() != null
                 || req.color() != null
                 || req.isAllDay() != null;
     }
@@ -722,6 +724,10 @@ public class EventCommandServiceImpl implements EventCommandService {
                     String baseLocation = ex.getLocation() != null ? ex.getLocation() : event.getLocation();
                     changed |= !Objects.equals(req.location(), baseLocation);
                 }
+                if (req.address() != null) {
+                    String baseAddress = ex.getAddress() != null ? ex.getAddress() : event.getAddress();
+                    changed |= !Objects.equals(req.address(), baseAddress);
+                }
                 if (req.color() != null) {
                     EventColor baseColor = ex.getColor() != null ? ex.getColor() : event.getColor();
                     changed |= req.color() != baseColor;
@@ -747,6 +753,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (req.title() != null) changed |= !Objects.equals(req.title(), event.getTitle());
         if (req.content() != null) changed |= !Objects.equals(req.content(), event.getContent());
         if (req.location() != null) changed |= !Objects.equals(req.location(), event.getLocation());
+        if (req.address() != null) changed |= !Objects.equals(req.address(), event.getAddress());
         if (req.color() != null) changed |= req.color() != event.getColor();
         if (req.isAllDay() != null) changed |= !Objects.equals(req.isAllDay(), event.getIsAllDay());
         if (req.startTime() != null) changed |= !start.equals(occurrenceDate);

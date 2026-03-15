@@ -142,6 +142,7 @@ public class Event extends BaseEntity {
             LocalDateTime startTime,
             LocalDateTime endTime,
             String location,
+            String address,
             EventColor color,
             Boolean isAllDay
     ) {
@@ -153,6 +154,7 @@ public class Event extends BaseEntity {
         }
         if (endTime != null) this.endTime = endTime;
         if (location != null) this.location = location;
+        if (address != null) this.address = address;
         if (color != null) this.color = color;
         if (isAllDay != null) this.isAllDay = isAllDay;
         if (startTime != null && endTime != null) {

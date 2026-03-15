@@ -54,6 +54,9 @@ public class RecurrenceException extends BaseEntity {
     @Column(name = "location")
     private String location;
 
+    @Column(name = "address")
+    private String address;
+
     // TODO 리팩토링 단계에서 삭제할지 말지 결정
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", length = 10)

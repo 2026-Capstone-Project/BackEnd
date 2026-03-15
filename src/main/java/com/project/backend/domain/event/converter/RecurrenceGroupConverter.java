@@ -157,6 +157,7 @@ public class RecurrenceGroupConverter {
                 .endTime(endTime)
                 .exceptionType(ExceptionType.OVERRIDE)
                 .location(req.location() != null ? req.location() : null)
+                .address(req.address() != null ? req.address() : null)
                 .color(req.color() != null ? req.color() : null)
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : null)
                 .recurrenceGroup(recurrenceGroup)
