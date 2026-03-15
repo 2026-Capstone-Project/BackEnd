@@ -21,7 +21,10 @@ public class EventReqDTO {
             LocalDateTime startTime,
             @NotNull(message = "날짜 입력은 필수입니다.")
             LocalDateTime endTime,
+
             String location,
+            String address,
+
             EventColor color,
             Boolean isAllDay,
 
@@ -42,6 +45,7 @@ public class EventReqDTO {
             LocalDateTime startTime,
             LocalDateTime endTime,
             String location,
+            String address,
             EventColor color,
             Boolean isAllDay,
             RecurrenceGroupReqDTO.UpdateReq recurrenceGroup
