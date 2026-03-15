@@ -128,6 +128,7 @@ public class EventConverter {
                 .start(event.getStartTime())
                 .end(event.getEndTime())
                 .location(event.getLocation())
+                .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
                 // TODO : 임시 조치이므로 리팩토링 대상
