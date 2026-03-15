@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +68,57 @@ public class OpenAiLlmClient implements LlmClient {
             throw new NlpException(NlpErrorCode.LLM_API_ERROR);
         } catch (Exception e) {
             log.error("OpenAI API 호출 실패", e);
+            throw new NlpException(NlpErrorCode.LLM_API_ERROR);
+        }
+    }
+
+    @Override
+    public String chatWithHistory(String systemPrompt, List<Map<String, String>> messages) {
+        List<Map<String, Object>> messageBody = new ArrayList<>();
+        messageBody.add(Map.of("role", "system", "content", systemPrompt));
+        messages.forEach(m -> {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("role", m.get("role"));
+            entry.put("content", m.get("content"));
+            messageBody.add(entry);
+        });
+
+        Map<String, Object> requestBody = Map.of(
+                "model", llmConfig.getModel(),
+                "messages", messageBody,
+                "temperature", 0.7
+        );
+
+        try {
+            log.debug("OpenAI API 호출 (멀티턴) - model: {}, 히스토리 크기: {}", llmConfig.getModel(), messages.size());
+
+            Map response = webClient.post()
+                    .uri(OPENAI_API_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + llmConfig.getApiKey())
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (response == null) {
+                throw new NlpException(NlpErrorCode.LLM_API_ERROR);
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> message = (Map<String, Object>) choices.getFirst().get("message");
+            String result = (String) message.get("content");
+
+            log.debug("OpenAI API 응답 수신 완료 (멀티턴)");
+            return result;
+
+        } catch (WebClientResponseException e) {
+            log.error("OpenAI API 호출 실패 (멀티턴) - status: {}, body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new NlpException(NlpErrorCode.LLM_API_ERROR);
+        } catch (Exception e) {
+            log.error("OpenAI API 호출 실패 (멀티턴)", e);
             throw new NlpException(NlpErrorCode.LLM_API_ERROR);
         }
     }
