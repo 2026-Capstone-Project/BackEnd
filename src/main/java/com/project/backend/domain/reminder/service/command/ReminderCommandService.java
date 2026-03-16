@@ -5,7 +5,6 @@ import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.TargetType;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 public interface ReminderCommandService {
 
@@ -15,7 +14,6 @@ public interface ReminderCommandService {
             (Long eventId, TargetType targetType, Long memberId,
              LocalDateTime occurrenceTime, String title, Long exceptionId);
 
-    List<Reminder> findActiveReminders();
 
     void refreshIfExpired(Reminder reminder);
 

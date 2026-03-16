@@ -4,7 +4,6 @@ import com.project.backend.domain.common.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor

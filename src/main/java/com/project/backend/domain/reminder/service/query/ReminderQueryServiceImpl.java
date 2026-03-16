@@ -72,6 +72,11 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
                 .toList();
     }
 
+    @Override
+    public List<Reminder> getActiveReminder() {
+        return reminderRepository.findAllByLifecycleStatus(LifecycleStatus.ACTIVE);
+    }
+
     private String createMessage(Reminder reminder, Setting setting) {
         return reminderMessageFactory.create(
                 reminder.getTitle(),
