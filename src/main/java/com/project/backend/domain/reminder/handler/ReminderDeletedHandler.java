@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-@Transactional
 public class ReminderDeletedHandler {
 
     private final ReminderCommandService reminderCommandService;
