@@ -83,4 +83,31 @@ public class SuggestionInvalidationPlanner {
                 ? InvalidationPlan.empty()
                 : new InvalidationPlan(commands);
     }
+
+    public <P extends PlanFingerprint, G extends GroupFingerprint>
+    InvalidationPlan planForDelete(
+            SuggestionInvalidationSnapshot<P, G> before,
+            SuggestionInvalidateReason planDeletedReason,
+            SuggestionInvalidateReason groupReason,
+            boolean invalidatePlanAxis,
+            boolean invalidateGroupAxis
+    ) {
+        if (before == null) {
+            return InvalidationPlan.empty();
+        }
+
+        List<InvalidationCommand> commands = new ArrayList<>();
+
+        if (invalidatePlanAxis && before.planKeyHash() != null) {
+            commands.add(new InvalidationCommand(planDeletedReason, before.planKeyHash()));
+        }
+
+        if (invalidateGroupAxis && before.groupKeyHash() != null) {
+            commands.add(new InvalidationCommand(groupReason, before.groupKeyHash()));
+        }
+
+        return commands.isEmpty()
+                ? InvalidationPlan.empty()
+                : new InvalidationPlan(commands);
+    }
 }

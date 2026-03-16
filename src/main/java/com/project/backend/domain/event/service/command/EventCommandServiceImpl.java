@@ -269,11 +269,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);
 
-        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-        byte[] beforeRgHash = null;
-        if (event.getRecurrenceGroup() != null) {
-            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
-        }
+        EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
@@ -287,8 +283,16 @@ public class EventCommandServiceImpl implements EventCommandService {
                     TargetType.EVENT,
                     DeletedType.DELETED_SINGLE);
             // 단일은 그냥 해시 겹치면 바로 만료
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                    beforeSnapshot,
+                    SuggestionInvalidateReason.EVENT_DELETED,
+                    null,
+                    true,
+                    false
+            );
+
             log.info("event deleted");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
+            suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
             return;
         }
 
@@ -327,16 +331,21 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         // 반복은 RGH 축 무조건 정리
-        if (beforeRgHash != null) {
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                beforeSnapshot,
+                SuggestionInvalidateReason.EVENT_DELETED,
+                reason,
+                hardDeleteGroup,
+                true
+        );
+
+        if (hardDeleteGroup) {
+            log.info("event deleted");
+        } else {
             log.info("before rg deleted");
-            suggestionInvalidatePublisher.publish(memberId, reason, beforeRgHash);
         }
 
-        // (선택) 그룹 통째 삭제면 EH 축도 같이 정리하고 싶으면 켜
-         if (hardDeleteGroup) {
-             log.info("event deleted");
-             suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
-         }
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
 
     // 반복그룹이 없는 일정을 수정할 경우
