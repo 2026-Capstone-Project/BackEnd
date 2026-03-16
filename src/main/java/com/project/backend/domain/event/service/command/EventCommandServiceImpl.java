@@ -109,9 +109,15 @@ public class EventCommandServiceImpl implements EventCommandService {
                 ChangeType.CREATED
         );
         // 반복의 유무와 상관없이 동일한 이름 + 장소로 생성된 이벤트가 있으면 비활성화
-        byte[] createdHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        EventSuggestionSnapshot createdSnapshot = eventSuggestionSnapshotFactory.from(event);
+
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForCreate(
+                createdSnapshot,
+                SuggestionInvalidateReason.EVENT_CREATED
+        );
+
         log.info("event created");
-        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, createdHash);
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
         return EventConverter.toCreateRes(event);
     }

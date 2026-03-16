@@ -16,8 +16,20 @@ import java.util.Objects;
 @Component
 public class SuggestionInvalidationPlanner {
 
-    public <P extends PlanFingerprint, G extends GroupFingerprint>
-    InvalidationPlan planForUpdate(
+    public <P extends PlanFingerprint, G extends GroupFingerprint> InvalidationPlan planForCreate(
+            SuggestionInvalidationSnapshot<P, G> after,
+            SuggestionInvalidateReason planCreatedReason
+    ) {
+        if (after == null || after.planKeyHash() == null) {
+            return InvalidationPlan.empty();
+        }
+
+        return new InvalidationPlan(List.of(
+                new InvalidationCommand(planCreatedReason, after.planKeyHash())
+        ));
+    }
+
+    public <P extends PlanFingerprint, G extends GroupFingerprint> InvalidationPlan planForUpdate(
             SuggestionInvalidationSnapshot<P, G> before,
             SuggestionInvalidationSnapshot<P, G> after,
             SuggestionInvalidateReason planUpdatedReason,
