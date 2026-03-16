@@ -110,4 +110,17 @@ public class SuggestionInvalidationPlanner {
                 ? InvalidationPlan.empty()
                 : new InvalidationPlan(commands);
     }
+
+    public InvalidationPlan planForSingleTarget(
+            SuggestionInvalidateReason reason,
+            byte[] targetHash
+    ) {
+        if (targetHash == null) {
+            return InvalidationPlan.empty();
+        }
+
+        return new InvalidationPlan(List.of(
+                new InvalidationCommand(reason, targetHash)
+        ));
+    }
 }

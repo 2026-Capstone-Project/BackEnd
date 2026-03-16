@@ -72,7 +72,6 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
-    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
     private final SuggestionRepository suggestionRepository;
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
@@ -423,7 +422,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                     ExceptionChangeType.UPDATE_THIS_AGAIN
             );
             log.info("exception updated");
-            suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
+                    SuggestionInvalidateReason.EXCEPTION_UPDATED,
+                    rgHash
+            );
+
+            suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
             return;
         }
 
@@ -443,7 +447,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                 ExceptionChangeType.UPDATED_THIS);
 
         log.info("exception updated");
-        suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
+                SuggestionInvalidateReason.EXCEPTION_UPDATED,
+                rgHash
+        );
+
+        suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
     }
 
     // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우
