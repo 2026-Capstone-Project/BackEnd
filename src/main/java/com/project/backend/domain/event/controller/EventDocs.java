@@ -42,6 +42,7 @@ public interface EventDocs {
                 ## 일정(Event) 선택 파라미터
                 - content (String) : 일정 메모
                 - location (String) : 장소
+                - address (String) : location 주소
                 - isAllDay (Boolean) : 종일 여부 (미전송 시 false)
                 - color (EventColor) : 색상 (미전송 시 기본값 적용) [BLUE(기본값), GREEN, PINK, PURPLE, GRAY, YELLOW]
                 - recurrenceGroup (RecurrenceGroup) : 반복 설정 (없으면 단일 일정)
@@ -167,6 +168,7 @@ public interface EventDocs {
                                               "startTime": "2026-01-27T10:00:00",
                                               "endTime": "2026-01-27T11:00:00",
                                               "location": "회의실 A",
+                                              "address": "서울특별시 종로구 홍지문2길 20",
                                               "color": "BLUE",
                                               "isAllDay": false
                                             }
@@ -232,6 +234,7 @@ public interface EventDocs {
                                               "startTime": "2026-01-15T09:00:00",
                                               "endTime": "2026-01-15T09:30:00",
                                               "location": "회의실 A",
+                                              "address": "서울특별시 종로구 홍지문2길 20",
                                               "color": "BLUE",
                                               "recurrenceGroup": {
                                                 "frequency": "MONTHLY",
@@ -309,6 +312,7 @@ public interface EventDocs {
                                               "startTime": "2026-01-15T09:00:00",
                                               "endTime": "2026-01-15T09:30:00",
                                               "location": "회의실 A",
+                                              "address": "서울특별시 종로구 홍지문2길 20",
                                               "recurrenceGroup": {
                                                 "frequency": "YEARLY",
                                                 "monthOfYear": 6,
@@ -707,7 +711,8 @@ public interface EventDocs {
                                     value = """
                                             {
                                               "title": "팀 회의 (변경)",
-                                              "location": "회의실 B"
+                                              "location": "회의실 B",
+                                              "address": "서울특별시 종로구 홍지문2길 20"
                                             }
                                             """
                             ),

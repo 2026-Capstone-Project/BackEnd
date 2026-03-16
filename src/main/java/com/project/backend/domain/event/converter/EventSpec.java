@@ -12,6 +12,7 @@ public record EventSpec(
         LocalDateTime startTime,
         LocalDateTime endTime,
         String location,
+        String address,
         EventColor color,
         Boolean isAllDay
 ) {}
