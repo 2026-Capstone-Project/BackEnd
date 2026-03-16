@@ -4,6 +4,7 @@ import com.project.backend.domain.suggestion.invalidation.snapshot.TodoSuggestio
 import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoFingerPrint;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoRecurrenceGroupFingerPrint;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TodoSuggestionSnapshotFactory {
 
-    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
-
     public TodoSuggestionSnapshot from(Todo todo) {
-        byte[] todoHash = suggestionInvalidatePublisher.todoHash(
+        byte[] todoHash = SuggestionKeyUtil.todoHash(
                 todo.getTitle(),
                 todo.getMemo()
         );
@@ -27,7 +26,7 @@ public class TodoSuggestionSnapshotFactory {
 
         TodoRecurrenceGroup todoRecurrenceGroup = todo.getTodoRecurrenceGroup();
         if (todoRecurrenceGroup != null) {
-            todoRecurrenceGroupHash = suggestionInvalidatePublisher.trgHash(todoRecurrenceGroup.getId());
+            todoRecurrenceGroupHash = SuggestionKeyUtil.trgHash(todoRecurrenceGroup.getId());
             todoRecurrenceGroupFingerPrint = TodoRecurrenceGroupFingerPrint.from(todoRecurrenceGroup);
         }
 

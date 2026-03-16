@@ -11,10 +11,16 @@ import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
+import com.project.backend.domain.suggestion.invalidation.dispatcher.SuggestionInvalidationDispatcher;
+import com.project.backend.domain.suggestion.invalidation.factory.TodoSuggestionSnapshotFactory;
+import com.project.backend.domain.suggestion.invalidation.planner.InvalidationPlan;
+import com.project.backend.domain.suggestion.invalidation.planner.SuggestionInvalidationPlanner;
 import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.invalidation.snapshot.TodoSuggestionSnapshot;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoFingerPrint;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoRecurrenceGroupFingerPrint;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
@@ -53,6 +59,9 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final ReminderEventBridge reminderEventBridge;
     private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
     private final SuggestionRepository suggestionRepository;
+    private final TodoSuggestionSnapshotFactory todoSuggestionSnapshotFactory;
+    private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
+    private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -89,9 +98,14 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 ChangeType.CREATED
         );
         // 반복의 유무와 상관없이 동일한 이름 + 메모로 생성된 할 일이 있으면 비활성화
-        byte[] createdHash = suggestionInvalidatePublisher.todoHash(todo.getTitle(), todo.getMemo());
-        log.info("todo created");
-        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_CREATED, createdHash);
+        TodoSuggestionSnapshot afterSnapshot = todoSuggestionSnapshotFactory.from(todo);
+
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForCreate(
+                afterSnapshot,
+                SuggestionInvalidateReason.TODO_CREATED
+        );
+
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
         return TodoConverter.toTodoInfo(todo);
     }
