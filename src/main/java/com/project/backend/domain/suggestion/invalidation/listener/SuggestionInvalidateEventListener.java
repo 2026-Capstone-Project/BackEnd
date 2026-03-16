@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.listener;
+package com.project.backend.domain.suggestion.invalidation.listener;
 
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.vo.SuggestionInvalidateEvent;

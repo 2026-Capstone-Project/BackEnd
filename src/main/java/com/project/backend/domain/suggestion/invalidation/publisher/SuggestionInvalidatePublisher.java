@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.publisher;
+package com.project.backend.domain.suggestion.invalidation.publisher;
 
 
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;

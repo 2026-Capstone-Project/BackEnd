@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.vo.fingerprint;
+package com.project.backend.domain.suggestion.invalidation.fingerprint;
 
 import com.project.backend.domain.event.entity.Event;
 
@@ -9,7 +9,7 @@ public record EventFingerPrint(
         LocalDateTime endTime,
         Boolean isAllDay,
         Long recurrenceGroupId
-) {
+) implements PlanFingerprint {
     public static EventFingerPrint from(Event event) {
         return new EventFingerPrint(
                 event.getStartTime(),

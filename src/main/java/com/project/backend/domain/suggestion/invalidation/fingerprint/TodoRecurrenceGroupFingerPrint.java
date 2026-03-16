@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.vo.fingerprint;
+package com.project.backend.domain.suggestion.invalidation.fingerprint;
 
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
@@ -19,7 +19,7 @@ public record TodoRecurrenceGroupFingerPrint(
         RecurrenceEndType endType,
         LocalDate endDate,
         Integer occurrenceCount
-) {
+) implements GroupFingerprint {
     public static TodoRecurrenceGroupFingerPrint from(TodoRecurrenceGroup trg) {
         return new TodoRecurrenceGroupFingerPrint(
                 trg.getFrequency(),

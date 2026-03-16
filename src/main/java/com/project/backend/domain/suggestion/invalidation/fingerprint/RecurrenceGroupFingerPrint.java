@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.vo.fingerprint;
+package com.project.backend.domain.suggestion.invalidation.fingerprint;
 
 import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
@@ -20,7 +20,7 @@ public record RecurrenceGroupFingerPrint(
         RecurrenceEndType endType,
         LocalDate endDate,
         Integer occurrenceCount
-) {
+) implements GroupFingerprint {
     public static RecurrenceGroupFingerPrint from(RecurrenceGroup rg) {
         return new RecurrenceGroupFingerPrint(
                 rg.getFrequency(),
