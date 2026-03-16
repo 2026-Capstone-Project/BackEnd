@@ -135,24 +135,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
 
-        // 변경하기 전의 title + location hash
-        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-        EventFingerPrint beforeEventFp = EventFingerPrint.from(event);  // 변경하기 전의 이벤트 특정 정보
-
-        byte[] beforeRgHash = null;
-        RecurrenceGroupFingerPrint beforeRgFp = null;
-        if (event.getRecurrenceGroup() != null) {   // 만약 반복 그룹이 존재한다면? 단일 이벤트가 아니라는 것
-            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());    // id 해시
-            beforeRgFp = RecurrenceGroupFingerPrint.from(event.getRecurrenceGroup());   // 반복 그룹 정보
-        }
-
-        // 해당 이벤트가 반복이 없는 단일 이벤트라면 단일 이벤트 스냅샷 저장
-        log.info("EventCommandImpl");
-        EventSuggestionSnapshot beforeSingleSnapshot = null;
-        if (event.getRecurrenceGroup() == null) {
-            beforeSingleSnapshot = eventSuggestionSnapshotFactory.from(event);
-            log.info("EventCommandImpl 단일 스냅샷 생성 완료");
-        }
+        EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
         LocalDateTime start = calStartTime(req, event, occurrenceDate);
@@ -203,12 +186,12 @@ public class EventCommandServiceImpl implements EventCommandService {
 
             }
             // 단일 이벤트 after 스냅샷
-            EventSuggestionSnapshot afterSingleSnapshot = eventSuggestionSnapshotFactory.from(event);
+            EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
             log.info("EventCommandImpl, after 스냅샷 생성 완료");
 
             InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
-                    beforeSingleSnapshot,
-                    afterSingleSnapshot,
+                    beforeSnapshot,
+                    afterSnapshot,
                     SuggestionInvalidateReason.EVENT_UPDATED,
                     SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED,
                     SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED
@@ -255,47 +238,17 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         SuggestionInvalidateReason afterRgReason = SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
 
-        // 반복 그룹이 잘려서 새로운 객체가 생성된 경우 -> after 해시는 새로 생성된 event
-        byte[] afterEventHash = suggestionInvalidatePublisher.eventHash(afterBase.getTitle(), afterBase.getLocation());
-        EventFingerPrint afterEventFp = EventFingerPrint.from(afterBase); // 새로 생성된 이벤트 특정 정보
+        EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(afterBase);
 
-        byte[] afterRgHash = null;
-        RecurrenceGroupFingerPrint afterRgFp = null;
-        if (afterBase.getRecurrenceGroup() != null) {   // 새로 생성된 이벤트의 새로 생성된 반복 그룹 정보
-            afterRgHash = suggestionInvalidatePublisher.rgHash(afterBase.getRecurrenceGroup().getId());
-            afterRgFp = RecurrenceGroupFingerPrint.from(afterBase.getRecurrenceGroup());
-        }
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
+                beforeSnapshot,
+                afterSnapshot,
+                SuggestionInvalidateReason.EVENT_UPDATED,
+                beforeRgReason,
+                afterRgReason
+        );
 
-        boolean eventKeyChanged = !Arrays.equals(beforeEventHash, afterEventHash);  // title + location 변경?
-        boolean rgKeyChanged = !Arrays.equals(beforeRgHash, afterRgHash);   // rgId 변경?
-
-        boolean eventFpChanged = !beforeEventFp.equals(afterEventFp);   // 이벤트 정보 변경?
-        boolean rgFpChanged = !Objects.equals(beforeRgFp, afterRgFp);   // 반복 그룹 정보 변경?
-
-        boolean invalidateEventAxis = eventKeyChanged || eventFpChanged;
-        boolean invalidateRgAxis = rgKeyChanged || rgFpChanged;
-
-        // 반복 -> 단일 / 반복 -> 반복은 무조건 after 무효화
-        // 만약 키가 변경된 경우 before 무효화
-        if (invalidateEventAxis) {
-            log.info("event updated");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, afterEventHash);
-            if (eventKeyChanged) {
-                log.info("event title location updated");
-                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeEventHash);
-            }
-        }
-
-        // 키가 변경되고, 이전 반복 그룹이 존재한다면 -> 이전 반복 그룹 제안 무효화
-        if (invalidateRgAxis) {
-            if (afterRgHash != null) {
-                suggestionInvalidatePublisher.publish(memberId, afterRgReason, afterRgHash);
-            }
-            if (rgKeyChanged && beforeRgHash != null) {
-                log.info("rg deleted because new rg updated");
-                suggestionInvalidatePublisher.publish(memberId, beforeRgReason, beforeRgHash);
-            }
-        }
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
 
     @Override
