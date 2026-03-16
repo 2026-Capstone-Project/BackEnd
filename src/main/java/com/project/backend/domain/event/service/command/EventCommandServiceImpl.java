@@ -38,6 +38,7 @@ import com.project.backend.domain.suggestion.invalidation.factory.EventSuggestio
 import com.project.backend.domain.suggestion.invalidation.planner.InvalidationPlan;
 import com.project.backend.domain.suggestion.invalidation.planner.SuggestionInvalidationPlanner;
 import com.project.backend.domain.suggestion.invalidation.snapshot.EventSuggestionSnapshot;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
@@ -399,7 +400,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
-        byte[] rgHash = suggestionInvalidatePublisher.rgHash(rg.getId());
+        byte[] rgHash = SuggestionKeyUtil.rgHash(rg.getId());
 
         // 만약 이미 수정된 일정을 또 수정하는 경우
         Optional<RecurrenceException> re = recurrenceExRepository

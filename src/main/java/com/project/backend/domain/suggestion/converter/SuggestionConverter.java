@@ -9,7 +9,7 @@ import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.Status;
 import com.project.backend.domain.suggestion.enums.SuggestionType;
-import com.project.backend.domain.suggestion.util.SuggestionTargetKeyUtil;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.suggestion.util.TargetKeyHashUtil;
 import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
 import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
@@ -44,10 +44,10 @@ public class SuggestionConverter {
     ) {
         String targetKey = null;
         if (previousEvent != null) {
-            targetKey = SuggestionTargetKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation());
+            targetKey = SuggestionKeyUtil.eventKey(previousEvent.getTitle(), previousEvent.getLocation(), previousEvent.getAddress());
         }
         else if (previousTodo != null) {
-            targetKey = SuggestionTargetKeyUtil.todoKey(previousTodo.getTitle(), previousTodo.getMemo());
+            targetKey = SuggestionKeyUtil.todoKey(previousTodo.getTitle(), previousTodo.getMemo());
         }
 
         return Suggestion.builder()
@@ -79,10 +79,10 @@ public class SuggestionConverter {
     ) {
         String targetKey = null;
         if (rg != null) {
-            targetKey = SuggestionTargetKeyUtil.rgKey(rg.getId());
+            targetKey = SuggestionKeyUtil.rgKey(rg.getId());
         }
         else if (trg != null) {
-            targetKey = SuggestionTargetKeyUtil.trgKey(trg.getId());
+            targetKey = SuggestionKeyUtil.trgKey(trg.getId());
         }
         return Suggestion.builder()
                 .primaryContent(llmRecurrenceGroupSuggestion.content())

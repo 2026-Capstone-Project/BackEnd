@@ -3,9 +3,9 @@ package com.project.backend.domain.suggestion.invalidation.factory;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.suggestion.invalidation.snapshot.EventSuggestionSnapshot;
-import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.EventFingerPrint;
 import com.project.backend.domain.suggestion.invalidation.fingerprint.RecurrenceGroupFingerPrint;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,12 +13,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class EventSuggestionSnapshotFactory {
 
-    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
-
     public EventSuggestionSnapshot from(Event event) {
-        byte[] eventHash = suggestionInvalidatePublisher.eventHash(
+        byte[] eventHash = SuggestionKeyUtil.eventHash(
                 event.getTitle(),
-                event.getLocation()
+                event.getLocation(),
+                event.getAddress()
         );
         EventFingerPrint eventFingerPrint = EventFingerPrint.from(event);
 
@@ -27,7 +26,7 @@ public class EventSuggestionSnapshotFactory {
 
         RecurrenceGroup recurrenceGroup = event.getRecurrenceGroup();
         if (recurrenceGroup != null) {
-            recurrenceGroupHash = suggestionInvalidatePublisher.rgHash(recurrenceGroup.getId());
+            recurrenceGroupHash = SuggestionKeyUtil.rgHash(recurrenceGroup.getId());
             recurrenceGroupFingerPrint = RecurrenceGroupFingerPrint.from(recurrenceGroup);
         }
 
