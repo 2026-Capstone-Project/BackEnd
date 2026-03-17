@@ -214,11 +214,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     public void deleteTodo(Long memberId, Long todoId, LocalDate occurrenceDate, RecurrenceUpdateScope scope) {
         Todo todo = getTodoWithPermissionCheck(memberId, todoId);
 
-        byte[] beforeTodoHash = SuggestionKeyUtil.todoHash(todo.getTitle(), todo.getMemo());
-        byte[] beforeTrgHash = null;
-        if (todo.getTodoRecurrenceGroup() != null) {
-            beforeTrgHash = SuggestionKeyUtil.trgHash(todo.getTodoRecurrenceGroup().getId());
-        }
+        TodoSuggestionSnapshot beforeSnapshot = todoSuggestionSnapshotFactory.from(todo);
 
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
@@ -234,7 +230,16 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                     DeletedType.DELETED_SINGLE);
             // 단일은 그냥 해시 겹치면 바로 만료
             log.info("todo deleted");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_DELETED, beforeTodoHash);
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                    beforeSnapshot,
+                    SuggestionInvalidateReason.EVENT_DELETED,
+                    null,
+                    true,
+                    false
+            );
+
+            log.info("event deleted");
+            suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
             return;
         }
 
@@ -283,16 +288,21 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         }
 
         // 반복은 TrgH 축 무조건 정리
-        if (beforeTrgHash != null) {
-            log.info("before trg deleted");
-            suggestionInvalidatePublisher.publish(memberId, reason, beforeTrgHash);
-        }
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                beforeSnapshot,
+                SuggestionInvalidateReason.EVENT_DELETED,
+                reason,
+                hardDeleteGroup,
+                true
+        );
 
-        // (선택) 그룹 통째 삭제면 TodoH 축도 같이 정리하고 싶으면 켜
         if (hardDeleteGroup) {
             log.info("todo deleted");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.TODO_DELETED, beforeTodoHash);
+        } else {
+            log.info("before trg deleted");
         }
+
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
 
     @Override
