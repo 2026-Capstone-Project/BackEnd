@@ -32,7 +32,7 @@ public class ScheduleContextBuilder {
         List<Todo> todos = todoRepository.findByMemberIdAndStartDateBetween(
                         memberId, range.start().toLocalDate(), range.end().toLocalDate())
                 .stream()
-                .filter(t -> !Boolean.TRUE.equals(t.getIsCompleted()))
+                .filter(t -> !Boolean.TRUE.equals(t.getIsCompleted())) // isCompleted=true 필터링 제거
                 .toList();
 
         if (events.isEmpty() && todos.isEmpty()) {

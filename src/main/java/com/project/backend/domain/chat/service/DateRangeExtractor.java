@@ -34,6 +34,7 @@ public class DateRangeExtractor {
 
     private String promptTemplate;
 
+    // 파일을 매 요청마다 읽지 않고 서버 시작 시 한 번만 읽어 메모리에 올려두는 용도임
     @PostConstruct
     public void init() {
         try {
