@@ -1,7 +1,7 @@
-package com.project.backend.domain.suggestion.detector;
+package com.project.backend.domain.suggestion.generation.detector;
 
-import com.project.backend.domain.suggestion.detector.vo.*;
 import com.project.backend.domain.suggestion.enums.StableType;
+import com.project.backend.domain.suggestion.generation.detector.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

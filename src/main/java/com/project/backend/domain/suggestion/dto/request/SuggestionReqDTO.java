@@ -1,6 +1,6 @@
 package com.project.backend.domain.suggestion.dto.request;
 
-import com.project.backend.domain.suggestion.vo.SuggestionPattern;
+import com.project.backend.domain.suggestion.generation.pattern.SuggestionPattern;
 import com.project.backend.domain.suggestion.enums.Category;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.suggestion.enums.StableType;

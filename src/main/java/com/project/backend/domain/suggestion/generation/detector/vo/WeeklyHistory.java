@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.detector.vo;
+package com.project.backend.domain.suggestion.generation.detector.vo;
 
 import java.time.DayOfWeek;
 import java.util.List;

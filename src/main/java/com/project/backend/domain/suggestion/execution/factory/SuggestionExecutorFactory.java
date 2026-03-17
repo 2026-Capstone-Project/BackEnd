@@ -1,6 +1,7 @@
-package com.project.backend.domain.suggestion.executor;
+package com.project.backend.domain.suggestion.execution.factory;
 
 import com.project.backend.domain.suggestion.enums.SuggestionType;
+import com.project.backend.domain.suggestion.execution.executor.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 

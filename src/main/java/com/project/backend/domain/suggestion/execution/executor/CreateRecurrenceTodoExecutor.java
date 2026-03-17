@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.executor;
+package com.project.backend.domain.suggestion.execution.executor;
 
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Category;

@@ -1,16 +1,15 @@
-package com.project.backend.domain.suggestion.detector.util;
+package com.project.backend.domain.suggestion.generation.detector.util;
 
-import com.project.backend.domain.suggestion.detector.vo.MonthlyHistory;
-import com.project.backend.domain.suggestion.detector.vo.RecurrencePreprocessResult;
-import com.project.backend.domain.suggestion.detector.vo.WeeklyHistory;
-import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
+import com.project.backend.domain.suggestion.generation.detector.vo.MonthlyHistory;
+import com.project.backend.domain.suggestion.generation.detector.vo.RecurrencePreprocessResult;
+import com.project.backend.domain.suggestion.generation.detector.vo.WeeklyHistory;
+import com.project.backend.domain.suggestion.generation.candidate.SuggestionCandidate;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.WeekFields;
 import java.util.*;
 
 import static com.project.backend.domain.suggestion.util.WeekEpochUtil.toEpochWeek;

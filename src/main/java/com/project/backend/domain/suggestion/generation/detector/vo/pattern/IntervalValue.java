@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.detector.vo.pattern;
+package com.project.backend.domain.suggestion.generation.detector.vo.pattern;
 
 public record IntervalValue(
         int dayDiff

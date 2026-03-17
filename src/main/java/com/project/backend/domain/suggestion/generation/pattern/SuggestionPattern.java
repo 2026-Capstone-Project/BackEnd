@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.vo;
+package com.project.backend.domain.suggestion.generation.pattern;
 
 import lombok.Builder;
 

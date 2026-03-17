@@ -1,9 +1,9 @@
-package com.project.backend.domain.suggestion.detector.vo;
+package com.project.backend.domain.suggestion.generation.detector.vo;
 
-import com.project.backend.domain.suggestion.detector.vo.pattern.IntervalValue;
-import com.project.backend.domain.suggestion.detector.vo.pattern.MonthlySetValue;
-import com.project.backend.domain.suggestion.detector.vo.pattern.PatternValue;
-import com.project.backend.domain.suggestion.detector.vo.pattern.WeeklySetValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.IntervalValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.MonthlySetValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.PatternValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.WeeklySetValue;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.suggestion.enums.StableType;
 import lombok.extern.slf4j.Slf4j;

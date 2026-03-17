@@ -1,4 +1,4 @@
-package com.project.backend.domain.suggestion.vo;
+package com.project.backend.domain.suggestion.generation.candidate;
 
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
