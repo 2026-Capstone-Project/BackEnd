@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Suggestion 무효화 이벤트를 받아 실제 무효화 처리
+ */
 @Component
 @RequiredArgsConstructor
 public class SuggestionInvalidateEventListener {
@@ -18,6 +21,10 @@ public class SuggestionInvalidateEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(SuggestionInvalidateEvent event) {
-        suggestionRepository.bulkInvalidateOne(event.memberId(), event.targetKeyHash(), event.reason());
+        suggestionRepository.bulkInvalidateOne(
+                event.memberId(),
+                event.targetKeyHash(),
+                event.reason()
+        );
     }
 }

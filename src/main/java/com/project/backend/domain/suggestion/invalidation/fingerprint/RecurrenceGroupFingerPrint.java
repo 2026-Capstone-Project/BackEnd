@@ -7,6 +7,9 @@ import com.project.backend.global.recurrence.util.RecurrenceUtils;
 
 import java.time.LocalDate;
 
+/**
+ * 반복 일정 무효화 판단에 사용하는 비교용 fingerprint
+ */
 public record RecurrenceGroupFingerPrint(
         RecurrenceFrequency frequency,
         Integer intervalValue,
@@ -21,6 +24,7 @@ public record RecurrenceGroupFingerPrint(
         LocalDate endDate,
         Integer occurrenceCount
 ) implements GroupFingerprint {
+
     public static RecurrenceGroupFingerPrint from(RecurrenceGroup rg) {
         return new RecurrenceGroupFingerPrint(
                 rg.getFrequency(),

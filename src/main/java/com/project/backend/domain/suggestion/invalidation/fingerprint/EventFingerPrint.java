@@ -4,12 +4,16 @@ import com.project.backend.domain.event.entity.Event;
 
 import java.time.LocalDateTime;
 
+/**
+ * Event 무효화 판단에 사용하는 비교용 fingerprint
+ */
 public record EventFingerPrint(
         LocalDateTime startTime,
         LocalDateTime endTime,
         Boolean isAllDay,
         Long recurrenceGroupId
 ) implements PlanFingerprint {
+
     public static EventFingerPrint from(Event event) {
         return new EventFingerPrint(
                 event.getStartTime(),

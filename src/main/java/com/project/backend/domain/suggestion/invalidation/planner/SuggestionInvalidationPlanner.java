@@ -12,6 +12,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * before/after snapshot 비교로 suggestion 무효화 계획 생성
+ */
 @Slf4j
 @Component
 public class SuggestionInvalidationPlanner {
@@ -40,23 +43,22 @@ public class SuggestionInvalidationPlanner {
             return InvalidationPlan.empty();
         }
 
-
         List<InvalidationCommand> commands = new ArrayList<>();
-        log.info("SuggestionInvalidatePlanner : before: {}, after: {}", before, after);
+        log.info("SuggestionInvalidationPlanner - before: {}, after: {}", before, after);
 
+        // 개별 대상 / 그룹 대상 key 변경 여부
         boolean planKeyChanged = !Arrays.equals(before.planKeyHash(), after.planKeyHash());
         boolean groupKeyChanged = !Arrays.equals(before.groupKeyHash(), after.groupKeyHash());
-        log.info("SuggestionInvalidatePlanner : planKeyChanged: {}, groupKeyChanged: {}", planKeyChanged, groupKeyChanged);
+        log.info("SuggestionInvalidationPlanner - planKeyChanged: {}, groupKeyChanged: {}", planKeyChanged, groupKeyChanged);
 
-        boolean planFingerprintChanged = !Objects.equals(
-                before.planFingerprint(),
-                after.planFingerprint()
+        // 개별 대상 / 그룹 대상 fingerprint 변경 여부
+        boolean planFingerprintChanged = !Objects.equals(before.planFingerprint(), after.planFingerprint());
+        boolean groupFingerprintChanged = !Objects.equals(before.groupFingerprint(), after.groupFingerprint());
+        log.info(
+                "SuggestionInvalidationPlanner - planFingerprintChanged: {}, groupFingerprintChanged: {}",
+                planFingerprintChanged,
+                groupFingerprintChanged
         );
-        boolean groupFingerprintChanged = !Objects.equals(
-                before.groupFingerprint(),
-                after.groupFingerprint()
-        );
-        log.info("SuggestionInvalidatePlanner : planFingerprintChanged: {}, groupFingerprintChanged: {}", planFingerprintChanged, groupFingerprintChanged);
 
         boolean invalidatePlanAxis = planKeyChanged || planFingerprintChanged;
         boolean invalidateGroupAxis = groupKeyChanged || groupFingerprintChanged;
@@ -64,6 +66,7 @@ public class SuggestionInvalidationPlanner {
         if (invalidatePlanAxis && after.planKeyHash() != null) {
             commands.add(new InvalidationCommand(planUpdatedReason, after.planKeyHash()));
 
+            // key가 바뀌었으면 기존 key 기준 suggestion도 함께 무효화
             if (planKeyChanged && before.planKeyHash() != null) {
                 commands.add(new InvalidationCommand(planUpdatedReason, before.planKeyHash()));
             }
@@ -74,18 +77,20 @@ public class SuggestionInvalidationPlanner {
                 commands.add(new InvalidationCommand(afterGroupReason, after.groupKeyHash()));
             }
 
+            // 그룹 key가 바뀌었으면 기존 그룹 key 기준 suggestion도 함께 무효화
             if (groupKeyChanged && before.groupKeyHash() != null) {
                 commands.add(new InvalidationCommand(beforeGroupReason, before.groupKeyHash()));
             }
         }
-        log.info("SuggestionInvalidatePlanner : commands: {}", commands);
+
+        log.info("SuggestionInvalidationPlanner - commands: {}", commands);
+
         return commands.isEmpty()
                 ? InvalidationPlan.empty()
                 : new InvalidationPlan(commands);
     }
 
-    public <P extends PlanFingerprint, G extends GroupFingerprint>
-    InvalidationPlan planForDelete(
+    public <P extends PlanFingerprint, G extends GroupFingerprint> InvalidationPlan planForDelete(
             SuggestionInvalidationSnapshot<P, G> before,
             SuggestionInvalidateReason planDeletedReason,
             SuggestionInvalidateReason groupReason,

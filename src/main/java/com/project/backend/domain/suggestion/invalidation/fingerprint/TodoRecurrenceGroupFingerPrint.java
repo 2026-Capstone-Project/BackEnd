@@ -7,7 +7,9 @@ import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 
 import java.time.LocalDate;
 
-// TODO : 투두리커런스 그룹 추가에 따른 수정 필요
+/**
+ * 반복 할 일 무효화 판단에 사용하는 비교용 fingerprint
+ */
 public record TodoRecurrenceGroupFingerPrint(
         RecurrenceFrequency frequency,
         Integer intervalValue,
@@ -20,6 +22,7 @@ public record TodoRecurrenceGroupFingerPrint(
         LocalDate endDate,
         Integer occurrenceCount
 ) implements GroupFingerprint {
+
     public static TodoRecurrenceGroupFingerPrint from(TodoRecurrenceGroup trg) {
         return new TodoRecurrenceGroupFingerPrint(
                 trg.getFrequency(),
