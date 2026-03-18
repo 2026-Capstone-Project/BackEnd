@@ -69,6 +69,16 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("최근 일정 제목 조회 완료", resDTO);
     }
 
+    @GetMapping("/history/location")
+    public CustomResponse<EventResDTO.EventLocationHistoryRes> getEventLocationHistory(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam(value = "keyword", required = false) String keyword
+    ) {
+        EventResDTO.EventLocationHistoryRes resDTO =
+                eventQueryService.getEventLocationHistory(customUserDetails.getId(), keyword);
+        return CustomResponse.onSuccess("최근 일정 장소 조회 완료", resDTO);
+    }
+
     @PatchMapping("/{eventId}")
     @Override
     public CustomResponse<Void> updateEvent(

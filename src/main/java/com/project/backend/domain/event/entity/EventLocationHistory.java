@@ -12,28 +12,28 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(
-        name = "event_title_history",
+        name = "event_location_history",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_event_title_history_member_title",
+                        name = "uk_event_location_history_member_title",
                         columnNames = {"member_id", "title"}
                 )
         }
 //        indexes = {
 //                @Index(
-//                        name = "idx_event_title_history_member_last_used_at",
+//                        name = "idx_event_location_history_member_last_used_at",
 //                        columnList = "member_id, last_used_at"
 //                )
 //        }
 )
-public class EventTitleHistory extends BaseEntity {
+public class EventLocationHistory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title", nullable = false, length = 100)
-    private String title;
+    @Column(name = "location", nullable = false)
+    private String location;
 
     @Column(name = "last_used_at", nullable = false)
     private LocalDateTime lastUsedAt;

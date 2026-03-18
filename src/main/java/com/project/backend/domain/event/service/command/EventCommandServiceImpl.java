@@ -6,20 +6,14 @@ import com.project.backend.domain.event.dto.AdjustedTime;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
-import com.project.backend.domain.event.entity.Event;
-import com.project.backend.domain.event.entity.EventTitleHistory;
-import com.project.backend.domain.event.entity.RecurrenceException;
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.entity.*;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
-import com.project.backend.domain.event.repository.EventRepository;
-import com.project.backend.domain.event.repository.EventTitleHistoryRepository;
-import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
-import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
+import com.project.backend.domain.event.repository.*;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.validator.EventValidator;
@@ -40,10 +34,7 @@ import com.project.backend.domain.suggestion.invalidation.snapshot.EventSuggesti
 import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
-import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
-import com.project.backend.domain.suggestion.invalidation.fingerprint.EventFingerPrint;
-import com.project.backend.domain.suggestion.invalidation.fingerprint.RecurrenceGroupFingerPrint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,7 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -76,6 +66,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+    private final EventLocationHistoryRepository eventLocationHistoryRepository;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -627,17 +618,36 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
         eventRepository.save(newEvent);
 
+        upsertEventTitleHistory(eventSpec.title(), member.getId());
+        upsertEventLocationHistory(eventSpec.location(), member.getId());
+
+        return newEvent;
+    }
+
+    private void upsertEventTitleHistory(String title, Long memberId) {
+        String trimmedTitle = title.trim();
         EventTitleHistory history =
-                eventTitleHistoryRepository.findByMemberIdAndTitle(member.getId(), eventSpec.title().trim())
+                eventTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
                         .orElse(null);
         if (history == null) {
-            history = EventTitleHistoryConverter.toEventTitleHistory(eventSpec, member.getId());
+            history = EventHistoryConverter.toEventTitleHistory(memberId, trimmedTitle);
             eventTitleHistoryRepository.save(history);
         } else {
             history.updateLastUsedAt();
         }
+    }
 
-        return newEvent;
+    private void upsertEventLocationHistory(String location, Long memberId) {
+        String trimmedLocation = location.trim();
+        EventLocationHistory history =
+                eventLocationHistoryRepository.findByMemberIdAndLocation(memberId, trimmedLocation)
+                        .orElse(null);
+        if (history == null) {
+            history = EventHistoryConverter.toEventLocationHistory(memberId, trimmedLocation);
+            eventLocationHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
     }
 
     private boolean hasAnyEventFieldProvided(EventReqDTO.UpdateReq req) {

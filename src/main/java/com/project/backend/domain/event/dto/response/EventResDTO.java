@@ -43,4 +43,10 @@ public class EventResDTO {
             List<String> titleHistory
     ) {
     }
+
+    @Builder
+    public record EventLocationHistoryRes(
+            List<String> locationHistory
+    ) {
+    }
 }
