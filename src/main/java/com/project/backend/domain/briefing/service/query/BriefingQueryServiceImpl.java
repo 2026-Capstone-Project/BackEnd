@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -28,7 +29,7 @@ import java.util.stream.Stream;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class BriefingQueryServiceImpl implements BriefingQueryService {
 
     private final SettingRepository settingRepository;
@@ -40,47 +41,33 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
         Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
-        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
 
         // 브리핑 비활성화 시
         if (!setting.getDailyBriefing()) {
-            return BriefingConverter.toDisable(today.toLocalDate());
+            return BriefingConverter.toBriefingRes(today, BriefingReason.DISABLED);
         }
 
         // 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
-        if (today.isBefore(setting.getDailyBriefingTime().atDate(today.toLocalDate()))) {
-            return BriefingConverter.toTimeNotReached(today.toLocalDate());
+        if (now.isBefore(setting.getDailyBriefingTime().atDate(today))) {
+            return BriefingConverter.toBriefingRes(today, BriefingReason.TIME_NOT_REACHED);
         }
 
         // 현재시간보다 startTime이 이후가 아닌 일정/투두 조회
-        List<Long> eventIds = eventRepository
-                .findAllByMemberIdAndCurrentDate(
-                        memberId, today.toLocalDate().atTime(23, 59, 59)
-                )
-                .stream()
-                .map(Event::getId)
-                .toList();
+        List<Long> eventIds = eventRepository.findEventIdsByMemberIdAndCurrentDate(
+                        memberId, today.atTime(LocalTime.MAX));
 
-        List<Long> todoIds = todoRepository
-                .findAllByMemberIdAndCurrentDate(memberId, today.toLocalDate())
-                .stream()
-                .map(Todo::getId)
-                .toList();
+        List<Long> todoIds = todoRepository.findTodoIdsByMemberIdAndCurrentDate(memberId, today);
 
-        List<BriefingResDTO.BriefInfoRes> eventBrief = List.of();
-        List<BriefingResDTO.BriefInfoRes> todoBrief = List.of();
-
-        if (!eventIds.isEmpty()) {
-            eventBrief = toBriefInfos(TargetType.EVENT, eventIds, today.toLocalDate());
-        }
-
-        if (!todoIds.isEmpty()) {
-            todoBrief  = toBriefInfos(TargetType.TODO,  todoIds,  today.toLocalDate());
-        }
+        List<BriefingResDTO.BriefInfoRes> eventBrief =
+                eventIds.isEmpty() ? List.of() : toBriefInfos(TargetType.EVENT, eventIds, today);
+        List<BriefingResDTO.BriefInfoRes> todoBrief =
+                todoIds.isEmpty() ? List.of() : toBriefInfos(TargetType.TODO,  todoIds, today);
 
         // 일정과 할일이 없다면 빈 값 리턴
         if (eventBrief.isEmpty() && todoBrief.isEmpty()) {
-            return BriefingConverter.toEmpty(today.toLocalDate());
+            return BriefingConverter.toBriefingRes(today, BriefingReason.NOT_EVENT_TODAY);
         }
 
         List<BriefingResDTO.BriefInfoRes> briefInfo =
@@ -89,7 +76,7 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
                         .toList();
 
         return BriefingConverter.toBriefingRes(
-                today.toLocalDate(),
+                today,
                 BriefingReason.AVAILABLE,
                 briefInfo,
                 eventBrief.size(),
