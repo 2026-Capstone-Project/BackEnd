@@ -5,7 +5,9 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
-import com.project.backend.domain.reminder.listener.ReminderListener;
+import com.project.backend.domain.reminder.handler.ExceptionReminderHandler;
+import com.project.backend.domain.reminder.handler.PlanReminderHandler;
+import com.project.backend.domain.reminder.handler.ReminderDeletedHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +17,9 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ReminderEventBridge {
 
-    private final ReminderListener reminderListener;
+    private final PlanReminderHandler planReminderHandler;
+    private final ExceptionReminderHandler exceptionReminderHandler;
+    private final ReminderDeletedHandler reminderDeletedHandler;
 
     public void handlePlanChanged (
             Long targetId,
@@ -26,7 +30,7 @@ public class ReminderEventBridge {
             LocalDateTime startTime,
             ChangeType changeType
     ) {
-        reminderListener.onPlanChanged(PlanEventFactory.toPlanChanged(
+        planReminderHandler.handle(PlanEventFactory.toPlanChanged(
                 targetId,
                 targetType,
                 memberId,
@@ -46,7 +50,7 @@ public class ReminderEventBridge {
             LocalDateTime occurrenceTime,
             ExceptionChangeType changeType
     ) {
-        reminderListener.onRecurrenceExceptionChanged(PlanEventFactory.toRecurrenceExceptionChanged(
+        exceptionReminderHandler.handle(PlanEventFactory.toRecurrenceExceptionChanged(
                 exceptionId,
                 targetId,
                 targetType,
@@ -66,7 +70,7 @@ public class ReminderEventBridge {
             TargetType targetType,
             DeletedType deletedType
     ) {
-        reminderListener.onReminderDeleted(PlanEventFactory.toReminderDeleted(
+        reminderDeletedHandler.handle(PlanEventFactory.toReminderDeleted(
                 exceptionId,
                 memberId,
                 occurrenceTime,
