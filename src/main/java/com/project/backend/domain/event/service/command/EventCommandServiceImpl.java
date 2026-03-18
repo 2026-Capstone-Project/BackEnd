@@ -1,15 +1,13 @@
 package com.project.backend.domain.event.service.command;
 
 import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
-import com.project.backend.domain.event.converter.EventConverter;
-import com.project.backend.domain.event.converter.EventSpec;
-import com.project.backend.domain.event.converter.RecurrenceGroupConverter;
-import com.project.backend.domain.event.converter.RecurrenceGroupSpec;
+import com.project.backend.domain.event.converter.*;
 import com.project.backend.domain.event.dto.AdjustedTime;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.EventTitleHistory;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
@@ -19,6 +17,7 @@ import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.EventTitleHistoryRepository;
 import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
@@ -66,6 +65,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     private final MemberRepository memberRepository;
     private final EventRepository eventRepository;
+    private final EventTitleHistoryRepository eventTitleHistoryRepository;
     private final RecurrenceExceptionRepository recurrenceExRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
@@ -625,8 +625,18 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (baseRg != null) {
             baseRg.attachEvent(newEvent);
         }
-
         eventRepository.save(newEvent);
+
+        EventTitleHistory history =
+                eventTitleHistoryRepository.findByMemberIdAndTitle(member.getId(), eventSpec.title().trim())
+                        .orElse(null);
+        if (history == null) {
+            history = EventTitleHistoryConverter.toEventTitleHistory(eventSpec, member.getId());
+            eventTitleHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
+
         return newEvent;
     }
 
