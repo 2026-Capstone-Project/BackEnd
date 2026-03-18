@@ -47,10 +47,10 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
             return BriefingConverter.toBriefingRes(today, BriefingReason.DISABLED);
         }
 
-        // 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
-        if (now.isBefore(setting.getDailyBriefingTime().atDate(today))) {
-            return BriefingConverter.toBriefingRes(today, BriefingReason.TIME_NOT_REACHED);
-        }
+//        // 설정한 브리핑 시간이 현재시간보다 이후이면 리턴
+//        if (now.isBefore(setting.getDailyBriefingTime().atDate(today))) {
+//            return BriefingConverter.toBriefingRes(today, BriefingReason.TIME_NOT_REACHED);
+//        }
 
         // 현재시간보다 startTime이 이후가 아닌 일정/투두 조회
         List<Long> eventIds = eventRepository.findEventIdsByMemberIdAndCurrentDate(
