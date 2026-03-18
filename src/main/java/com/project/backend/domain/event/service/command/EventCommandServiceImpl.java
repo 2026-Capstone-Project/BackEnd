@@ -183,6 +183,10 @@ public class EventCommandServiceImpl implements EventCommandService {
                         ChangeType.UPDATE_SINGLE);
 
             }
+            // 수정 시 history upsert
+            upsertEventTitleHistory(req.title(), memberId);
+            upsertEventLocationHistory(req.location(), memberId);
+
             // 단일 이벤트 after 스냅샷
             EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
             log.info("EventCommandImpl, after 스냅샷 생성 완료");
@@ -228,6 +232,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             case THIS_AND_FOLLOWING_EVENTS -> afterBase = updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
+
+        // 수정 시 history upsert
+        upsertEventTitleHistory(req.title(), memberId);
+        upsertEventLocationHistory(req.location(), memberId);
+
         // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
         SuggestionInvalidateReason beforeRgReason =
                 hardDeleteGroup
@@ -626,6 +635,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     private void upsertEventTitleHistory(String title, Long memberId) {
+        if (title == null) return;
         String trimmedTitle = title.trim();
         EventTitleHistory history =
                 eventTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
@@ -639,6 +649,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     }
 
     private void upsertEventLocationHistory(String location, Long memberId) {
+        if (location == null) return;
         String trimmedLocation = location.trim();
         EventLocationHistory history =
                 eventLocationHistoryRepository.findByMemberIdAndLocation(memberId, trimmedLocation)
