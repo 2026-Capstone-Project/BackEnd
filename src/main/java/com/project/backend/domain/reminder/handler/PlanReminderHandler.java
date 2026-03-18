@@ -6,7 +6,6 @@ import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -14,7 +13,6 @@ public class PlanReminderHandler {
 
     private final ReminderCommandService reminderCommandService;
 
-    @Transactional
     public void handle(PlanChanged pc) {
         ReminderSource rs = ReminderConverter.toReminderSource
                 (pc.targetId(), pc.targetType(), pc.title(), pc.occurrenceTime(), pc.isRecurring());

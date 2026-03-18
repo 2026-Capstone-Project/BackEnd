@@ -4,11 +4,9 @@ import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.service.command.ReminderCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-@Transactional
 public class ReminderDeletedHandler {
 
     private final ReminderCommandService reminderCommandService;
@@ -21,7 +19,7 @@ public class ReminderDeletedHandler {
                     reminderCommandService.deleteReminderOfThisAndFollowings(
                             rd.targetId(), rd.targetType(), rd.occurrenceTime());
             case DELETED_ALL ->
-                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType(), rd.occurrenceTime());
+                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType());
         }
     }
 }
