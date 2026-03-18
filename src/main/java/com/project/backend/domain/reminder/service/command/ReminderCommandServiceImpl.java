@@ -10,7 +10,7 @@ import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.reminder.converter.ReminderConverter;
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.entity.Reminder;
 import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.LifecycleStatus;
@@ -19,7 +19,7 @@ import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.reminder.exception.ReminderErrorCode;
 import com.project.backend.domain.reminder.exception.ReminderException;
 import com.project.backend.domain.reminder.repository.ReminderRepository;
-import com.project.backend.domain.reminder.provider.OccurrenceProvider;
+import com.project.backend.domain.occurrence.service.OccurrenceResolver;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.exception.TodoErrorCode;
@@ -46,7 +46,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     private final ReminderRepository reminderRepository;
     private final MemberRepository memberRepository;
     private final RecurrenceExceptionRepository recurrenceExRepository;
-    private final OccurrenceProvider occurrenceProvider;
+    private final OccurrenceResolver occurrenceResolver;
     private final EventQueryService eventQueryService;
     private final TodoQueryService todoQueryService;
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
@@ -311,7 +311,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     private void doRefresh(Reminder reminder) {
         LocalDateTime now = LocalDateTime.now();
 
-        NextOccurrenceResult result = occurrenceProvider.getNextOccurrence(reminder);
+        NextOccurrenceResult result = occurrenceResolver.getNextOccurrence(reminder);
 
         if (!result.hasNext()) {
             reminder.terminate();

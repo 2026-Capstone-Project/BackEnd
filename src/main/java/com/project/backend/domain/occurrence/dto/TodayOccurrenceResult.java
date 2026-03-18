@@ -1,4 +1,4 @@
-package com.project.backend.domain.briefing.dto;
+package com.project.backend.domain.occurrence.dto;
 
 import com.project.backend.domain.reminder.enums.TargetType;
 

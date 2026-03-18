@@ -1,6 +1,6 @@
 package com.project.backend.domain.event.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
@@ -18,7 +18,7 @@ import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.event.validator.EventValidator;
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package com.project.backend.domain.briefing.converter;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.briefing.dto.response.BriefingResDTO;
 import com.project.backend.domain.briefing.enums.BriefingReason;
 import lombok.AccessLevel;

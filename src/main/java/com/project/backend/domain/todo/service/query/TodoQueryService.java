@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.enums.TodoFilter;
 
@@ -8,8 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
-import com.project.backend.domain.reminder.entity.Reminder;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 
 public interface TodoQueryService {
 
