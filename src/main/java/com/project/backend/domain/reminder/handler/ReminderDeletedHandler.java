@@ -19,7 +19,7 @@ public class ReminderDeletedHandler {
                     reminderCommandService.deleteReminderOfThisAndFollowings(
                             rd.targetId(), rd.targetType(), rd.occurrenceTime());
             case DELETED_ALL ->
-                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType(), rd.occurrenceTime());
+                    reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType());
         }
     }
 }

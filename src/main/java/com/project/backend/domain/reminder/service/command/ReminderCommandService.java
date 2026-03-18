@@ -10,9 +10,6 @@ public interface ReminderCommandService {
 
     void createReminder(ReminderSource rs, Long memberId);
 
-    void createSingleOverrideReminder
-            (Long eventId, TargetType targetType, Long memberId,
-             LocalDateTime occurrenceTime, String title, Long exceptionId);
 
 
     void refreshIfExpired(Reminder reminder);
@@ -29,5 +26,5 @@ public interface ReminderCommandService {
 
     void deleteReminderOfThisAndFollowings(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
 
-    void deleteReminderOfAll(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
+    void deleteReminderOfAll(Long targetId, TargetType targetType);
 }

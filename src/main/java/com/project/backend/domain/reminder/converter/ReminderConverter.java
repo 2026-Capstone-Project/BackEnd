@@ -20,38 +20,17 @@ public class ReminderConverter {
     public static Reminder toReminder(
             ReminderSource source,
             Member member,
+            LocalDateTime occurrenceTime,
             Long exceptionId,
             LifecycleStatus lifecycleStatus,
             ReminderRole role
     ) {
         return Reminder.builder()
                 .title(source.title())
-                .occurrenceTime(source.occurrenceTime())
-                .targetType(source.targetType())
-                .targetId(source.targetId())
-                .recurrenceExceptionId(exceptionId)
-                .interactionStatus(InteractionStatus.PENDING)
-                .lifecycleStatus(lifecycleStatus)
-                .role(role)
-                .member(member)
-                .build();
-    }
-
-    public static Reminder toReminderWithOccurrence(
-            ReminderSource source,
-            Member member,
-            LocalDateTime occurrenceTime,
-            LifecycleStatus lifecycleStatus,
-            ReminderRole role,
-            Long recurrenceExceptionId
-
-    ) {
-        return Reminder.builder()
-                .title(source.title())
                 .occurrenceTime(occurrenceTime)
                 .targetType(source.targetType())
                 .targetId(source.targetId())
-                .recurrenceExceptionId(recurrenceExceptionId)
+                .recurrenceExceptionId(exceptionId)
                 .interactionStatus(InteractionStatus.PENDING)
                 .lifecycleStatus(lifecycleStatus)
                 .role(role)
