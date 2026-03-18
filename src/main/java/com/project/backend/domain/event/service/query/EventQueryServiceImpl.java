@@ -6,7 +6,7 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
@@ -33,8 +33,8 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
-import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
 
 @Slf4j
 @Service

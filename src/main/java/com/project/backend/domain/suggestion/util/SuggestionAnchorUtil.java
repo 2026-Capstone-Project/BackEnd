@@ -1,6 +1,6 @@
 package com.project.backend.domain.suggestion.util;
 
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
 import com.project.backend.domain.suggestion.generation.candidate.RecurrenceSuggestionCandidate;
 import com.project.backend.domain.suggestion.generation.pattern.SuggestionPattern;

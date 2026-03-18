@@ -1,8 +1,8 @@
 package com.project.backend.domain.todo.entity;
 
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.MonthlyType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceEndType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.global.recurrence.RecurrenceRule;

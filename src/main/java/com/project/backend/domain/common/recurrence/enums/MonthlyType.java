@@ -1,4 +1,4 @@
-package com.project.backend.domain.event.enums;
+package com.project.backend.domain.common.recurrence.enums;
 
 public enum MonthlyType {
     DAY_OF_MONTH,   // 매월 N일
