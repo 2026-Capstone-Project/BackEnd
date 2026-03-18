@@ -21,13 +21,29 @@ public class PromptTemplate {
     @Value("classpath:prompts/nlp-system-prompt.txt")
     private Resource systemPromptResource;
 
+    @Value("classpath:prompts/suggestion-prompt.txt")
+    private Resource systemSuggestionPromptResource;
+
+    @Value("classpath:prompts/recurrence-suggestion-prompt.txt")
+    private Resource recurrenceSuggestionPromptResource;
+
     private String systemPromptTemplate;
+    private String systemSuggestionPromptTemplate;
+    private String recurrenceSuggestionPromptTemplate;
 
     @PostConstruct
     public void init() {
         try {
             systemPromptTemplate = new String(
                     systemPromptResource.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8
+            );
+            systemSuggestionPromptTemplate = new String(
+                    systemSuggestionPromptResource.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8
+            );
+            recurrenceSuggestionPromptTemplate = new String(
+                    recurrenceSuggestionPromptResource.getInputStream().readAllBytes(),
                     StandardCharsets.UTF_8
             );
             log.debug("시스템 프롬프트 로드 완료");
@@ -47,6 +63,13 @@ public class PromptTemplate {
                 .replace("{week_dates}", buildWeekDatesTable(baseDate))
                 .replace("{next_week_dates}", buildNextWeekDatesTable(baseDate));
     }
+
+    public String getSuggestionPrompt() {
+        return systemSuggestionPromptTemplate;
+    }
+
+    public String getRecurrenceSuggestionPrompt() { return recurrenceSuggestionPromptTemplate; }
+
 
     private String buildWeekDatesTable(LocalDate baseDate) {
         LocalDate monday = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -79,6 +102,14 @@ public class PromptTemplate {
                 사용자 입력: "%s"
 
                 위 입력을 분석하여 일정(Event)인지 할 일(Todo)인지 구분하고, JSON 형식으로 응답해주세요.
+                """, userInput);
+    }
+
+    public String getUserSuggestionPrompt(String userInput) {
+        return String.format("""
+                "%s"
+
+                위 입력을 분석하여 JSON 형식으로 응답해주세요.
                 """, userInput);
     }
 }

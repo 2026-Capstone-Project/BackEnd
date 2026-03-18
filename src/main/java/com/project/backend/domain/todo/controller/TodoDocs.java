@@ -210,7 +210,7 @@ public interface TodoDocs {
                                                 "intervalValue": 1,
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
-                                                "weekDayRule": "SINGLE",
+                                                "weekdayRule": "SINGLE",
                                                 "dayOfWeekInMonth": "TUESDAY",
                                                 "endType": "END_BY_COUNT",
                                                 "occurrenceCount": 12

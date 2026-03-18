@@ -4,7 +4,6 @@ import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
 import com.project.backend.domain.suggestion.enums.SuggestionType;
-import com.project.backend.domain.suggestion.vo.SuggestionPattern;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
 import com.project.backend.global.entity.BaseEntity;
