@@ -22,6 +22,7 @@ import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,7 +100,8 @@ public class EventQueryServiceImpl implements EventQueryService {
     }
 
     /**
-     * 기존에 존재햇던 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (단순히 다음 계산 값이 있는지)
+     * 기존에 존재햇던 반복 그룹을 대상으로, 해당 반복 일정에 대한 occurrenceTime의 다음 계산된 시간을 구하되,
+     * 현재 시간보다 이후의 계산된 시간인지 확인한다. (단순히 다음 계산 값이 있는지)
      **/
     @Override
     public NextOccurrenceResult calculateNextOccurrence(Long eventId, LocalDateTime occurrenceTime) {
@@ -117,7 +119,7 @@ public class EventQueryServiceImpl implements EventQueryService {
     }
 
     /**
-        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (현재 보다 이후의 )
+        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (처음부터 현재 시간보다 이후의 계산된 시간이 있는지 반환)
      **/
     @Override
     public LocalDateTime findNextOccurrenceAfterNow(Long eventId) {
@@ -126,34 +128,11 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (event.getRecurrenceGroup() == null) {
+        if (!event.isRecurring()) {
             throw new EventException(EventErrorCode.NOT_RECURRING_EVENT);
         }
 
-        RecurrenceGroup rg = event.getRecurrenceGroup();
-
-        Generator generator = generatorFactory.getGenerator(rg);
-        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
-
-        LocalDateTime current = event.getStartTime();
-        LocalDateTime lastValid = null;
-
-        int count = 1;
-
-        // 현재 시간보다 가장 가까운 이후 날짜 찾기
-        while (endCondition.shouldContinue(current, count, rg)) {
-            current = generator.next(current, rg);
-            lastValid = current;
-            count++;
-
-            if (!current.isBefore(now)) {
-                break;
-            }
-
-            if (count > 20_000) break;
-        }
-
-        return lastValid;
+        return findFirstOccurrenceOnOrAfter(event, now);
     }
 
     /**
@@ -425,5 +404,32 @@ public class EventQueryServiceImpl implements EventQueryService {
             }
         }
         return NextOccurrenceResult.none();
+    }
+
+    private LocalDateTime findFirstOccurrenceOnOrAfter(Event event, LocalDateTime now) {
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        LocalDateTime current = event.getStartTime();
+        LocalDateTime lastValid = null;
+
+        int count = 1;
+
+        // 현재 시간보다 가장 가까운 이후 날짜 찾기
+        while (endCondition.shouldContinue(current, count, rg)) {
+            current = generator.next(current, rg);
+            lastValid = current;
+            count++;
+
+            if (!current.isBefore(now)) {
+                break;
+            }
+
+            if (count > MAX_OCCURRENCE_ITERATION) break;
+        }
+
+        return lastValid;
     }
 }
