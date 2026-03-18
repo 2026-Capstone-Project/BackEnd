@@ -33,12 +33,18 @@ import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.domain.suggestion.invalidation.dispatcher.SuggestionInvalidationDispatcher;
+import com.project.backend.domain.suggestion.invalidation.factory.EventSuggestionSnapshotFactory;
+import com.project.backend.domain.suggestion.invalidation.planner.InvalidationPlan;
+import com.project.backend.domain.suggestion.invalidation.planner.SuggestionInvalidationPlanner;
+import com.project.backend.domain.suggestion.invalidation.snapshot.EventSuggestionSnapshot;
+import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import com.project.backend.domain.suggestion.enums.SuggestionInvalidateReason;
-import com.project.backend.domain.suggestion.publisher.SuggestionInvalidatePublisher;
+import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
-import com.project.backend.domain.suggestion.vo.fingerprint.EventFingerPrint;
-import com.project.backend.domain.suggestion.vo.fingerprint.RecurrenceGroupFingerPrint;
+import com.project.backend.domain.suggestion.invalidation.fingerprint.EventFingerPrint;
+import com.project.backend.domain.suggestion.invalidation.fingerprint.RecurrenceGroupFingerPrint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -66,8 +72,10 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
-    private final SuggestionInvalidatePublisher suggestionInvalidatePublisher;
     private final SuggestionRepository suggestionRepository;
+    private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
+    private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
+    private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -101,9 +109,15 @@ public class EventCommandServiceImpl implements EventCommandService {
                 ChangeType.CREATED
         );
         // 반복의 유무와 상관없이 동일한 이름 + 장소로 생성된 이벤트가 있으면 비활성화
-        byte[] createdHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
+        EventSuggestionSnapshot createdSnapshot = eventSuggestionSnapshotFactory.from(event);
+
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForCreate(
+                createdSnapshot,
+                SuggestionInvalidateReason.EVENT_CREATED
+        );
+
         log.info("event created");
-        suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_CREATED, createdHash);
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
         return EventConverter.toCreateRes(event);
     }
@@ -127,16 +141,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
 
-        // 변경하기 전의 title + location hash
-        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-        EventFingerPrint beforeEventFp = EventFingerPrint.from(event);  // 변경하기 전의 이벤트 특정 정보
-
-        byte[] beforeRgHash = null;
-        RecurrenceGroupFingerPrint beforeRgFp = null;
-        if (event.getRecurrenceGroup() != null) {   // 만약 반복 그룹이 존재한다면? 단일 이벤트가 아니라는 것
-            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());    // id 해시
-            beforeRgFp = RecurrenceGroupFingerPrint.from(event.getRecurrenceGroup());   // 반복 그룹 정보
-        }
+        EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
         LocalDateTime start = calStartTime(req, event, occurrenceDate);
@@ -186,51 +191,19 @@ public class EventCommandServiceImpl implements EventCommandService {
                         ChangeType.UPDATE_SINGLE);
 
             }
-            // 단일 -> 단일 / 단일 -> 반복 변경의 경우
-            // 변경 후 이벤트 title + location hash
-            byte[] afterEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-            EventFingerPrint afterEventFp = EventFingerPrint.from(event);   // 변경 후 이벤트 특정 정보
+            // 단일 이벤트 after 스냅샷
+            EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
+            log.info("EventCommandImpl, after 스냅샷 생성 완료");
 
-            byte[] afterRgHash = null;
-            RecurrenceGroupFingerPrint afterRgFp = null;
-            if (event.getRecurrenceGroup() != null) {   // 단일 -> 반복인 경우
-                afterRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
-                afterRgFp = RecurrenceGroupFingerPrint.from(event.getRecurrenceGroup());
-            }
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
+                    beforeSnapshot,
+                    afterSnapshot,
+                    SuggestionInvalidateReason.EVENT_UPDATED,
+                    SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED,
+                    SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED
+            );
 
-            boolean eventKeyChanged = !Arrays.equals(beforeEventHash, afterEventHash);  // title + location이 변경되었는가?
-            boolean rgKeyChanged = !Arrays.equals(beforeRgHash, afterRgHash);   // rgId가 변경 되었는가? -> 새로운 반복 그룹이 생겼는가?
-
-            boolean eventFpChanged = !beforeEventFp.equals(afterEventFp);   // 이벤트 특정 정보가 변경 되었는가? (시간 등)
-            boolean rgFpChanged = !Objects.equals(beforeRgFp, afterRgFp);   // 반복 그룹 특정 정보가 변경되었는가?
-
-            boolean invalidateEventAxis = eventKeyChanged || eventFpChanged;
-            boolean invalidateRgAxis = rgKeyChanged || rgFpChanged;
-
-            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
-            // 만약 title + location이 변경된 경우 이전과 이후 모두 비활성화
-            if (invalidateEventAxis) {
-                log.info("event updated");
-                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, afterEventHash);
-                if (eventKeyChanged) {
-                    log.info("event title location updated");
-                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeEventHash);
-                }
-            }
-
-            // 키 또는 정보가 변경되었을 때 이후의 정보로 제안 비활성화
-            // 만약 rg 자체가 변경된 경우 이전 rg 제안 비활성화
-            if (invalidateRgAxis) {
-                if (afterRgHash != null) {
-                    // 새 RG 기준 만료
-                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED, afterRgHash);
-                }
-                if (rgKeyChanged && beforeRgHash != null) {
-                    // (이 브랜치에서 사실상 안 나오지만) old RG 정리 케이스 대비
-                    log.info("rg updated");
-                    suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED, beforeRgHash);
-                }
-            }
+            suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
             return;
         }
@@ -271,47 +244,17 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         SuggestionInvalidateReason afterRgReason = SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED;
 
-        // 반복 그룹이 잘려서 새로운 객체가 생성된 경우 -> after 해시는 새로 생성된 event
-        byte[] afterEventHash = suggestionInvalidatePublisher.eventHash(afterBase.getTitle(), afterBase.getLocation());
-        EventFingerPrint afterEventFp = EventFingerPrint.from(afterBase); // 새로 생성된 이벤트 특정 정보
+        EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(afterBase);
 
-        byte[] afterRgHash = null;
-        RecurrenceGroupFingerPrint afterRgFp = null;
-        if (afterBase.getRecurrenceGroup() != null) {   // 새로 생성된 이벤트의 새로 생성된 반복 그룹 정보
-            afterRgHash = suggestionInvalidatePublisher.rgHash(afterBase.getRecurrenceGroup().getId());
-            afterRgFp = RecurrenceGroupFingerPrint.from(afterBase.getRecurrenceGroup());
-        }
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
+                beforeSnapshot,
+                afterSnapshot,
+                SuggestionInvalidateReason.EVENT_UPDATED,
+                beforeRgReason,
+                afterRgReason
+        );
 
-        boolean eventKeyChanged = !Arrays.equals(beforeEventHash, afterEventHash);  // title + location 변경?
-        boolean rgKeyChanged = !Arrays.equals(beforeRgHash, afterRgHash);   // rgId 변경?
-
-        boolean eventFpChanged = !beforeEventFp.equals(afterEventFp);   // 이벤트 정보 변경?
-        boolean rgFpChanged = !Objects.equals(beforeRgFp, afterRgFp);   // 반복 그룹 정보 변경?
-
-        boolean invalidateEventAxis = eventKeyChanged || eventFpChanged;
-        boolean invalidateRgAxis = rgKeyChanged || rgFpChanged;
-
-        // 반복 -> 단일 / 반복 -> 반복은 무조건 after 무효화
-        // 만약 키가 변경된 경우 before 무효화
-        if (invalidateEventAxis) {
-            log.info("event updated");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, afterEventHash);
-            if (eventKeyChanged) {
-                log.info("event title location updated");
-                suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_UPDATED, beforeEventHash);
-            }
-        }
-
-        // 키가 변경되고, 이전 반복 그룹이 존재한다면 -> 이전 반복 그룹 제안 무효화
-        if (invalidateRgAxis) {
-            if (afterRgHash != null) {
-                suggestionInvalidatePublisher.publish(memberId, afterRgReason, afterRgHash);
-            }
-            if (rgKeyChanged && beforeRgHash != null) {
-                log.info("rg deleted because new rg updated");
-                suggestionInvalidatePublisher.publish(memberId, beforeRgReason, beforeRgHash);
-            }
-        }
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
 
     @Override
@@ -326,11 +269,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);
 
-        byte[] beforeEventHash = suggestionInvalidatePublisher.eventHash(event.getTitle(), event.getLocation());
-        byte[] beforeRgHash = null;
-        if (event.getRecurrenceGroup() != null) {
-            beforeRgHash = suggestionInvalidatePublisher.rgHash(event.getRecurrenceGroup().getId());
-        }
+        EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 
         // 단일 일정일 경우
         if (event.getRecurrenceGroup() == null) {
@@ -344,8 +283,16 @@ public class EventCommandServiceImpl implements EventCommandService {
                     TargetType.EVENT,
                     DeletedType.DELETED_SINGLE);
             // 단일은 그냥 해시 겹치면 바로 만료
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                    beforeSnapshot,
+                    SuggestionInvalidateReason.EVENT_DELETED,
+                    null,
+                    true,
+                    false
+            );
+
             log.info("event deleted");
-            suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
+            suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
             return;
         }
 
@@ -384,16 +331,21 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         // 반복은 RGH 축 무조건 정리
-        if (beforeRgHash != null) {
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForDelete(
+                beforeSnapshot,
+                SuggestionInvalidateReason.EVENT_DELETED,
+                reason,
+                hardDeleteGroup,
+                true
+        );
+
+        if (hardDeleteGroup) {
+            log.info("event deleted");
+        } else {
             log.info("before rg deleted");
-            suggestionInvalidatePublisher.publish(memberId, reason, beforeRgHash);
         }
 
-        // (선택) 그룹 통째 삭제면 EH 축도 같이 정리하고 싶으면 켜
-         if (hardDeleteGroup) {
-             log.info("event deleted");
-             suggestionInvalidatePublisher.publish(memberId, SuggestionInvalidateReason.EVENT_DELETED, beforeEventHash);
-         }
+        suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
 
     // 반복그룹이 없는 일정을 수정할 경우
@@ -447,7 +399,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     ) {
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
-        byte[] rgHash = suggestionInvalidatePublisher.rgHash(rg.getId());
+        byte[] rgHash = SuggestionKeyUtil.rgHash(rg.getId());
 
         // 만약 이미 수정된 일정을 또 수정하는 경우
         Optional<RecurrenceException> re = recurrenceExRepository
@@ -470,7 +422,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                     ExceptionChangeType.UPDATE_THIS_AGAIN
             );
             log.info("exception updated");
-            suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
+            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
+                    SuggestionInvalidateReason.EXCEPTION_UPDATED,
+                    rgHash
+            );
+
+            suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
             return;
         }
 
@@ -490,7 +447,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                 ExceptionChangeType.UPDATED_THIS);
 
         log.info("exception updated");
-        suggestionInvalidatePublisher.publish(member.getId(), SuggestionInvalidateReason.EXCEPTION_UPDATED, rgHash);
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
+                SuggestionInvalidateReason.EXCEPTION_UPDATED,
+                rgHash
+        );
+
+        suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
     }
 
     // 반복 그룹이 있는 일정에서 해당 일정만 삭제하는 경우

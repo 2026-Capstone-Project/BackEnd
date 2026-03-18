@@ -15,28 +15,28 @@ import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
 import com.project.backend.domain.nlp.client.LlmClient;
+import com.project.backend.domain.nlp.service.LlmResponseParser;
+import com.project.backend.domain.nlp.service.PromptTemplate;
 import com.project.backend.domain.suggestion.converter.LlmSuggestionConverter;
 import com.project.backend.domain.suggestion.converter.SuggestionConverter;
-import com.project.backend.domain.suggestion.detector.RecurrencePatternDetector;
-import com.project.backend.domain.suggestion.detector.util.RecurrencePreprocessor;
-import com.project.backend.domain.suggestion.detector.vo.DetectionResult;
-import com.project.backend.domain.suggestion.detector.vo.RecurrencePreprocessResult;
+import com.project.backend.domain.suggestion.generation.detector.RecurrencePatternDetector;
+import com.project.backend.domain.suggestion.generation.detector.util.RecurrencePreprocessor;
+import com.project.backend.domain.suggestion.generation.detector.vo.DetectionResult;
+import com.project.backend.domain.suggestion.generation.detector.vo.RecurrencePreprocessResult;
 import com.project.backend.domain.suggestion.dto.request.SuggestionReqDTO;
 import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import com.project.backend.domain.suggestion.entity.Suggestion;
 import com.project.backend.domain.suggestion.enums.Status;
 import com.project.backend.domain.suggestion.exception.SuggestionErrorCode;
 import com.project.backend.domain.suggestion.exception.SuggestionException;
-import com.project.backend.domain.suggestion.executor.SuggestionExecutor;
-import com.project.backend.domain.suggestion.executor.SuggestionExecutorFactory;
-import com.project.backend.domain.suggestion.llm.LlmSuggestionResponseParser;
-import com.project.backend.domain.suggestion.llm.SuggestionPromptTemplate;
+import com.project.backend.domain.suggestion.execution.executor.SuggestionExecutor;
+import com.project.backend.domain.suggestion.execution.factory.SuggestionExecutorFactory;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.util.SuggestionAnchorUtil;
-import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
-import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionException;
-import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
-import com.project.backend.domain.suggestion.vo.SuggestionKey;
+import com.project.backend.domain.suggestion.generation.candidate.RecurrenceSuggestionCandidate;
+import com.project.backend.domain.suggestion.generation.candidate.RecurrenceSuggestionException;
+import com.project.backend.domain.suggestion.generation.candidate.SuggestionCandidate;
+import com.project.backend.domain.suggestion.generation.key.SuggestionKey;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
@@ -78,8 +78,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
 
     private final LlmClient llmClient;
-    private final SuggestionPromptTemplate suggestionPromptTemplate;
-    private final LlmSuggestionResponseParser llmSuggestionResponseParser;
+    private final PromptTemplate promptTemplate;
+    private final LlmResponseParser llmResponseParser;
     private final ObjectMapper objectMapper;
 
     private final RecurrencePatternDetector detector;
@@ -469,11 +469,11 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
         log.debug("llm request json = {}",llmReqJson);
 
-        String suggestionPrompt = suggestionPromptTemplate.getSuggestionPrompt();
-        String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
+        String suggestionPrompt = promptTemplate.getSuggestionPrompt();
+        String userPrompt = promptTemplate.getUserSuggestionPrompt(llmReqJson);
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
         log.debug("llm response json = {}",llmSuggestionRes);
-        return llmSuggestionResponseParser.parseSuggestion(llmSuggestionRes);
+        return llmResponseParser.parseSuggestion(llmSuggestionRes);
     }
 
     private SuggestionResDTO.LlmRecurrenceGroupSuggestionRes getLlmResponse(SuggestionReqDTO.LlmRecurrenceGroupSuggestionReq llmReq) {
@@ -481,11 +481,11 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         String llmReqJson = objectMapper.writeValueAsString(llmReq);
         log.debug("llm request json = {}",llmReqJson);
 
-        String suggestionPrompt = suggestionPromptTemplate.getRecurrenceSuggestionPrompt();
-        String userPrompt = suggestionPromptTemplate.getUserSuggestionPrompt(llmReqJson);
+        String suggestionPrompt = promptTemplate.getRecurrenceSuggestionPrompt();
+        String userPrompt = promptTemplate.getUserSuggestionPrompt(llmReqJson);
         String llmSuggestionRes = llmClient.chat(suggestionPrompt, userPrompt);
         log.debug("llm response json = {}",llmSuggestionRes);
-        return llmSuggestionResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
+        return llmResponseParser.parseRecurrenceGroupSuggestion(llmSuggestionRes);
     }
 
     private boolean checkAlreadyExist(List<LocalDate> anchors, SuggestionCandidate candidate, Member member) {

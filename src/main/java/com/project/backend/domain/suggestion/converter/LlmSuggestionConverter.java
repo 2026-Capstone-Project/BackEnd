@@ -1,13 +1,12 @@
 package com.project.backend.domain.suggestion.converter;
 
-import com.project.backend.domain.suggestion.detector.vo.DetectionResult;
-import com.project.backend.domain.suggestion.detector.vo.pattern.IntervalValue;
-import com.project.backend.domain.suggestion.detector.vo.pattern.MonthlySetValue;
-import com.project.backend.domain.suggestion.vo.SuggestionPattern;
-import com.project.backend.domain.suggestion.detector.vo.pattern.WeeklySetValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.DetectionResult;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.IntervalValue;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.MonthlySetValue;
+import com.project.backend.domain.suggestion.generation.pattern.SuggestionPattern;
+import com.project.backend.domain.suggestion.generation.detector.vo.pattern.WeeklySetValue;
 import com.project.backend.domain.suggestion.dto.request.SuggestionReqDTO;
-import com.project.backend.domain.suggestion.enums.Category;
-import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
+import com.project.backend.domain.suggestion.generation.candidate.SuggestionCandidate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

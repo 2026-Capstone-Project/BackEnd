@@ -1,6 +1,8 @@
 package com.project.backend.domain.todo.converter;
 
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.exception.RecurrenceGroupErrorCode;
 import com.project.backend.domain.event.exception.RecurrenceGroupException;
 import com.project.backend.domain.member.entity.Member;
@@ -14,6 +16,7 @@ import com.project.backend.domain.todo.enums.TodoColor;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -21,6 +24,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TodoConverter {
 
@@ -67,13 +71,16 @@ public class TodoConverter {
 
         // SINGLE이 아닌데, dayOfWeekInMonth 입력 시 예외처리
         if (reqDTO.dayOfWeekInMonth() != null && reqDTO.weekdayRule() != MonthlyWeekdayRule.SINGLE) {
+            log.info("dayOfWeekInMonth: {}, weekdayRule: {}", reqDTO.dayOfWeekInMonth(), reqDTO.weekdayRule());
             throw new RecurrenceGroupException(RecurrenceGroupErrorCode.INVALID_DAY_OF_WEEK_IN_MONTH);
         }
 
         // DayOfWeek → "MONDAY" 형태로 변환
-        String dayOfWeekInMonth = reqDTO.dayOfWeekInMonth() != null
-                ? reqDTO.dayOfWeekInMonth().name()
-                : RecurrenceUtils.normalizeDayOfWeekInMonth(reqDTO.weekdayRule());
+        String dayOfWeekInMonth = (reqDTO.frequency() == RecurrenceFrequency.MONTHLY && reqDTO.monthlyType() == MonthlyType.DAY_OF_WEEK)
+                ? (reqDTO.dayOfWeekInMonth() != null
+                    ? reqDTO.dayOfWeekInMonth().name()
+                    : RecurrenceUtils.normalizeDayOfWeekInMonth(reqDTO.weekdayRule()))
+                : null;
 
         return TodoRecurrenceGroup.create(
                 member,

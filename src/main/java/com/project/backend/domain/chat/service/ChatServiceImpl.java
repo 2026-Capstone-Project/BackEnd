@@ -24,19 +24,31 @@ public class ChatServiceImpl implements ChatService {
     private final LlmClient llmClient;
     private final ChatPromptTemplate chatPromptTemplate;
     private final ConversationHistoryService conversationHistoryService;
+    private final DateRangeExtractor dateRangeExtractor;
+    private final ScheduleContextBuilder scheduleContextBuilder;
 
     @Override
     public ChatResDTO.SendRes sendMessage(Long memberId, ChatReqDTO.SendReq reqDTO) {
         try {
-            // 1. Redis에서 기존 히스토리 조회
+            String message = reqDTO.message();
+
+            // 1. 날짜 범위 파싱 → 일정/할 일 조회 → 컨텍스트 텍스트 생성
+            String scheduleContext = dateRangeExtractor.extract(message)
+                    .map(range -> scheduleContextBuilder.build(memberId, range))
+                    .orElse(null);
+
+            // 2. 시스템 프롬프트에 일정 컨텍스트 주입
+            String systemPrompt = chatPromptTemplate.getSystemPrompt(scheduleContext);
+
+            // 3. Redis에서 기존 히스토리 조회 후 새 메시지 추가
             List<Map<String, String>> messages = new ArrayList<>(conversationHistoryService.getHistory(memberId));
-            messages.add(Map.of("role", "user", "content", reqDTO.message()));
+            messages.add(Map.of("role", "user", "content", message));
 
-            // 2. 히스토리 + 새 메시지 합쳐서 OpenAI 호출
-            String reply = llmClient.chatWithHistory(chatPromptTemplate.getSystemPrompt(), messages);
+            // 4. 히스토리 + 컨텍스트 포함 시스템 프롬프트로 OpenAI 호출
+            String reply = llmClient.chatWithHistory(systemPrompt, messages);
 
-            // 3. 유저 메시지와 GPT 응답을 Redis에 저장
-            conversationHistoryService.saveMessage(memberId, "user", reqDTO.message());
+            // 5. 유저 메시지와 GPT 응답을 Redis에 저장
+            conversationHistoryService.saveMessage(memberId, "user", message);
             conversationHistoryService.saveMessage(memberId, "assistant", reply);
 
             return ChatConverter.toSendResDTO(reply);

@@ -2,8 +2,8 @@ package com.project.backend.domain.suggestion.util;
 
 import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.suggestion.enums.RecurrencePatternType;
-import com.project.backend.domain.suggestion.vo.RecurrenceSuggestionCandidate;
-import com.project.backend.domain.suggestion.vo.SuggestionPattern;
+import com.project.backend.domain.suggestion.generation.candidate.RecurrenceSuggestionCandidate;
+import com.project.backend.domain.suggestion.generation.pattern.SuggestionPattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

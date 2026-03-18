@@ -33,6 +33,13 @@ public class ChatPromptTemplate {
     }
 
     public String getSystemPrompt() {
-        return systemPrompt;
+        return systemPrompt.replace("{schedule_context}", "");
+    }
+
+    public String getSystemPrompt(String scheduleContext) {
+        String contextBlock = scheduleContext != null
+                ? "[사용자의 일정 및 할 일]\n" + scheduleContext + "\n\n위 내용을 참고하여 답변하세요. 일정과 할 일이 없을 경우 '해당 기간에 일정이 없어요'라고 답변하세요."
+                : "";
+        return systemPrompt.replace("{schedule_context}", contextBlock);
     }
 }
