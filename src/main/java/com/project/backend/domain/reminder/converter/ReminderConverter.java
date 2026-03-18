@@ -1,13 +1,13 @@
 package com.project.backend.domain.reminder.converter;
 
 import com.project.backend.domain.member.entity.Member;
+import com.project.backend.domain.reminder.dto.PlanChanged;
+import com.project.backend.domain.reminder.dto.RecurrenceExceptionChanged;
+import com.project.backend.domain.reminder.dto.ReminderDeleted;
 import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.dto.response.ReminderResDTO;
 import com.project.backend.domain.reminder.entity.Reminder;
-import com.project.backend.domain.reminder.enums.InteractionStatus;
-import com.project.backend.domain.reminder.enums.LifecycleStatus;
-import com.project.backend.domain.reminder.enums.ReminderRole;
-import com.project.backend.domain.reminder.enums.TargetType;
+import com.project.backend.domain.reminder.enums.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -79,6 +79,65 @@ public class ReminderConverter {
                 .title(base.title())
                 .occurrenceTime(occurrenceTime)
                 .isRecurring(base.isRecurring())
+                .build();
+    }
+
+    public static PlanChanged toPlanChanged(
+            Long targetId,
+            TargetType targetType,
+            Long memberId,
+            String title,
+            Boolean isRecurring,
+            LocalDateTime occurrenceTime,
+            ChangeType changeType) {
+        return PlanChanged.builder()
+                .targetId(targetId)
+                .targetType(targetType)
+                .memberId(memberId)
+                .title(title)
+                .isRecurring(isRecurring)
+                .occurrenceTime(occurrenceTime)
+                .changeType(changeType)
+                .build();
+    }
+
+    public static RecurrenceExceptionChanged toRecurrenceExceptionChanged (
+            Long exceptionId,
+            Long eventId,
+            TargetType targetType,
+            Long memberId,
+            String title,
+            Boolean isRecurring,
+            LocalDateTime occurrenceTime,
+            ExceptionChangeType changeType
+    ) {
+        return RecurrenceExceptionChanged.builder()
+                .exceptionId(exceptionId)
+                .eventId(eventId)
+                .targetType(targetType)
+                .memberId(memberId)
+                .title(title)
+                .isrRecurring(isRecurring)
+                .occurrenceTime(occurrenceTime)
+                .changeType(changeType)
+                .build();
+    }
+
+    public static ReminderDeleted toReminderDeleted(
+            Long exceptionId,
+            Long memberId,
+            LocalDateTime occurrenceTime,
+            Long targetId,
+            TargetType targetType,
+            DeletedType deletedType
+    ) {
+        return ReminderDeleted.builder()
+                .exceptionId(exceptionId)
+                .memberId(memberId)
+                .occurrenceTime(occurrenceTime)
+                .targetId(targetId)
+                .targetType(targetType)
+                .deletedType(deletedType)
                 .build();
     }
 }

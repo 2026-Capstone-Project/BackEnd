@@ -1,4 +1,4 @@
-package com.project.backend.domain.common.plan.enums;
+package com.project.backend.domain.common.recurrence.enums;
 
 public enum MonthlyWeekdayRule {
     SINGLE,      // 특정 요일 1개

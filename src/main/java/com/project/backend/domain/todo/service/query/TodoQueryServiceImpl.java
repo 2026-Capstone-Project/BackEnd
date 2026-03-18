@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.enums.ExceptionType;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
@@ -18,8 +18,7 @@ import com.project.backend.domain.todo.exception.TodoErrorCode;
 import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
-import com.project.backend.domain.reminder.entity.Reminder;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

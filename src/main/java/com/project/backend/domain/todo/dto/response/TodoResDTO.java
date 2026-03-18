@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.dto.response;
 
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.MonthlyType;
 import com.project.backend.domain.event.enums.RecurrenceEndType;
 import com.project.backend.domain.event.enums.RecurrenceFrequency;

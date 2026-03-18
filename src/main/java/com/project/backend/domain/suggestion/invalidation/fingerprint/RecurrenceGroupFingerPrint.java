@@ -1,6 +1,6 @@
 package com.project.backend.domain.suggestion.invalidation.fingerprint;
 
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.*;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;

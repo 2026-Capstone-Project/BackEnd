@@ -63,11 +63,11 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     /**
      * 오늘보다 startTime이 이후가 아닌 할일 조회
      */
-    @Query("SELECT t " +
+    @Query("SELECT t.id " +
             "FROM Todo t " +
             "WHERE t.member.id = :memberId " +
             "AND t.startDate <= :currentDate")
-    List<Todo> findAllByMemberIdAndCurrentDate(
+    List<Long> findTodoIdsByMemberIdAndCurrentDate(
             @Param("memberId") Long memberId,
             @Param("currentDate") LocalDate currentDate
     );
