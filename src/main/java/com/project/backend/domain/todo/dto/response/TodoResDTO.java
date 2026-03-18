@@ -118,4 +118,13 @@ public class TodoResDTO {
             String title,
             Boolean isCompleted
     ) {}
+
+    /**
+     * 할 일 제목 히스토리
+     */
+    @Builder
+    public record TodoTitleHistoryRes(
+            List<String> titleHistory
+    ) {
+    }
 }

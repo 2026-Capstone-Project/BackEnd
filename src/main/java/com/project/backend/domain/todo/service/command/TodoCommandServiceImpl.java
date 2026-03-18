@@ -22,17 +22,20 @@ import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoFinger
 import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoRecurrenceGroupFingerPrint;
 import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.todo.converter.TodoConverter;
+import com.project.backend.domain.todo.converter.TodoHistoryConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
+import com.project.backend.domain.todo.entity.TodoTitleHistory;
 import com.project.backend.domain.todo.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.todo.exception.TodoErrorCode;
 import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
+import com.project.backend.domain.todo.repository.TodoTitleHistoryRepository;
 import com.project.backend.domain.todo.service.query.TodoQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +65,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final TodoSuggestionSnapshotFactory todoSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+    private final TodoTitleHistoryRepository todoTitleHistoryRepository;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -80,6 +84,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 3. Todo 생성
         Todo todo = TodoConverter.toTodo(reqDTO, member, recurrenceGroup);
         todo = todoRepository.save(todo);
+        upsertTodoTitleHistory(memberId, todo.getTitle());
         log.debug("할 일 생성 완료 - todoId: {}", todo.getId());
 
         // 4. 반복 그룹에 Todo 연결
@@ -108,6 +113,19 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
         return TodoConverter.toTodoInfo(todo);
+    }
+
+    private void upsertTodoTitleHistory(Long memberId, String title) {
+        String trimmedTitle = title.trim();
+        TodoTitleHistory history =
+                todoTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
+                        .orElse(null);
+        if (history == null) {
+            history = TodoHistoryConverter.toTodoTitleHistory(memberId, trimmedTitle);
+            todoTitleHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
     }
 
     @Override

@@ -38,6 +38,11 @@ public interface TodoQueryService {
     TodoResDTO.TodoProgressRes getProgress(Long memberId, LocalDate date);
 
     /**
+     * 할 일 제목 히스토리 조회
+     */
+    TodoResDTO.TodoTitleHistoryRes TodoTitleHistoryRes(Long memberId, String keyword);
+
+    /**
      * 반복 할 일의 유효한 날짜인지 검증
      */
     boolean isValidOccurrenceDate(Long todoId, LocalDate occurrenceDate);
