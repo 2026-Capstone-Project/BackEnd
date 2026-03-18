@@ -139,6 +139,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
+        eventValidator.validateBlank(req);
 
         // 입력한 값이 기존 단일 일정 or 반복 일정의 필드값과 동일한 경우
         if (!hasEventChanged(event, req, start, end, occurrenceDate)
