@@ -115,19 +115,6 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         return TodoConverter.toTodoInfo(todo);
     }
 
-    private void upsertTodoTitleHistory(Long memberId, String title) {
-        String trimmedTitle = title.trim();
-        TodoTitleHistory history =
-                todoTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
-                        .orElse(null);
-        if (history == null) {
-            history = TodoHistoryConverter.toTodoTitleHistory(memberId, trimmedTitle);
-            todoTitleHistoryRepository.save(history);
-        } else {
-            history.updateLastUsedAt();
-        }
-    }
-
     @Override
     public TodoResDTO.TodoInfo updateTodo(Long memberId, Long todoId, LocalDate occurrenceDate,
                                            RecurrenceUpdateScope scope, TodoReqDTO.UpdateTodo reqDTO) {
@@ -774,5 +761,21 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 oldGroup.getEndDate(),
                 oldGroup.getOccurrenceCount()
         );
+    }
+
+    /**
+     * title history를 upsert하는 메서드
+     */
+    private void upsertTodoTitleHistory(Long memberId, String title) {
+        String trimmedTitle = title.trim();
+        TodoTitleHistory history =
+                todoTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
+                        .orElse(null);
+        if (history == null) {
+            history = TodoHistoryConverter.toTodoTitleHistory(memberId, trimmedTitle);
+            todoTitleHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
     }
 }
