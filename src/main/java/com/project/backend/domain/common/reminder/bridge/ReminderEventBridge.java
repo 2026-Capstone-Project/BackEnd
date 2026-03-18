@@ -1,6 +1,6 @@
 package com.project.backend.domain.common.reminder.bridge;
 
-import com.project.backend.domain.common.plan.factory.PlanEventFactory;
+import com.project.backend.domain.reminder.converter.ReminderConverter;
 import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.DeletedType;
 import com.project.backend.domain.reminder.enums.ExceptionChangeType;
@@ -26,7 +26,7 @@ public class ReminderEventBridge {
             LocalDateTime startTime,
             ChangeType changeType
     ) {
-        reminderListener.onPlanChanged(PlanEventFactory.toPlanChanged(
+        reminderListener.onPlanChanged(ReminderConverter.toPlanChanged(
                 targetId,
                 targetType,
                 memberId,
@@ -46,7 +46,7 @@ public class ReminderEventBridge {
             LocalDateTime occurrenceTime,
             ExceptionChangeType changeType
     ) {
-        reminderListener.onRecurrenceExceptionChanged(PlanEventFactory.toRecurrenceExceptionChanged(
+        reminderListener.onRecurrenceExceptionChanged(ReminderConverter.toRecurrenceExceptionChanged(
                 exceptionId,
                 targetId,
                 targetType,
@@ -66,7 +66,7 @@ public class ReminderEventBridge {
             TargetType targetType,
             DeletedType deletedType
     ) {
-        reminderListener.onReminderDeleted(PlanEventFactory.toReminderDeleted(
+        reminderListener.onReminderDeleted(ReminderConverter.toReminderDeleted(
                 exceptionId,
                 memberId,
                 occurrenceTime,

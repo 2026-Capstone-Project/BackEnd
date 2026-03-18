@@ -1,4 +1,4 @@
-package com.project.backend.domain.common.reminder.dto;
+package com.project.backend.domain.reminder.dto;
 
 import com.project.backend.domain.reminder.enums.ChangeType;
 import com.project.backend.domain.reminder.enums.TargetType;
