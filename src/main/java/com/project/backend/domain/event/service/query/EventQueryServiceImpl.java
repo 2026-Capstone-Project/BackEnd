@@ -42,6 +42,8 @@ import static com.project.backend.domain.common.recurrence.enums.ExceptionType.S
 @Transactional(readOnly = true)
 public class EventQueryServiceImpl implements EventQueryService {
 
+    private static final int MAX_OCCURRENCE_ITERATION = 20_000;
+
     private final EventRepository eventRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
@@ -53,11 +55,7 @@ public class EventQueryServiceImpl implements EventQueryService {
 
 
     @Override
-    public EventResDTO.DetailRes getEventDetail(
-            Long eventId,
-            LocalDateTime occurrenceDate,
-            Long memberId
-    ) {
+    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
@@ -89,18 +87,6 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         List<Event> result = concatEventList(baseEvents, EventFromRg);
 
-//        // 반복이 있는 일정
-//        List<Event> recurringEvent = baseEvents.stream()
-//                .filter(e -> e.getRecurrenceGroup() != null)
-//                .toList();
-//
-//        // 반복이 없는 일정
-//        List<Event> nonRecurringEvent = baseEvents.stream()
-//                .filter(e -> e.getRecurrenceGroup() == null)
-//                .toList();
-
-//        List<EventResDTO.DetailRes> eventsListRes = expandEvents(recurringEvent, startRange, endRange);
-
         // 최상위 이벤트 확장
         List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
 
@@ -113,7 +99,7 @@ public class EventQueryServiceImpl implements EventQueryService {
     }
 
     /**
-     * 기존에 존재햇던 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+     * 기존에 존재햇던 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (단순히 다음 계산 값이 있는지)
      **/
     @Override
     public NextOccurrenceResult calculateNextOccurrence(Long eventId, LocalDateTime occurrenceTime) {
@@ -127,56 +113,11 @@ public class EventQueryServiceImpl implements EventQueryService {
             return NextOccurrenceResult.none();
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime lastOccurrence = occurrenceTime;
-        LocalDateTime current = event.getStartTime();
-
-        Generator generator = generatorFactory.getGenerator(rg);
-        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
-
-        int count = 1;
-
-        while (endCondition.shouldContinue(current, count, rg)) {
-
-            // 다음 기본 occurrence 생성
-            current = generator.next(current, rg);
-
-            // 해당 날짜의 반복 예외 조회
-            Optional<RecurrenceException> exOpt =
-                    recurrenceExceptionRepository
-                            .findByRecurrenceGroupIdAndExceptionDate(
-                                    rg.getId(),
-                                    current
-                            );
-
-            if (exOpt.isPresent()) {
-                RecurrenceException ex = exOpt.get();
-
-                // SKIP, 날짜 수정이 아닌경우
-                if (ex.getExceptionType() == SKIP || ex.getStartTime() == null) {
-                    count++;
-                    continue;
-                }
-            }
-
-            // 리마인더에 설정된 날짜보다 이후인데, 현재시간보다 이후여야함
-            if (current.isAfter(lastOccurrence) && current.isAfter(now)) {
-                return NextOccurrenceResult.of(current);
-            }
-
-
-            count++;
-
-            if (count > 20_000) {
-                break; // 안전장치
-            }
-        }
-        return NextOccurrenceResult.none();
+        return findNextOccurrenceAfter(event, rg, occurrenceTime, LocalDateTime.now());
     }
 
-
     /**
-        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (현재 보다 이후의 )
      **/
     @Override
     public LocalDateTime findNextOccurrenceAfterNow(Long eventId) {
@@ -434,5 +375,55 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return new ArrayList<>(uniqueEvents.values());
+    }
+
+    private NextOccurrenceResult findNextOccurrenceAfter(
+            Event event,
+            RecurrenceGroup rg,
+            LocalDateTime occurrenceTime,
+            LocalDateTime now
+    ) {
+        LocalDateTime currentOccurrenceTime = event.getStartTime();
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        int count = 1;
+
+        while (endCondition.shouldContinue(currentOccurrenceTime, count, rg)) {
+
+            // 다음 기본 occurrence 생성
+            currentOccurrenceTime = generator.next(currentOccurrenceTime, rg);
+
+            // 해당 날짜의 반복 예외 조회
+            Optional<RecurrenceException> exOpt =
+                    recurrenceExceptionRepository
+                            .findByRecurrenceGroupIdAndExceptionDate(
+                                    rg.getId(),
+                                    currentOccurrenceTime
+                            );
+
+            if (exOpt.isPresent()) {
+                RecurrenceException ex = exOpt.get();
+
+                // SKIP, 날짜 수정이 아닌경우
+                if (ex.getExceptionType() == SKIP || ex.getStartTime() == null) {
+                    count++;
+                    continue;
+                }
+            }
+
+            // 리마인더에 설정된 날짜보다 이후인데, 현재시간보다 이후여야함
+            if (currentOccurrenceTime.isAfter(occurrenceTime) && currentOccurrenceTime.isAfter(now)) {
+                return NextOccurrenceResult.of(currentOccurrenceTime);
+            }
+
+            count++;
+
+            if (count > MAX_OCCURRENCE_ITERATION) {
+                break; // 안전장치
+            }
+        }
+        return NextOccurrenceResult.none();
     }
 }
