@@ -2,6 +2,7 @@ package com.project.backend.domain.event.service.query;
 
 import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
+import com.project.backend.domain.event.converter.EventTitleHistoryConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
@@ -12,6 +13,7 @@ import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.repository.EventTitleHistoryRepository;
 import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
@@ -50,6 +52,7 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final EndConditionFactory endConditionFactory;
     private final EventValidator eventValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
+    private final EventTitleHistoryRepository eventTitleHistoryRepository;
 
 
     @Override
@@ -313,6 +316,19 @@ public class EventQueryServiceImpl implements EventQueryService {
         return result;
     }
 
+    @Override
+    public EventResDTO.EventTitleHistoryRes getEventTitleHistory(Long memberId, String keyword) {
+        List<String> titleHistory;
+
+        if (keyword == null || keyword.isBlank()) {
+            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberId(memberId);
+        } else {
+            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberIdAndKeyword(memberId, keyword);
+        }
+
+
+        return EventTitleHistoryConverter.toEventTitleHistoryRes(titleHistory);
+    }
 
     // 최상위 이벤트 객체를 기준으로 검색 범위에 맞게 임시 시간 Detail DTO를 생성하여 리스트로 반환
     private List<EventResDTO.DetailRes> expandEvents(
