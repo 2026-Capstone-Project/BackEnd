@@ -1,7 +1,7 @@
 package com.project.backend.domain.todo.service.command;
 
 import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -18,8 +18,6 @@ import com.project.backend.domain.suggestion.invalidation.planner.SuggestionInva
 import com.project.backend.domain.suggestion.invalidation.publisher.SuggestionInvalidatePublisher;
 import com.project.backend.domain.suggestion.invalidation.snapshot.TodoSuggestionSnapshot;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
-import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoFingerPrint;
-import com.project.backend.domain.suggestion.invalidation.fingerprint.TodoRecurrenceGroupFingerPrint;
 import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.todo.converter.TodoConverter;
 import com.project.backend.domain.todo.converter.TodoHistoryConverter;
@@ -44,8 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j

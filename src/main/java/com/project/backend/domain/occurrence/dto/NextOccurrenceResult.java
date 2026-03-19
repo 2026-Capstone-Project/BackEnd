@@ -1,4 +1,4 @@
-package com.project.backend.domain.reminder.dto;
+package com.project.backend.domain.occurrence.dto;
 
 import java.time.LocalDateTime;
 

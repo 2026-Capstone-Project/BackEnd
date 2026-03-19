@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.repository;
 
 import com.project.backend.domain.event.entity.RecurrenceException;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

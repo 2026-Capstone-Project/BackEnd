@@ -1,13 +1,13 @@
 package com.project.backend.domain.event.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventHistoryConverter;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
@@ -17,10 +17,11 @@ import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.event.validator.EventValidator;
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +33,16 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
-import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EventQueryServiceImpl implements EventQueryService {
+
+    private static final int MAX_OCCURRENCE_ITERATION = 20_000;
 
     private final EventRepository eventRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
@@ -54,18 +57,14 @@ public class EventQueryServiceImpl implements EventQueryService {
 
 
     @Override
-    public EventResDTO.DetailRes getEventDetail(
-            Long eventId,
-            LocalDateTime occurrenceDate,
-            Long memberId
-    ) {
+    public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventValidator.validateRead(event, occurrenceDate);
 
         // 찾고자 하는 것이 부모 이벤트인 경우
-        if (event.getStartTime().isEqual(occurrenceDate) && event.getRecurrenceGroup() == null) {
+        if (!event.isRecurring()) {
             return EventConverter.toDetailRes(event);
         }
 
@@ -90,18 +89,6 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         List<Event> result = concatEventList(baseEvents, EventFromRg);
 
-//        // 반복이 있는 일정
-//        List<Event> recurringEvent = baseEvents.stream()
-//                .filter(e -> e.getRecurrenceGroup() != null)
-//                .toList();
-//
-//        // 반복이 없는 일정
-//        List<Event> nonRecurringEvent = baseEvents.stream()
-//                .filter(e -> e.getRecurrenceGroup() == null)
-//                .toList();
-
-//        List<EventResDTO.DetailRes> eventsListRes = expandEvents(recurringEvent, startRange, endRange);
-
         // 최상위 이벤트 확장
         List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
 
@@ -114,7 +101,8 @@ public class EventQueryServiceImpl implements EventQueryService {
     }
 
     /**
-     * 기존에 존재햇던 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+     * 기존에 존재햇던 반복 그룹을 대상으로, 해당 반복 일정에 대한 occurrenceTime의 다음 계산된 시간을 구하되,
+     * 현재 시간보다 이후의 계산된 시간인지 확인한다. (단순히 다음 계산 값이 있는지)
      **/
     @Override
     public NextOccurrenceResult calculateNextOccurrence(Long eventId, LocalDateTime occurrenceTime) {
@@ -128,56 +116,11 @@ public class EventQueryServiceImpl implements EventQueryService {
             return NextOccurrenceResult.none();
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime lastOccurrence = occurrenceTime;
-        LocalDateTime current = event.getStartTime();
-
-        Generator generator = generatorFactory.getGenerator(rg);
-        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
-
-        int count = 1;
-
-        while (endCondition.shouldContinue(current, count, rg)) {
-
-            // 다음 기본 occurrence 생성
-            current = generator.next(current, rg);
-
-            // 해당 날짜의 반복 예외 조회
-            Optional<RecurrenceException> exOpt =
-                    recurrenceExceptionRepository
-                            .findByRecurrenceGroupIdAndExceptionDate(
-                                    rg.getId(),
-                                    current
-                            );
-
-            if (exOpt.isPresent()) {
-                RecurrenceException ex = exOpt.get();
-
-                // SKIP, 날짜 수정이 아닌경우
-                if (ex.getExceptionType() == SKIP || ex.getStartTime() == null) {
-                    count++;
-                    continue;
-                }
-            }
-
-            // 리마인더에 설정된 날짜보다 이후인데, 현재시간보다 이후여야함
-            if (current.isAfter(lastOccurrence) && current.isAfter(now)) {
-                return NextOccurrenceResult.of(current);
-            }
-
-
-            count++;
-
-            if (count > 20_000) {
-                break; // 안전장치
-            }
-        }
-        return NextOccurrenceResult.none();
+        return findNextOccurrenceAfter(event, rg, occurrenceTime, LocalDateTime.now());
     }
 
-
     /**
-        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산
+        * 새로 생성된 반복 그룹을 대상으로, 현재 시간보다 이후의 계산된 시간이 있는지 계산 (처음부터 현재 시간보다 이후의 계산된 시간이 있는지 반환)
      **/
     @Override
     public LocalDateTime findNextOccurrenceAfterNow(Long eventId) {
@@ -186,132 +129,178 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (event.getRecurrenceGroup() == null) {
+        if (!event.isRecurring()) {
             throw new EventException(EventErrorCode.NOT_RECURRING_EVENT);
         }
 
-        RecurrenceGroup rg = event.getRecurrenceGroup();
-
-        Generator generator = generatorFactory.getGenerator(rg);
-        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
-
-        LocalDateTime current = event.getStartTime();
-        LocalDateTime lastValid = null;
-
-        int count = 1;
-
-        // 현재 시간보다 가장 가까운 이후 날짜 찾기
-        while (endCondition.shouldContinue(current, count, rg)) {
-            current = generator.next(current, rg);
-            lastValid = current;
-            count++;
-
-            if (!current.isBefore(now)) {
-                break;
-            }
-
-            if (count > 20_000) break;
-        }
-
-        return lastValid;
+        return findFirstOccurrenceOnOrAfter(event, now);
     }
 
     /**
      * 일정에 대한 반복을 진행해 계산된 일정의 startTime이 오늘인 일정 정보 조회
      **/
     @Override
-    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate) {
-        List<TodayOccurrenceResult> result = new ArrayList<>();
+    public List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventIds, LocalDate currentDate) {
+        List<TodayOccurrenceResult> results = new ArrayList<>();
 
-        for (Long id : eventId) {
-            Event event = eventRepository.findById(id)
+        for (Long eventId : eventIds) {
+            Event event = eventRepository.findById(eventId)
                     .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-            // 단일 일정인데
-            if (event.getRecurrenceGroup() == null) {
-                // startTime이 오늘 날짜와 일치한다면
-                if (event.getStartTime().toLocalDate().isEqual(currentDate)) {
-                    result.add(TodayOccurrenceResult.of(
-                            event.getTitle(),
-                            event.getStartTime().toLocalTime(),
-                            TargetType.EVENT
-                    ));
-                } else {
-                    result.add(TodayOccurrenceResult.none());
-                }
-                continue;
+            results.add(calculateTodayOccurrence(event, currentDate));
+        }
+
+        return results;
+    }
+
+    //=========================================== private method ======================================================
+
+    private TodayOccurrenceResult calculateTodayOccurrence(Event event, LocalDate currentDate) {
+        if (!event.isRecurring()) {
+            return calculateSingleEventTodayOccurrence(event, currentDate);
+        }
+
+        return calculateRecurringEventTodayOccurrence(event, currentDate);
+    }
+
+    private TodayOccurrenceResult calculateSingleEventTodayOccurrence(Event event, LocalDate currentDate) {
+        if (event.getStartTime().toLocalDate().isEqual(currentDate)) {
+            return TodayOccurrenceResult.of(
+                    event.getTitle(),
+                    event.getStartTime().toLocalTime(),
+                    TargetType.EVENT
+            );
+        }
+
+        return TodayOccurrenceResult.none();
+    }
+
+    private TodayOccurrenceResult calculateRecurringEventTodayOccurrence(Event event, LocalDate currentDate) {
+        RecurrenceGroup recurrenceGroup = event.getRecurrenceGroup();
+        List<RecurrenceException> exceptions =
+                recurrenceExceptionRepository.findAllByRecurrenceGroupId(recurrenceGroup.getId());
+
+        Optional<TodayOccurrenceResult> movedOverrideResult =
+                resolveMovedToTodayOverride(event, currentDate, exceptions);
+        if (movedOverrideResult.isPresent()) {
+            return movedOverrideResult.get();
+        }
+
+        LocalDateTime occurrenceTime = findOccurrenceOnDate(event, currentDate);
+        if (occurrenceTime == null) {
+            return TodayOccurrenceResult.none();
+        }
+
+        return resolveOccurrenceResult(event, currentDate, occurrenceTime, exceptions);
+    }
+
+    private Optional<TodayOccurrenceResult> resolveMovedToTodayOverride(
+            Event event,
+            LocalDate currentDate,
+            List<RecurrenceException> exceptions
+    ) {
+        return exceptions.stream()
+                .filter(ex -> ex.getExceptionType() == OVERRIDE)
+                .filter(ex -> ex.getStartTime() != null)
+                .filter(ex -> ex.getStartTime().toLocalDate().isEqual(currentDate))
+                .findFirst()
+                .map(ex -> TodayOccurrenceResult.of(
+                        ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
+                        ex.getStartTime().toLocalTime(),
+                        TargetType.EVENT
+                ));
+    }
+
+    private TodayOccurrenceResult resolveOccurrenceResult(
+            Event event,
+            LocalDate currentDate,
+            LocalDateTime occurrenceTime,
+            List<RecurrenceException> exceptions
+    ) {
+        Optional<RecurrenceException> occurrenceException = exceptions.stream()
+                .filter(ex -> ex.getExceptionDate().isEqual(occurrenceTime))
+                .findFirst();
+
+        if (occurrenceException.isEmpty()) {
+            return TodayOccurrenceResult.of(
+                    event.getTitle(),
+                    occurrenceTime.toLocalTime(),
+                    TargetType.EVENT
+            );
+        }
+
+        RecurrenceException exception = occurrenceException.get();
+
+        if (exception.getExceptionType() == SKIP) {
+            return TodayOccurrenceResult.none();
+        }
+
+        return resolveOverrideResult(event, currentDate, occurrenceTime, exception);
+    }
+
+    private TodayOccurrenceResult resolveOverrideResult(
+            Event event,
+            LocalDate currentDate,
+            LocalDateTime occurrenceTime,
+            RecurrenceException exception
+    ) {
+        if (exception.getExceptionType() != OVERRIDE) {
+            return TodayOccurrenceResult.none();
+        }
+
+        LocalDateTime actualStartTime = exception.getStartTime() != null
+                ? exception.getStartTime()
+                : LocalDateTime.of(
+                exception.getExceptionDate().toLocalDate(),
+                event.getStartTime().toLocalTime()
+        );
+
+        if (!actualStartTime.toLocalDate().isEqual(currentDate)) {
+            return TodayOccurrenceResult.none();
+        }
+
+        String resolvedTitle = exception.getTitle() != null
+                ? exception.getTitle()
+                : event.getTitle();
+
+        return TodayOccurrenceResult.of(
+                resolvedTitle,
+                actualStartTime.toLocalTime(),
+                TargetType.EVENT
+        );
+    }
+
+    private LocalDateTime findOccurrenceOnDate(Event event, LocalDate targetDate) {
+        LocalDateTime currentOccurrenceTime = event.getStartTime();
+
+        if (currentOccurrenceTime.toLocalDate().isEqual(targetDate)) {
+            return currentOccurrenceTime;
+        }
+
+        RecurrenceGroup recurrenceGroup = event.getRecurrenceGroup();
+        Generator generator = generatorFactory.getGenerator(recurrenceGroup);
+        EndCondition endCondition = endConditionFactory.getEndCondition(recurrenceGroup);
+
+        int iterationCount = 1;
+
+        while (endCondition.shouldContinue(currentOccurrenceTime, iterationCount, recurrenceGroup)) {
+            if (iterationCount >= MAX_OCCURRENCE_ITERATION) {
+                break;
             }
 
-            RecurrenceGroup rg = event.getRecurrenceGroup();
+            currentOccurrenceTime = generator.next(currentOccurrenceTime, recurrenceGroup);
+            iterationCount++;
 
-            Generator generator = generatorFactory.getGenerator(rg);
-            EndCondition endCondition = endConditionFactory.getEndCondition(rg);
-
-            // 예외 날짜 조회
-            Set<LocalDateTime> skipDates = recurrenceExceptionRepository
-                    .findByRecurrenceGroupId(rg.getId())
-                    .stream()
-                    .filter(ex -> ex.getExceptionType() == ExceptionType.SKIP)
-                    .map(RecurrenceException::getExceptionDate)
-                    .collect(Collectors.toSet());
-
-            Optional<RecurrenceException> re = recurrenceExceptionRepository.
-                    findByRecurrenceGroupIdAndExceptionDate(
-                            rg.getId(),
-                            currentDate.atStartOfDay(),
-                            currentDate.atTime(23, 59, 59)
-                    )
-                    .filter(ex -> ex.getExceptionType() == ExceptionType.OVERRIDE);
-
-            // 기준 시간 설정
-            LocalTime startTime = event.getStartTime().toLocalTime();
-            LocalDateTime current = event.getStartTime();
-
-            String title = event.getTitle();
-
-            if (re.isPresent()) {
-                RecurrenceException exception = re.get();
-                if (exception.getStartTime() != null) {
-                    // 다른 날짜로 수정된 경우
-                    if (!exception.getStartTime().toLocalDate().equals(exception.getExceptionDate().toLocalDate())) {
-                        result.add(TodayOccurrenceResult.none());
-                        continue;
-                    }
-                    // 시간만 수정된 경우)
-                    startTime = exception.getStartTime().toLocalTime();
-                }
-                title = !Objects.equals(event.getTitle(), exception.getTitle()) ? exception.getTitle() : title;
-            }
-            // 원본 일정의 startTime이 오늘과 같고
-            if (current.toLocalDate().isEqual(currentDate) && !skipDates.contains(current)) {
-                result.add(TodayOccurrenceResult.of(title, startTime, TargetType.EVENT));
-                continue;
+            if (currentOccurrenceTime.toLocalDate().isAfter(targetDate)) {
+                return null;
             }
 
-            int count = 1;
-
-            // 현재 시간보다 가장 가까운 이후 날짜 찾기
-            while (endCondition.shouldContinue(current, count, rg)) {
-                current = generator.next(current, rg);
-                count++;
-
-                // 계산된 일정의 날짜가 오늘보다 이후일 경우
-                if (current.isAfter(currentDate.atTime(LocalTime.MAX))) {
-                    result.add(TodayOccurrenceResult.none());
-                    break;
-                }
-
-                // 계산된 일정 날짜가 오늘과 일치한다면
-                if (current.toLocalDate().isEqual(currentDate)) {
-                    result.add(TodayOccurrenceResult.of(title, startTime, TargetType.EVENT));
-                    break;
-                }
-
-                if (count > 20_000) break;
+            if (currentOccurrenceTime.toLocalDate().isEqual(targetDate)) {
+                return currentOccurrenceTime;
             }
         }
 
-        return result;
+        return null;
     }
 
     @Override
@@ -460,5 +449,82 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return new ArrayList<>(uniqueEvents.values());
+    }
+
+    private NextOccurrenceResult findNextOccurrenceAfter(
+            Event event,
+            RecurrenceGroup rg,
+            LocalDateTime occurrenceTime,
+            LocalDateTime now
+    ) {
+        LocalDateTime currentOccurrenceTime = event.getStartTime();
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        int count = 1;
+
+        while (endCondition.shouldContinue(currentOccurrenceTime, count, rg)) {
+
+            // 다음 기본 occurrence 생성
+            currentOccurrenceTime = generator.next(currentOccurrenceTime, rg);
+
+            // 해당 날짜의 반복 예외 조회
+            Optional<RecurrenceException> exOpt =
+                    recurrenceExceptionRepository
+                            .findByRecurrenceGroupIdAndExceptionDate(
+                                    rg.getId(),
+                                    currentOccurrenceTime
+                            );
+
+            if (exOpt.isPresent()) {
+                RecurrenceException ex = exOpt.get();
+
+                // SKIP, 날짜 수정이 아닌경우
+                if (ex.getExceptionType() == SKIP || ex.getStartTime() == null) {
+                    count++;
+                    continue;
+                }
+            }
+
+            // 리마인더에 설정된 날짜보다 이후인데, 현재시간보다 이후여야함
+            if (currentOccurrenceTime.isAfter(occurrenceTime) && currentOccurrenceTime.isAfter(now)) {
+                return NextOccurrenceResult.of(currentOccurrenceTime);
+            }
+
+            count++;
+
+            if (count > MAX_OCCURRENCE_ITERATION) {
+                break; // 안전장치
+            }
+        }
+        return NextOccurrenceResult.none();
+    }
+
+    private LocalDateTime findFirstOccurrenceOnOrAfter(Event event, LocalDateTime now) {
+        RecurrenceGroup rg = event.getRecurrenceGroup();
+
+        Generator generator = generatorFactory.getGenerator(rg);
+        EndCondition endCondition = endConditionFactory.getEndCondition(rg);
+
+        LocalDateTime current = event.getStartTime();
+        LocalDateTime lastValid = null;
+
+        int count = 1;
+
+        // 현재 시간보다 가장 가까운 이후 날짜 찾기
+        while (endCondition.shouldContinue(current, count, rg)) {
+            current = generator.next(current, rg);
+            lastValid = current;
+            count++;
+
+            if (!current.isBefore(now)) {
+                break;
+            }
+
+            if (count > MAX_OCCURRENCE_ITERATION) break;
+        }
+
+        return lastValid;
     }
 }

@@ -1,6 +1,6 @@
 package com.project.backend.domain.briefing.converter;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.briefing.dto.response.BriefingResDTO;
 import com.project.backend.domain.briefing.enums.BriefingReason;
 import lombok.AccessLevel;
@@ -28,6 +28,16 @@ public class BriefingConverter {
                 .build();
     }
 
+    public static BriefingResDTO.BriefingRes toBriefingRes(LocalDate date, BriefingReason reason) {
+        return BriefingResDTO.BriefingRes.builder()
+                .date(date)
+                .reason(reason)
+                .briefInfo(null)
+                .eventCount(0)
+                .toDoCount(0)
+                .build();
+    }
+
     public static BriefingResDTO.BriefInfoRes toBriefInfoRes (TodayOccurrenceResult result) {
         return BriefingResDTO.BriefInfoRes.builder()
                 .targetType(result.targetType())
@@ -35,42 +45,4 @@ public class BriefingConverter {
                 .startTime(result.time())
                 .build();
     }
-
-    public static BriefingResDTO.BriefingRes toDisable(LocalDate date) {
-        return BriefingResDTO.BriefingRes.builder()
-                .date(date)
-                .reason(BriefingReason.DISABLED)
-                .briefInfo(null)
-                .eventCount(0)
-                .toDoCount(0)
-                .build();
-    }
-
-    public static BriefingResDTO.BriefingRes toTimeNotReached(LocalDate date) {
-        return BriefingResDTO.BriefingRes.builder()
-                .date(date)
-                .reason(BriefingReason.TIME_NOT_REACHED)
-                .briefInfo(null)
-                .eventCount(0)
-                .toDoCount(0)
-                .build();
-    }
-
-    public static BriefingResDTO.BriefingRes toEmpty(LocalDate date) {
-        return BriefingResDTO.BriefingRes.builder()
-                .date(date)
-                .reason(BriefingReason.NOT_EVENT_TODAY)
-                .briefInfo(null)
-                .eventCount(0)
-                .toDoCount(0)
-                .build();
-    }
-
-//    public static NotificationResDTO.BriefInfoRes toBriefTodoInfoRes (Todo todo) {
-//        return NotificationResDTO.BriefInfoRes.builder()
-//                .title(todo.getTitle())
-//                .startTime(todo.getStartTime().toLocalTime())
-//                .build();
-//    }
-
 }

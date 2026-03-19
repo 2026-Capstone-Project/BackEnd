@@ -27,9 +27,9 @@ public interface TodoRecurrenceGroupRepository extends JpaRepository<TodoRecurre
         SELECT trg
         FROM TodoRecurrenceGroup trg
         WHERE trg.member.id = :memberId
-          AND trg.endType <> com.project.backend.domain.event.enums.RecurrenceEndType.NEVER
+          AND trg.endType <> com.project.backend.domain.common.recurrence.enums.RecurrenceEndType.NEVER
           AND (
-                trg.endType = com.project.backend.domain.event.enums.RecurrenceEndType.END_BY_COUNT
+                trg.endType = com.project.backend.domain.common.recurrence.enums.RecurrenceEndType.END_BY_COUNT
                 OR trg.endDate >= :today
           )
 """)

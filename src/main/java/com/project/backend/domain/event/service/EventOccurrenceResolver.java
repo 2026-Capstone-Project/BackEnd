@@ -19,13 +19,15 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
-import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class EventOccurrenceResolver {
+
+    private static final int MAX_OCCURRENCE_ITERATION = 20_000;
 
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final GeneratorFactory generatorFactory;
@@ -36,9 +38,9 @@ public class EventOccurrenceResolver {
 
         if (ro.exception() != null) {
             return EventConverter.toDetailRes(ro.event(), ro.exception(), ro.occurrenceDate());
-        } else {
-            return EventConverter.toDetailRes(ro.event(), ro.occurrenceDate());
         }
+
+        return EventConverter.toDetailRes(ro.event(), ro.occurrenceDate());
     }
 
     public void assertOccurrenceExists(Event event, LocalDateTime occurrenceDate) {
@@ -51,29 +53,22 @@ public class EventOccurrenceResolver {
                 findByRecurrenceGroupIdAndExceptionDate(event.getRecurrenceGroup().getId(), occurrenceDate);
 
         if (exception.isPresent()) {
-            RecurrenceException ex = exception.get();
-            // 타입이 오버라이드(수정)
-            if (ex.getExceptionType() == OVERRIDE) {
-                // 날짜는 수정되지 않은 경우
-                if (ex.getStartTime() == null) {
-                    return EventConverter.toResolvedOccurrence(event, ex, occurrenceDate);
-                }
-                // 날짜가 수정된 경우
-                return EventConverter.toResolvedOccurrence(event, ex, ex.getStartTime());
-            }
-            // 타입이 스킵이면 보여주면 안되는 객체
-            if (ex.getExceptionType() == SKIP) {
-                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
-            }
+            return resolveFromException(event, occurrenceDate, exception.get());
         }
 
         // 생성기에 최초로 들어갈 기준 시간
         LocalDateTime current = event.getStartTime();
 
+        // 반복 일정에 대한 첫 시작 일정의 startTime과 occurrenceTime이 일치하면 부모 일정의 값 반환해줌
         if (current.isEqual(occurrenceDate)) {
             return EventConverter.toResolvedOccurrence(event, null, current);
         }
 
+        return resolveGeneratedOccurrence(event, occurrenceDate, current);
+    }
+
+    private ResolvedOccurrence resolveGeneratedOccurrence(
+            Event event, LocalDateTime occurrenceDate, LocalDateTime currentOccurrenceTime) {
         // 생성기 & 종료 조건 생성
         Generator generator = generatorFactory.getGenerator(event.getRecurrenceGroup());
         EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
@@ -81,28 +76,43 @@ public class EventOccurrenceResolver {
         int count = 1;
 
         // endCondition에 의한 무한반복
-        while (endCondition.shouldContinue(current, count, event.getRecurrenceGroup())) {
-
+        while (endCondition.shouldContinue(currentOccurrenceTime, count, event.getRecurrenceGroup())) {
             // 시간 생성
-            current = generator.next(current, event.getRecurrenceGroup());
+            currentOccurrenceTime = generator.next(currentOccurrenceTime, event.getRecurrenceGroup());
 
             // 이벤트를 찾은 경우
-            if (current.equals(occurrenceDate)) {
-                return EventConverter.toResolvedOccurrence(event, null, current);
+            if (currentOccurrenceTime.equals(occurrenceDate)) {
+                return EventConverter.toResolvedOccurrence(event, null, currentOccurrenceTime);
             }
             // 검색하고자 했던 시간을 넘어선 경우
-            if (current.isAfter(occurrenceDate)) {
+            if (currentOccurrenceTime.isAfter(occurrenceDate)) {
                 log.debug("설정한 이벤트 종료 시간 초과");
                 break;
             }
             // 모든 탈출 조건문에 걸리지 않았을 때, 최후의 종료
-            if (count > 20000) {
+            if (count > MAX_OCCURRENCE_ITERATION) {
                 log.debug("반복 한도 초과");
                 break;
             }
             count++;
         }
         // 아무것도 찾지 못하고 반복 종료 시
+        throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+    }
+
+    private ResolvedOccurrence resolveFromException(Event event, LocalDateTime occurrenceDate, RecurrenceException ex) {
+        // 타입이 스킵이면 보여주면 안되는 객체
+        if (ex.getExceptionType() == SKIP) {
+            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+        }
+
+        // 타입이 오버라이드(수정)
+        if (ex.getExceptionType() == OVERRIDE) {
+            // Exception에 startTime이 있다면 수정된 것이고 아니라면 수정되지 않은 것.
+            LocalDateTime resolvedTime = (ex.getStartTime() == null) ? occurrenceDate : ex.getStartTime();
+            return EventConverter.toResolvedOccurrence(event, ex, resolvedTime);
+        }
+
         throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
     }
 }

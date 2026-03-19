@@ -1,13 +1,13 @@
 package com.project.backend.domain.nlp.converter;
 
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
+import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.recurrence.enums.MonthlyType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.dto.request.NlpReqDTO;
 import com.project.backend.domain.nlp.dto.response.LlmResDTO;
 import com.project.backend.domain.nlp.dto.response.NlpResDTO;
 import com.project.backend.domain.nlp.enums.ItemType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

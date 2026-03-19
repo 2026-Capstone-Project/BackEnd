@@ -38,9 +38,9 @@ public interface RecurrenceGroupRepository extends JpaRepository<RecurrenceGroup
         SELECT rg
         FROM RecurrenceGroup rg
         WHERE rg.member.id = :memberId
-          AND rg.endType <> com.project.backend.domain.event.enums.RecurrenceEndType.NEVER
+          AND rg.endType <> com.project.backend.domain.common.recurrence.enums.RecurrenceEndType.NEVER
           AND (
-                rg.endType = com.project.backend.domain.event.enums.RecurrenceEndType.END_BY_COUNT
+                rg.endType = com.project.backend.domain.common.recurrence.enums.RecurrenceEndType.END_BY_COUNT
                 OR rg.endDate >= :today
           )
 """)
