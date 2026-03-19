@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.entity;
 
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.todo.enums.Priority;
 import com.project.backend.domain.todo.enums.TodoColor;
 import jakarta.persistence.*;

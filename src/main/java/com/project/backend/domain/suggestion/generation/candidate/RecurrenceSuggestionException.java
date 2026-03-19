@@ -1,7 +1,7 @@
 package com.project.backend.domain.suggestion.generation.candidate;
 
 import com.project.backend.domain.event.entity.RecurrenceException;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 
 import java.time.LocalDateTime;

@@ -59,8 +59,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.project.backend.domain.event.enums.ExceptionType.OVERRIDE;
-import static com.project.backend.domain.event.enums.ExceptionType.SKIP;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
+import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
 
 @Slf4j
 @Service

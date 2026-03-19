@@ -1,9 +1,9 @@
 package com.project.backend.domain.todo.dto.request;
 
-import com.project.backend.domain.event.enums.MonthlyType;
+import com.project.backend.domain.common.recurrence.enums.MonthlyType;
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceEndType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.todo.enums.Priority;
 import com.project.backend.domain.todo.enums.TodoColor;
 import jakarta.validation.Valid;

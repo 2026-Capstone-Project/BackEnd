@@ -1,7 +1,7 @@
 package com.project.backend.domain.todo.service.query;
 
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;

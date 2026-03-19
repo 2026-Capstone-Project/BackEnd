@@ -18,7 +18,13 @@ public class EventValidator {
     }
     
     public void validateRead(Event event, LocalDateTime time) {
-        validateMother(event, time);
+        // 반복이 아닐때
+        if (!event.isRecurring()) {
+            // 이벤트의 시작시간과 원본 시작시간이 다른경우
+            if (!event.getStartTime().isEqual(time)) {
+                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+            }
+        }
     }
 
     public void validateUpdate(
@@ -47,16 +53,6 @@ public class EventValidator {
 
         if (start.isAfter(end)) {
             throw new EventException(EventErrorCode.INVALID_TIME_RANGE);
-        }
-    }
-
-    private void validateMother(Event event, LocalDateTime originalDate) {
-        // 반복이 아닐때
-        if (!event.isRecurring()) {
-            // 이벤트의 시작시간과 원본 시작시간이 다른경우
-            if (!event.getStartTime().isEqual(originalDate)) {
-                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
-            }
         }
     }
 

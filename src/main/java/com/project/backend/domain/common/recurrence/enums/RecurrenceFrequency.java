@@ -1,4 +1,4 @@
-package com.project.backend.domain.event.enums;
+package com.project.backend.domain.common.recurrence.enums;
 
 public enum RecurrenceFrequency {
     NONE,
