@@ -11,6 +11,9 @@ public enum EventErrorCode implements BaseErrorCode {
 
     INVALID_TIME(HttpStatus.BAD_REQUEST, "EVENT400_1", "시간을 설정하지 않았습니다."),
     INVALID_TIME_RANGE(HttpStatus.BAD_REQUEST, "EVENT400_2", "시간 설정이 잘못되었습니다."),
+    INVALID_TITLE(HttpStatus.BAD_REQUEST, "EVENT400_3", "제목에는 공백만 입력할 수 없습니다."),
+    INVALID_LOCATION(HttpStatus.BAD_REQUEST, "EVENT400_4", "위치에는 공백만 입력할 수 없습니다."),
+    INVALID_ADDRESS(HttpStatus.BAD_REQUEST, "EVENT400_5", "주소에는 공백만 입력할 수 없습니다."),
     DAYS_OF_WEEK_NOT_FOUND(HttpStatus.NOT_FOUND, "EVENT404_4", "WEEKLY 반복의 요일 정보를 찾을 수 없습니다"),
     INVALID_MONTHLY_TYPE
             (HttpStatus.INTERNAL_SERVER_ERROR, "EVENT500_5", "MONTHLY_TYPE이 존재하지 않습니다"),

@@ -20,17 +20,20 @@ import com.project.backend.domain.suggestion.invalidation.snapshot.TodoSuggestio
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.suggestion.util.SuggestionKeyUtil;
 import com.project.backend.domain.todo.converter.TodoConverter;
+import com.project.backend.domain.todo.converter.TodoHistoryConverter;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
 import com.project.backend.domain.todo.entity.TodoRecurrenceGroup;
+import com.project.backend.domain.todo.entity.TodoTitleHistory;
 import com.project.backend.domain.todo.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.todo.exception.TodoErrorCode;
 import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRecurrenceGroupRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
+import com.project.backend.domain.todo.repository.TodoTitleHistoryRepository;
 import com.project.backend.domain.todo.service.query.TodoQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +61,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final TodoSuggestionSnapshotFactory todoSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+    private final TodoTitleHistoryRepository todoTitleHistoryRepository;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -76,6 +80,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         // 3. Todo 생성
         Todo todo = TodoConverter.toTodo(reqDTO, member, recurrenceGroup);
         todo = todoRepository.save(todo);
+        upsertTodoTitleHistory(memberId, todo.getTitle());
         log.debug("할 일 생성 완료 - todoId: {}", todo.getId());
 
         // 4. 반복 그룹에 Todo 연결
@@ -113,9 +118,14 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         TodoSuggestionSnapshot beforeSnapshot = todoSuggestionSnapshotFactory.from(todo);
 
+        // TODO 요청 바디에 공백이 있는가? 이거 분리해야할듯합니다
+        validateBlank(reqDTO);
+
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
             updateSingleTodo(todo, reqDTO);
+            // 수정이 완료되면 한 번 upsert
+            upsertTodoTitleHistory(memberId, todo.getTitle());
             // 할 일 생성에 따른 리스너 생성 로직 실행
             reminderEventBridge.handlePlanChanged(
                     todo.getId(),
@@ -182,6 +192,9 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 returnTodo = afterBase;
             }
         };
+
+        // 수정이 완료되면 한 번 upsert
+        upsertTodoTitleHistory(memberId, returnTodo.getTitle());
 
         // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
         SuggestionInvalidateReason beforeTrgReason =
@@ -582,6 +595,15 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     }
 
     /**
+     * 업데이트 요청 DTO 공백문자 여부
+     */
+    void validateBlank(TodoReqDTO.UpdateTodo reqDTO) {
+        if (reqDTO.title() != null && reqDTO.title().trim().isEmpty()) {
+            throw new TodoException(TodoErrorCode.INVALID_TITLE);
+        }
+    }
+
+    /**
      * 반복 할 일 - 모든 할 일 수정
      */
 //     private TodoResDTO.TodoInfo updateAllTodos(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
@@ -752,5 +774,21 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 oldGroup.getEndDate(),
                 oldGroup.getOccurrenceCount()
         );
+    }
+
+    /**
+     * title history를 upsert하는 메서드
+     */
+    private void upsertTodoTitleHistory(Long memberId, String title) {
+        String trimmedTitle = title.trim();
+        TodoTitleHistory history =
+                todoTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
+                        .orElse(null);
+        if (history == null) {
+            history = TodoHistoryConverter.toTodoTitleHistory(memberId, trimmedTitle);
+            todoTitleHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
     }
 }

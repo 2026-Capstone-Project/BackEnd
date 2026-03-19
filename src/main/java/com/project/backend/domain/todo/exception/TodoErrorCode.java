@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum TodoErrorCode implements BaseErrorCode {
 
+    INVALID_TITLE(HttpStatus.BAD_REQUEST, "TODO400_1", "제목에는 공백만 입력할 수 없습니다."),
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO404_1", "할 일을 찾을 수 없습니다."),
     TODO_RECURRENCE_EXCEPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO404_2", "할 일 반복예외를 찾을 수 없습니다."),
     TODO_FORBIDDEN(HttpStatus.FORBIDDEN, "TODO403_1", "해당 할 일에 대한 권한이 없습니다."),
