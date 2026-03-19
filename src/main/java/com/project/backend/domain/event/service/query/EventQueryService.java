@@ -18,4 +18,8 @@ public interface EventQueryService {
     LocalDateTime findNextOccurrenceAfterNow(Long eventId);
 
     List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate);
+
+    EventResDTO.EventTitleHistoryRes getEventTitleHistory(Long memberId, String keyword);
+
+    EventResDTO.EventLocationHistoryRes getEventLocationHistory(Long memberId, String keyword);
 }

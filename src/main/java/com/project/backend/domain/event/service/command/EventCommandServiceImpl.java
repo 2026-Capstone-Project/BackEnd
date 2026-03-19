@@ -1,26 +1,19 @@
 package com.project.backend.domain.event.service.command;
 
 import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
-import com.project.backend.domain.event.converter.EventConverter;
-import com.project.backend.domain.event.converter.EventSpec;
-import com.project.backend.domain.event.converter.RecurrenceGroupConverter;
-import com.project.backend.domain.event.converter.RecurrenceGroupSpec;
+import com.project.backend.domain.event.converter.*;
 import com.project.backend.domain.event.dto.AdjustedTime;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
-import com.project.backend.domain.event.entity.Event;
-import com.project.backend.domain.event.entity.RecurrenceException;
-import com.project.backend.domain.event.entity.RecurrenceGroup;
+import com.project.backend.domain.event.entity.*;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
-import com.project.backend.domain.event.repository.EventRepository;
-import com.project.backend.domain.event.repository.RecurrenceExceptionRepository;
-import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
+import com.project.backend.domain.event.repository.*;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.validator.EventValidator;
@@ -62,6 +55,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     private final MemberRepository memberRepository;
     private final EventRepository eventRepository;
+    private final EventTitleHistoryRepository eventTitleHistoryRepository;
     private final RecurrenceExceptionRepository recurrenceExRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
@@ -72,6 +66,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+    private final EventLocationHistoryRepository eventLocationHistoryRepository;
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -144,6 +139,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
 
         eventValidator.validateTime(start, end);
+        eventValidator.validateBlank(req);
 
         // 입력한 값이 기존 단일 일정 or 반복 일정의 필드값과 동일한 경우
         if (!hasEventChanged(event, req, start, end, occurrenceDate)
@@ -187,6 +183,10 @@ public class EventCommandServiceImpl implements EventCommandService {
                         ChangeType.UPDATE_SINGLE);
 
             }
+            // 수정 시 history upsert
+            upsertEventTitleHistory(req.title(), memberId);
+            upsertEventLocationHistory(req.location(), memberId);
+
             // 단일 이벤트 after 스냅샷
             EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
             log.info("EventCommandImpl, after 스냅샷 생성 완료");
@@ -232,6 +232,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             case THIS_AND_FOLLOWING_EVENTS -> afterBase = updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
+
+        // 수정 시 history upsert
+        upsertEventTitleHistory(req.title(), memberId);
+        upsertEventLocationHistory(req.location(), memberId);
+
         // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
         SuggestionInvalidateReason beforeRgReason =
                 hardDeleteGroup
@@ -621,9 +626,40 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (baseRg != null) {
             baseRg.attachEvent(newEvent);
         }
-
         eventRepository.save(newEvent);
+
+        upsertEventTitleHistory(eventSpec.title(), member.getId());
+        upsertEventLocationHistory(eventSpec.location(), member.getId());
+
         return newEvent;
+    }
+
+    private void upsertEventTitleHistory(String title, Long memberId) {
+        if (title == null) return;
+        String trimmedTitle = title.trim();
+        EventTitleHistory history =
+                eventTitleHistoryRepository.findByMemberIdAndTitle(memberId, trimmedTitle)
+                        .orElse(null);
+        if (history == null) {
+            history = EventHistoryConverter.toEventTitleHistory(memberId, trimmedTitle);
+            eventTitleHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
+    }
+
+    private void upsertEventLocationHistory(String location, Long memberId) {
+        if (location == null) return;
+        String trimmedLocation = location.trim();
+        EventLocationHistory history =
+                eventLocationHistoryRepository.findByMemberIdAndLocation(memberId, trimmedLocation)
+                        .orElse(null);
+        if (history == null) {
+            history = EventHistoryConverter.toEventLocationHistory(memberId, trimmedLocation);
+            eventLocationHistoryRepository.save(history);
+        } else {
+            history.updateLastUsedAt();
+        }
     }
 
     private boolean hasAnyEventFieldProvided(EventReqDTO.UpdateReq req) {

@@ -56,6 +56,28 @@ public class EventValidator {
         }
     }
 
+    public void validateBlank(EventReqDTO.UpdateReq req) {
+        if (req.title() != null && req.title().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_TITLE);
+        }
+        if (req.location() != null && req.location().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_LOCATION);
+        }
+        if (req.address() != null && req.address().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_ADDRESS);
+        }
+    }
+
+    private void validateMother(Event event, LocalDateTime originalDate) {
+        // 반복이 아닐때
+        if (!event.isRecurring()) {
+            // 이벤트의 시작시간과 원본 시작시간이 다른경우
+            if (!event.getStartTime().isEqual(originalDate)) {
+                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+            }
+        }
+    }
+
     private void validateOccurrenceDate(Event event, LocalDateTime occurrenceDate) {
         if (occurrenceDate == null) {
             throw new EventException(EventErrorCode.OCCURRENCE_DATE_REQUIRED);
