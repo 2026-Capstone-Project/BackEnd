@@ -81,13 +81,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         RecurrenceGroup recurrenceGroup = null;
-        RecurrenceGroupSpec rgSpec;
 
         // 반복 일정 생성일 때
         if (req.recurrenceGroup() != null) {
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
 
-            rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
+            RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
             recurrenceGroup = createRecurrenceGroup(rgSpec, member);
         }
 
@@ -615,7 +614,6 @@ public class EventCommandServiceImpl implements EventCommandService {
             Member member,
             RecurrenceGroup baseRg
     ) {
-      
         Event newEvent = EventConverter.toEvent(eventSpec, member, baseRg);
 
         if (baseRg != null) {
