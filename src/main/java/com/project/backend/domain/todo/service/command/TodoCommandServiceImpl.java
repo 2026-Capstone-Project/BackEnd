@@ -122,9 +122,14 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         TodoSuggestionSnapshot beforeSnapshot = todoSuggestionSnapshotFactory.from(todo);
 
+        // TODO 요청 바디에 공백이 있는가? 이거 분리해야할듯합니다
+        validateBlank(reqDTO);
+
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
             updateSingleTodo(todo, reqDTO);
+            // 수정이 완료되면 한 번 upsert
+            upsertTodoTitleHistory(memberId, todo.getTitle());
             // 할 일 생성에 따른 리스너 생성 로직 실행
             reminderEventBridge.handlePlanChanged(
                     todo.getId(),
@@ -191,6 +196,9 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 returnTodo = afterBase;
             }
         };
+
+        // 수정이 완료되면 한 번 upsert
+        upsertTodoTitleHistory(memberId, returnTodo.getTitle());
 
         // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
         SuggestionInvalidateReason beforeTrgReason =
@@ -588,6 +596,15 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         log.debug("반복 할 일 이후 수정 완료 - oldTodoId: {}, newTodoId: {}", todo.getId(), newTodo.getId());
 //        return TodoConverter.toTodoInfo(newTodo);
         return newTodo;
+    }
+
+    /**
+     * 업데이트 요청 DTO 공백문자 여부
+     */
+    void validateBlank(TodoReqDTO.UpdateTodo reqDTO) {
+        if (reqDTO.title() != null && reqDTO.title().trim().isEmpty()) {
+            throw new TodoException(TodoErrorCode.INVALID_TITLE);
+        }
     }
 
     /**
