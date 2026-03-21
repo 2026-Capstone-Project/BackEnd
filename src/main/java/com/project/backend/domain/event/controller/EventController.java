@@ -59,7 +59,7 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("전체 이벤트 조회 완료", resDTO);
     }
 
-    @GetMapping("/history/title")
+    @GetMapping("/history/titles")
     public CustomResponse<EventResDTO.EventTitleHistoryRes> getEventTitleHistory(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam(value = "keyword", required = false) String keyword
@@ -69,7 +69,7 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("최근 일정 제목 조회 완료", resDTO);
     }
 
-    @GetMapping("/history/location")
+    @GetMapping("/history/locations")
     public CustomResponse<EventResDTO.EventLocationHistoryRes> getEventLocationHistory(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam(value = "keyword", required = false) String keyword
