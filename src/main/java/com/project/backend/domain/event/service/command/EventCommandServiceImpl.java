@@ -186,6 +186,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
 
+        // TODO private method로 뺄 수 있지 않을까?
         // 수정 시 history upsert
         upsertEventTitleHistory(req.title(), memberId);
         upsertEventLocationHistory(req.location(), memberId);
@@ -301,6 +302,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
+
+    // ========================= private method ===============================
+
 
     // 반복그룹이 없는 일정을 수정할 경우
     private void updateSingleEvent(EventReqDTO.UpdateReq req, Event event) {
