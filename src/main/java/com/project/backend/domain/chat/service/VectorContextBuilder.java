@@ -36,7 +36,9 @@ public class VectorContextBuilder {
         for (QdrantSearchResult result : filtered) {
             String title = (String) result.payload().get("title");
             String startDate = (String) result.payload().get("startDate");
-            sb.append(String.format("- %s: %s%n", startDate, title));
+            String type = (String) result.payload().getOrDefault("type", "EVENT");
+            String label = "TODO".equals(type) ? "[할 일]" : "[일정]";
+            sb.append(String.format("- %s %s: %s%n", label, startDate, title));
         }
         return sb.toString().trim();
     }
