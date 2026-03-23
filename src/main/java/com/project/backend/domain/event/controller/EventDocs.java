@@ -618,39 +618,6 @@ public interface EventDocs {
 
             @Parameter(
                     description = "검색 키워드. 없거나 공백이면 최근 5개, 있으면 일치하는 제목 기록 중 최대 5개를 조회합니다.",
-                    example = "회의",
-                    required = false
-            )
-            @RequestParam(value = "keyword", required = false) String keyword
-    );
-
-    @Operation(
-            summary = "일정 장소 검색 기록 조회",
-            description = """
-                    인증된 사용자의 일정 장소 검색 기록을 조회합니다.
-                    
-                    - keyword가 없거나 공백이면 최근 일정 장소 기록 5개를 조회합니다.
-                    - keyword가 있으면 일치하는 일정 장소 기록 중 최대 5개를 조회합니다.
-                    """
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "일정 장소 검색 기록 조회 성공",
-                    content = @Content(
-                            schema = @Schema(implementation = EventResDTO.EventLocationHistoryRes.class)
-                    )
-            )
-    })
-    @GetMapping("/history/location")
-    CustomResponse<EventResDTO.EventLocationHistoryRes> getEventLocationHistory(
-            @AuthenticationPrincipal
-            @Parameter(hidden = true)
-            CustomUserDetails customUserDetails,
-
-            @Parameter(
-                    description = "검색 키워드. 없거나 공백이면 최근 5개, 있으면 일치하는 장소 기록 중 최대 5개를 조회합니다.",
-                    example = "회의실",
                     required = false
             )
             @RequestParam(value = "keyword", required = false) String keyword
