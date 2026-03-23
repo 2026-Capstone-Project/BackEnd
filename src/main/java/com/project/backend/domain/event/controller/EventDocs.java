@@ -618,7 +618,6 @@ public interface EventDocs {
 
             @Parameter(
                     description = "검색 키워드. 없거나 공백이면 최근 5개, 있으면 일치하는 제목 기록 중 최대 5개를 조회합니다.",
-                    example = "회의",
                     required = false
             )
             @RequestParam(value = "keyword", required = false) String keyword
