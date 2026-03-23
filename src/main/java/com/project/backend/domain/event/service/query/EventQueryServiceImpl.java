@@ -53,8 +53,6 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final EventValidator eventValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final EventTitleHistoryRepository eventTitleHistoryRepository;
-    private final EventLocationHistoryRepository eventLocationHistoryRepository;
-
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
@@ -111,19 +109,6 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return EventHistoryConverter.toEventTitleHistoryRes(titleHistory);
-    }
-
-    @Override
-    public EventResDTO.EventLocationHistoryRes getEventLocationHistory(Long memberId, String keyword) {
-        List<String> locationHistory;
-
-        if (keyword == null || keyword.isBlank()) {
-            locationHistory = eventLocationHistoryRepository.findLocationHistoryByMemberId(memberId);
-        } else {
-            locationHistory = eventLocationHistoryRepository.findLocationHistoryByMemberIdAndKeyword(memberId, keyword);
-        }
-
-        return EventHistoryConverter.toEventLocationHistoryRes(locationHistory);
     }
 
     /**
