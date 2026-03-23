@@ -60,15 +60,16 @@ public class QdrantVectorClient {
     }
 
     // 벡터 저장 및 업데이트
-    public void upsert(Long eventId, Long memberId, String title, String startDate, float[] vector) {
+    public void upsert(Long pointId, Long memberId, String title, String startDate, String type, float[] vector) {
         try {
             Map<String, Object> point = Map.of(
-                    "id", eventId,
+                    "id", pointId,
                     "vector", toList(vector),
                     "payload", Map.of(
                             "memberId", memberId,
                             "title", title,
-                            "startDate", startDate
+                            "startDate", startDate,
+                            "type", type
                     )
             );
 
@@ -79,7 +80,7 @@ public class QdrantVectorClient {
                     .bodyToMono(String.class)
                     .block();
         } catch (Exception e) {
-            log.error("Qdrant upsert 실패 - eventId: {}, error: {}", eventId, e.getMessage());
+            log.error("Qdrant upsert 실패 - pointId: {}, error: {}", pointId, e.getMessage());
             throw new RuntimeException("Qdrant upsert 실패", e);
         }
     }
@@ -90,7 +91,7 @@ public class QdrantVectorClient {
             Map<String, Object> body = Map.of(
                     "vector", toList(queryVector),
                     "filter", Map.of("must", List.of(
-                                    Map.of("key", memberId,
+                                    Map.of("key", "memberId",
                                             "match", Map.of("value", memberId))
                             )
                     ),
