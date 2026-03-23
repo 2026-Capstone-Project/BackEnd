@@ -26,28 +26,40 @@ public class ChatServiceImpl implements ChatService {
     private final ConversationHistoryService conversationHistoryService;
     private final DateRangeExtractor dateRangeExtractor;
     private final ScheduleContextBuilder scheduleContextBuilder;
+    private final VectorContextBuilder vectorContextBuilder;
 
     @Override
     public ChatResDTO.SendRes sendMessage(Long memberId, ChatReqDTO.SendReq reqDTO) {
         try {
             String message = reqDTO.message();
 
-            // 1. 날짜 범위 파싱 → 일정/할 일 조회 → 컨텍스트 텍스트 생성
-            String scheduleContext = dateRangeExtractor.extract(message)
+            // 1. 날짜 범위 파싱 → 일정/할 일 조회 → 컨텍스트 텍스트 생성 (MySQL RAG)
+            String mysqlContext = dateRangeExtractor.extract(message)
                     .map(range -> scheduleContextBuilder.build(memberId, range))
                     .orElse(null);
 
-            // 2. 시스템 프롬프트에 일정 컨텍스트 주입
+            // 2. Qdrant RAG(의미 기반) -> 실패해도 채팅은 동작
+            String vectorContext = null;
+            try {
+                vectorContext = vectorContextBuilder.build(memberId, message);
+            } catch (Exception e) {
+                log.warn("Qdrant RAG 실패, MySQL RAG만으로 진행: {}", e.getMessage());
+            }
+
+            // 3. 두 결과 합치기 + 중복 제거
+            String scheduleContext = mergeContexts(mysqlContext, vectorContext);
+
+            // 4. 시스템 프롬프트에 일정 컨텍스트 주입
             String systemPrompt = chatPromptTemplate.getSystemPrompt(scheduleContext);
 
-            // 3. Redis에서 기존 히스토리 조회 후 새 메시지 추가
+            // 5. Redis에서 기존 히스토리 조회 후 새 메시지 추가
             List<Map<String, String>> messages = new ArrayList<>(conversationHistoryService.getHistory(memberId));
             messages.add(Map.of("role", "user", "content", message));
 
-            // 4. 히스토리 + 컨텍스트 포함 시스템 프롬프트로 OpenAI 호출
+            // 6. 히스토리 + 컨텍스트 포함 시스템 프롬프트로 OpenAI 호출
             String reply = llmClient.chatWithHistory(systemPrompt, messages);
 
-            // 5. 유저 메시지와 GPT 응답을 Redis에 저장
+            // 7. 유저 메시지와 GPT 응답을 Redis에 저장
             conversationHistoryService.saveMessage(memberId, "user", message);
             conversationHistoryService.saveMessage(memberId, "assistant", reply);
 
@@ -56,5 +68,14 @@ public class ChatServiceImpl implements ChatService {
             log.error("챗봇 응답 생성 실패", e);
             throw new ChatException(ChatErrorCode.CHAT_API_ERROR);
         }
+    }
+
+    private String mergeContexts(String mysqlContext, String vectorContext) {
+        if (mysqlContext == null && vectorContext == null) return null;
+        if (mysqlContext == null) return "[의미 유사 일정]\n" + vectorContext;
+        if (vectorContext == null) return mysqlContext;
+
+        // 둘 다 있으면 합치기
+        return mysqlContext + "\n\n[의미 유사 일정]\n" + vectorContext;
     }
 }
