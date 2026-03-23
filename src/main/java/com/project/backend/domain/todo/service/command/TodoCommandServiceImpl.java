@@ -62,6 +62,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
     private final TodoTitleHistoryRepository todoTitleHistoryRepository;
+    private final TodoVectorSyncService todoVectorSyncService;
 
     @Override
     public TodoResDTO.TodoInfo createTodo(Long memberId, TodoReqDTO.CreateTodo reqDTO) {
@@ -81,6 +82,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         Todo todo = TodoConverter.toTodo(reqDTO, member, recurrenceGroup);
         todo = todoRepository.save(todo);
         upsertTodoTitleHistory(memberId, todo.getTitle());
+        todoVectorSyncService.syncOnCreate(todo);
         log.debug("할 일 생성 완료 - todoId: {}", todo.getId());
 
         // 4. 반복 그룹에 Todo 연결
@@ -126,6 +128,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             updateSingleTodo(todo, reqDTO);
             // 수정이 완료되면 한 번 upsert
             upsertTodoTitleHistory(memberId, todo.getTitle());
+            todoVectorSyncService.syncOnUpdate(todo);
             // 할 일 생성에 따른 리스너 생성 로직 실행
             reminderEventBridge.handlePlanChanged(
                     todo.getId(),
@@ -190,6 +193,10 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             case THIS_AND_FOLLOWING -> {
                 afterBase = updateThisAndFollowing(todo, occurrenceDate, reqDTO);
                 returnTodo = afterBase;
+                if (hardDeleteGroup) {
+                    todoVectorSyncService.syncOnDelete(todo.getId());
+                }
+                todoVectorSyncService.syncOnCreate(returnTodo);
             }
         };
 
@@ -229,6 +236,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         if (!todo.isRecurring()) {
             suggestionRepository.detachPreviousTodo(memberId, todoId);
             todoRepository.delete(todo);
+            todoVectorSyncService.syncOnDelete(todoId);
             log.debug("단일 할 일 삭제 완료 - todoId: {}", todoId);
             reminderEventBridge.handleReminderDeleted(
                     null,
@@ -281,7 +289,12 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         switch (scope) {
             case THIS_TODO -> deleteThisTodoOnly(todo, occurrenceDate, memberId);
-            case THIS_AND_FOLLOWING -> deleteThisAndFollowing(todo, occurrenceDate, memberId);
+            case THIS_AND_FOLLOWING -> {
+                deleteThisAndFollowing(todo, occurrenceDate, memberId);
+                if (hardDeleteGroup) {
+                    todoVectorSyncService.syncOnDelete(todoId);
+                }
+            }
         }
 
         // reason 결정
