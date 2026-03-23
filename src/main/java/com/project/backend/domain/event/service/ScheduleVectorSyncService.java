@@ -23,6 +23,7 @@ public class ScheduleVectorSyncService {
                     event.getMember().getId(),
                     event.getTitle(),
                     event.getStartTime().toLocalDate().toString(),
+                    "EVENT",
                     vector
             );
             log.debug("Qdrant 저장 완료 - eventId: {}", event.getId());
