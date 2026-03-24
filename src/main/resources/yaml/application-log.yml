@@ -17,3 +17,10 @@ logging:
         orm:
           jdbc:
             bind: trace
+    com:
+      project:
+        backend:
+          domain:
+            chat: debug
+          global:
+            qdrant: debug

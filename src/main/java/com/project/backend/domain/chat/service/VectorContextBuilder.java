@@ -18,17 +18,20 @@ public class VectorContextBuilder {
     private final QdrantVectorClient qdrantVectorClient;
 
     private static final int SEARCH_LIMIT = 5;
-    private static final double MIN_SCORE = 0.7; // 유사도 0.7 미만은 노이즈로 제거함
+    private static final double MIN_SCORE = 0.25; // text-embedding-3-small 코사인 유사도 기준, 한국어 의미 검색 최적화
 
     public String build(Long memberId, String query) {
         float[] queryVector = embeddingClient.embed(query);
         List<QdrantSearchResult> results = qdrantVectorClient.search(memberId, queryVector, SEARCH_LIMIT);
+
+        results.forEach(r -> log.debug("Qdrant 검색 결과 - id: {}, score: {}, payload: {}", r.id(), r.score(), r.payload()));
 
         List<QdrantSearchResult> filtered = results.stream()
                 .filter(r -> r.score() >= MIN_SCORE)
                 .toList();
 
         if (filtered.isEmpty()) {
+            log.debug("Qdrant 유사도 임계값({}) 미달 또는 결과 없음", MIN_SCORE);
             return null;
         }
 
