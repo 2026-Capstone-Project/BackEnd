@@ -241,7 +241,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             reminderEventBridge.handleReminderDeleted(
                     null,
                     memberId,
-                    todo.getDueTime() != null ? occurrenceDate.atTime(todo.getDueTime()) : occurrenceDate.atStartOfDay(),
+                    todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
                     todoId,
                     TargetType.TODO,
                     DeletedType.DELETED_SINGLE);
