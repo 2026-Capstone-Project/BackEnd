@@ -188,6 +188,9 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         if (updated == 0) {
             throw new SuggestionException(SuggestionErrorCode.SUGGESTION_CONFLICT);
         }
+        // acceptAtomically로 bulkUpdate를 하면서 영속성 컨텍스트가 비워졌기 때문에 해당 제안 객체를 수정하기 위해 다시 엔티티를 올림
+        suggestion = suggestionRepository.findForExecute(suggestionId, memberId)
+                .orElseThrow(() -> new SuggestionException(SuggestionErrorCode.SUGGESTION_NOT_FOUND));
 
         SuggestionExecutor executor = suggestionExecutorFactory.getExecutor(suggestion.getSuggestionType());
 
