@@ -25,6 +25,7 @@ public class EventResDTO {
             LocalDateTime start, // 실제 표시/실행 시작시간
             LocalDateTime end,
             String location,
+            String address,
             Boolean isAllDay,
             EventColor color,
             RecurrenceGroupResDTO.DetailRes recurrenceGroup
@@ -36,4 +37,11 @@ public class EventResDTO {
             List<DetailRes> details
     ) {
     }
+
+    @Builder
+    public record EventTitleHistoryRes(
+            List<String> titleHistory
+    ) {
+    }
+
 }

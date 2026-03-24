@@ -1,13 +1,14 @@
 package com.project.backend.domain.todo.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
-import com.project.backend.domain.event.enums.ExceptionType;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.event.factory.EndConditionFactory;
 import com.project.backend.domain.event.factory.GeneratorFactory;
 import com.project.backend.domain.event.strategy.endcondition.EndCondition;
 import com.project.backend.domain.event.strategy.generator.Generator;
 import com.project.backend.domain.reminder.enums.TargetType;
 import com.project.backend.domain.todo.converter.TodoConverter;
+import com.project.backend.domain.todo.converter.TodoHistoryConverter;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.entity.TodoRecurrenceException;
@@ -18,8 +19,9 @@ import com.project.backend.domain.todo.exception.TodoErrorCode;
 import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
 import com.project.backend.domain.todo.repository.TodoRepository;
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.entity.Reminder;
+import com.project.backend.domain.todo.repository.TodoTitleHistoryRepository;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 public class TodoQueryServiceImpl implements TodoQueryService {
 
     private final TodoRepository todoRepository;
+    private final TodoTitleHistoryRepository todoTitleHistoryRepository;
     private final TodoRecurrenceExceptionRepository todoRecurrenceExceptionRepository;
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
@@ -150,6 +153,19 @@ public class TodoQueryServiceImpl implements TodoQueryService {
                 .count();
 
         return TodoConverter.toTodoProgressRes(date, totalCount, completedCount);
+    }
+
+    @Override
+    public TodoResDTO.TodoTitleHistoryRes TodoTitleHistoryRes(Long memberId, String keyword) {
+        List<String> titleHistory;
+
+        if (keyword == null || keyword.isBlank()) {
+            titleHistory = todoTitleHistoryRepository.findTitleHistoryByMemberId(memberId);
+        } else {
+            titleHistory = todoTitleHistoryRepository.findTitleHistoryByMemberIdAndKeyword(memberId, keyword);
+        }
+
+        return TodoHistoryConverter.toTodoTitleHistoryRes(titleHistory);
     }
 
     @Override

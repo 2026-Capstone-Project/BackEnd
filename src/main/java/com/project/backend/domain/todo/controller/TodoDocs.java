@@ -37,13 +37,15 @@ public interface TodoDocs {
 
                 | 필드 | 타입 | 필수 | 설명 |
                 |------|------|------|------|
-                | `title` | String | ✅ | 할 일 제목 (최대 100자) |
+                | `title` | String | ✅ | 할 일 제목 (최대 100자, 공백만 입력 불가) |
                 | `startDate` | LocalDate | ✅ | 시작일 (형식: YYYY-MM-DD) |
                 | `dueTime` | LocalTime | ❌ | 마감 시간 (형식: HH:mm, 종일이면 생략) |
                 | `isAllDay` | Boolean | ✅ | 종일 여부 (true/false) |
                 | `priority` | Priority | ✅ | 우선순위 (HIGH, MEDIUM, LOW) |
                 | `memo` | String | ❌ | 메모 |
                 | `recurrenceGroup` | Object | ❌ | 반복 설정 (없으면 단일 할 일) |
+
+                > ⚠️ `title`은 trim 후 공백만 남는 값이면 생성할 수 없습니다.
 
                 ---
                 ## 🔄 반복 설정 (recurrenceGroup)
@@ -96,11 +98,12 @@ public interface TodoDocs {
                 | 필드 | 타입 | 필수 | 설명 |
                 |------|------|------|------|
                 | `weekOfMonth` | Integer | ✅ | 몇 번째 주 (1~5, -1=마지막) |
-                | `weekdayRule` | MonthlyWeekDayRule | ✅ | 단일요일(SINGLE), 평일(WEEKEND), 주말(WEEKEND), 1주 전체(ALL_DAYS)
-                | `dayOfWeekInMonth` | List<DayOfWeek> | ✅ | 요일 |
+                | `weekdayRule` | MonthlyWeekDayRule | ✅ | 단일요일(SINGLE), 평일(WEEKDAY), 주말(WEEKEND), 전체(ALL_DAYS) |
+                | `dayOfWeekInMonth` | List<DayOfWeek> | 조건부 | 요일 목록 |
 
-                예: 매월 두 번째 화요일 → `weekOfMonth: 2`, `weekdayRule: "SINGLE"`, `dayOfWeekInMonth: "TUESDAY"` <br>
-                   매월 두 번째 평일 -> `weekOfMonth: 2`, `weekdayRule: "WEEKDAY"`, `dayOfWeekInMonth: null`
+                예: 매월 두 번째 화요일 → `weekOfMonth: 2`, `weekdayRule: "SINGLE"`, `dayOfWeekInMonth: ["TUESDAY"]`  
+                예: 매월 두 번째 평일 → `weekOfMonth: 2`, `weekdayRule: "WEEKDAY"`, `dayOfWeekInMonth: null`
+
                 ---
                 ## 📅 연간 반복 (YEARLY)
 
@@ -210,8 +213,8 @@ public interface TodoDocs {
                                                 "intervalValue": 1,
                                                 "monthlyType": "DAY_OF_WEEK",
                                                 "weekOfMonth": 2,
-                                                "weekDayRule": "SINGLE",
-                                                "dayOfWeekInMonth": "TUESDAY",
+                                                "weekdayRule": "SINGLE",
+                                                "dayOfWeekInMonth": ["TUESDAY"],
                                                 "endType": "END_BY_COUNT",
                                                 "occurrenceCount": 12
                                             }
@@ -313,6 +316,35 @@ public interface TodoDocs {
             @Parameter(description = "조회 날짜", example = "2025-01-15") @RequestParam LocalDate date
     );
 
+    @Operation(
+            summary = "할 일 제목 검색 기록 조회",
+            description = """
+                인증된 사용자의 할 일 제목 검색 기록을 조회합니다.
+                
+                - keyword가 없거나 공백이면 최근 할 일 제목 기록 5개를 조회합니다.
+                - keyword가 있으면 일치하는 할 일 제목 기록 중 최대 5개를 조회합니다.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "할 일 제목 검색 기록 조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = TodoResDTO.TodoTitleHistoryRes.class)
+                    )
+            )
+    })
+    CustomResponse<TodoResDTO.TodoTitleHistoryRes> getTodoTitleHistory(
+            @AuthenticationPrincipal
+            @Parameter(hidden = true)
+            CustomUserDetails customUserDetails,
+
+            @Parameter(
+                    description = "검색 키워드. 없거나 공백이면 최근 5개, 있으면 일치하는 제목 기록 중 최대 5개를 조회합니다.",
+                    required = false
+            )
+            @RequestParam(value = "keyword", required = false) String keyword
+    );
     // ===== 수정 =====
 
     @Operation(
@@ -342,7 +374,7 @@ public interface TodoDocs {
 
                 | 필드 | 타입 | 설명 |
                 |------|------|------|
-                | `title` | String | 제목 (최대 100자) |
+                | `title` | String | 제목 (최대 100자, 공백만 입력 불가) |
                 | `startDate` | LocalDate | 시작일 |
                 | `endDate` | LocalDate | 종료일 (반복 할 일, THIS_AND_FOLLOWING만 적용) |
                 | `dueTime` | LocalTime | 마감 시간 |
@@ -351,7 +383,8 @@ public interface TodoDocs {
                 | `memo` | String | 메모 |
                 | `recurrenceGroup` | Object | 반복 설정 (THIS_AND_FOLLOWING만 적용) |
 
-                > ⚠️ **주의:** 수정하지 않을 필드는 null로 보내거나 생략하세요.
+                > ⚠️ `title`은 trim 후 공백만 남는 값이면 수정할 수 없습니다.
+                > ⚠️ 수정하지 않을 필드는 null로 보내거나 생략하세요.
                 """
     )
     @ApiResponses({
@@ -486,7 +519,7 @@ public interface TodoDocs {
 
                 DELETE /api/v1/todos/1?occurrenceDate=2025-01-15&scope=THIS_AND_FOLLOWING
                 → 2025-01-15부터 모든 반복 삭제 (2025-01-14까지만 유지)
-
+                ```
                 """
     )
     @ApiResponses({

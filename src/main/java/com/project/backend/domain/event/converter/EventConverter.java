@@ -7,7 +7,7 @@ import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -37,6 +37,7 @@ public class EventConverter {
                 .startTime(spec.startTime())
                 .endTime(spec.endTime())
                 .location(spec.location())
+                .address(spec.address())
                 .recurrenceFrequency(rG)
                 .color(color)
                 .isAllDay(isAllDay)
@@ -53,6 +54,7 @@ public class EventConverter {
                 .startTime(start)
                 .endTime(end)
                 .location(req.location())
+                .address(req.address())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
                 .build();
@@ -65,6 +67,7 @@ public class EventConverter {
                 .startTime(start)
                 .endTime(end)
                 .location(req.location() != null ? req.location() : event.getLocation())
+                .address(req.address() != null ? req.address() : event.getAddress())
                 .color(req.color() != null ? req.color() : event.getColor())
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : event.getIsAllDay())
                 .build();
@@ -126,6 +129,7 @@ public class EventConverter {
                 .start(event.getStartTime())
                 .end(event.getEndTime())
                 .location(event.getLocation())
+                .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
                 // TODO : 임시 조치이므로 리팩토링 대상
@@ -146,6 +150,7 @@ public class EventConverter {
                 .start(start)
                 .end(end)
                 .location(event.getLocation())
+                .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
@@ -163,6 +168,7 @@ public class EventConverter {
                 .start(ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate())
                 .end(ex.getEndTime() != null ? ex.getEndTime() : getEndTime(event, ex.getExceptionDate()))
                 .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
+                .address(ex.getAddress() != null ? ex.getAddress() : event.getAddress())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
                 .recurrenceGroup(

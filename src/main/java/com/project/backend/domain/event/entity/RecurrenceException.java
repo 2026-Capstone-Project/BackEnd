@@ -1,8 +1,8 @@
 package com.project.backend.domain.event.entity;
 
 import com.project.backend.domain.event.enums.EventColor;
-import com.project.backend.domain.event.enums.ExceptionType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.ExceptionType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,7 +10,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -53,6 +52,9 @@ public class RecurrenceException extends BaseEntity {
 
     @Column(name = "location")
     private String location;
+
+    @Column(name = "address")
+    private String address;
 
     // TODO 리팩토링 단계에서 삭제할지 말지 결정
     @Enumerated(EnumType.STRING)

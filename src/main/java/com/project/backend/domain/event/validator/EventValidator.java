@@ -18,7 +18,13 @@ public class EventValidator {
     }
     
     public void validateRead(Event event, LocalDateTime time) {
-        validateMother(event, time);
+        // 반복이 아닐때
+        if (!event.isRecurring()) {
+            // 이벤트의 시작시간과 원본 시작시간이 다른경우
+            if (!event.getStartTime().isEqual(time)) {
+                throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+            }
+        }
     }
 
     public void validateUpdate(
@@ -47,6 +53,18 @@ public class EventValidator {
 
         if (start.isAfter(end)) {
             throw new EventException(EventErrorCode.INVALID_TIME_RANGE);
+        }
+    }
+
+    public void validateBlank(EventReqDTO.UpdateReq req) {
+        if (req.title() != null && req.title().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_TITLE);
+        }
+        if (req.location() != null && req.location().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_LOCATION);
+        }
+        if (req.address() != null && req.address().trim().isEmpty()) {
+            throw new EventException(EventErrorCode.INVALID_ADDRESS);
         }
     }
 

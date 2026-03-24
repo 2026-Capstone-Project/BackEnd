@@ -7,6 +7,7 @@ import com.project.backend.domain.nlp.dto.response.LlmResDTO;
 import com.project.backend.domain.nlp.dto.response.NlpResDTO;
 import com.project.backend.domain.nlp.exception.NlpErrorCode;
 import com.project.backend.domain.nlp.exception.NlpException;
+import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,28 @@ public class LlmResponseParser {
                         .toList();
                 return NlpResDTO.ParseRes.multiple(items);
             }
+        } catch (JsonProcessingException e) {
+            log.error("LLM 응답 파싱 실패: {}", llmResponse, e);
+            throw new NlpException(NlpErrorCode.LLM_PARSE_ERROR);
+        }
+    }
+
+    public SuggestionResDTO.LlmRes parseSuggestion(String llmResponse) {
+        try {
+            String jsonStr = extractJson(llmResponse);
+            return objectMapper.readValue(jsonStr, SuggestionResDTO.LlmRes.class);
+
+        } catch (JsonProcessingException e) {
+            log.error("LLM 응답 파싱 실패: {}", llmResponse, e);
+            throw new NlpException(NlpErrorCode.LLM_PARSE_ERROR);
+        }
+    }
+
+    public SuggestionResDTO.LlmRecurrenceGroupSuggestionRes parseRecurrenceGroupSuggestion(String llmResponse) {
+        try {
+            String jsonStr = extractJson(llmResponse);
+            return objectMapper.readValue(jsonStr, SuggestionResDTO.LlmRecurrenceGroupSuggestionRes.class);
+
         } catch (JsonProcessingException e) {
             log.error("LLM 응답 파싱 실패: {}", llmResponse, e);
             throw new NlpException(NlpErrorCode.LLM_PARSE_ERROR);

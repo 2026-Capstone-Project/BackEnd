@@ -4,16 +4,11 @@ import com.project.backend.domain.suggestion.controller.docs.SuggestionDocs;
 import com.project.backend.domain.suggestion.dto.response.SuggestionResDTO;
 import com.project.backend.domain.suggestion.service.command.SuggestionCommandService;
 import com.project.backend.domain.suggestion.service.query.SuggestionQueryService;
-import com.project.backend.domain.suggestion.vo.SuggestionCandidate;
-import com.project.backend.domain.suggestion.vo.SuggestionKey;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/suggestions")

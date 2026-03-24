@@ -40,8 +40,10 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
         select s from Suggestion s
         left join fetch s.previousEvent
         left join fetch s.previousTodo
-        left join fetch s.recurrenceGroup
-        left join fetch s.todoRecurrenceGroup
+        left join fetch s.recurrenceGroup rg
+        left join fetch rg.event
+        left join fetch s.todoRecurrenceGroup trg
+        left join fetch trg.todo
         left join fetch s.primaryAnchorDate
         left join fetch s.secondaryAnchorDate
         where s.id = :id and s.member.id = :memberId

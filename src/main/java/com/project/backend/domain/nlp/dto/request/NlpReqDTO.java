@@ -1,11 +1,11 @@
 package com.project.backend.domain.nlp.dto.request;
 
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
 import com.project.backend.domain.event.enums.EventColor;
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
+import com.project.backend.domain.common.recurrence.enums.MonthlyType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceEndType;
 import com.project.backend.domain.nlp.enums.ItemType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Builder;

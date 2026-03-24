@@ -1,16 +1,14 @@
 package com.project.backend.domain.event.entity;
 
-import com.project.backend.domain.event.enums.MonthlyType;
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.MonthlyType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceEndType;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.global.recurrence.RecurrenceRule;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;

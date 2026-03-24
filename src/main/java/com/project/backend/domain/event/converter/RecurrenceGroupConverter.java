@@ -1,12 +1,11 @@
 package com.project.backend.domain.event.converter;
 
-import com.project.backend.domain.common.plan.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.common.recurrence.enums.*;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.*;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.recurrence.util.RecurrenceUtils;
 import lombok.AccessLevel;
@@ -157,6 +156,7 @@ public class RecurrenceGroupConverter {
                 .endTime(endTime)
                 .exceptionType(ExceptionType.OVERRIDE)
                 .location(req.location() != null ? req.location() : null)
+                .address(req.address() != null ? req.address() : null)
                 .color(req.color() != null ? req.color() : null)
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : null)
                 .recurrenceGroup(recurrenceGroup)

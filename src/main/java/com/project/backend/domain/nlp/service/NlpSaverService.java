@@ -3,8 +3,6 @@ package com.project.backend.domain.nlp.service;
 import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.event.enums.RecurrenceEndType;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.repository.EventRepository;
 import com.project.backend.domain.event.repository.RecurrenceGroupRepository;
 import com.project.backend.domain.member.entity.Member;

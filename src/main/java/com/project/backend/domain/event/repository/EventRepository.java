@@ -25,10 +25,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findByMemberIdAndStartTimeBetween(Long memberId, LocalDateTime start, LocalDateTime end);
 
-    List<Event> findByRecurrenceGroup(RecurrenceGroup recurrenceGroup);
-
-    void deleteByRecurrenceGroup(RecurrenceGroup recurrenceGroup);
-
     @Query("SELECT e " +
             "FROM Event e " +
             "WHERE e.member.id = :memberId " +
@@ -55,10 +51,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
   
     List<Event> findAllByMemberId(@Param("memberId") Long memberId);
 
-    @Query("SELECT e " +
+    @Query("SELECT e.id " +
             "FROM Event e " +
             "WHERE e.member.id = :memberId AND e.startTime <= :currentDate")
-    List<Event> findAllByMemberIdAndCurrentDate(
+    List<Long> findEventIdsByMemberIdAndCurrentDate(
             @Param("memberId") Long memberId,
             @Param("currentDate") LocalDateTime currentDate
     );

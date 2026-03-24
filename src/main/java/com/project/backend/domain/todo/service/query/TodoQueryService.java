@@ -1,6 +1,6 @@
 package com.project.backend.domain.todo.service.query;
 
-import com.project.backend.domain.briefing.dto.TodayOccurrenceResult;
+import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.enums.TodoFilter;
 
@@ -8,8 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.project.backend.domain.reminder.dto.NextOccurrenceResult;
-import com.project.backend.domain.reminder.entity.Reminder;
+import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 
 public interface TodoQueryService {
 
@@ -36,6 +35,11 @@ public interface TodoQueryService {
      * 진행 상황 조회
      */
     TodoResDTO.TodoProgressRes getProgress(Long memberId, LocalDate date);
+
+    /**
+     * 할 일 제목 히스토리 조회
+     */
+    TodoResDTO.TodoTitleHistoryRes TodoTitleHistoryRes(Long memberId, String keyword);
 
     /**
      * 반복 할 일의 유효한 날짜인지 검증

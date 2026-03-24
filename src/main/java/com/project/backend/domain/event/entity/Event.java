@@ -1,7 +1,7 @@
 package com.project.backend.domain.event.entity;
 
 import com.project.backend.domain.event.enums.EventColor;
-import com.project.backend.domain.event.enums.RecurrenceFrequency;
+import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.global.entity.BaseEntity;
 import com.project.backend.domain.member.entity.Member;
 import jakarta.persistence.*;
@@ -36,6 +36,9 @@ public class Event extends BaseEntity {
 
     @Column(name = "location")
     private String location;
+
+    @Column(name = "address")
+    private String address;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", nullable = false, length = 10)
@@ -139,6 +142,7 @@ public class Event extends BaseEntity {
             LocalDateTime startTime,
             LocalDateTime endTime,
             String location,
+            String address,
             EventColor color,
             Boolean isAllDay
     ) {
@@ -150,6 +154,7 @@ public class Event extends BaseEntity {
         }
         if (endTime != null) this.endTime = endTime;
         if (location != null) this.location = location;
+        if (address != null) this.address = address;
         if (color != null) this.color = color;
         if (isAllDay != null) this.isAllDay = isAllDay;
         if (startTime != null && endTime != null) {

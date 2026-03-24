@@ -51,13 +51,15 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
         Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
+        LocalDateTime now = LocalDateTime.now();
+
         // 현재시간보다 저장된 리마인더의 occurrenceTime이 더 이후에 있는 리마인더만 반환 (이미 지나서 필요없는 리마인더 제외)
         List<Reminder> reminders = reminderRepository.
                 findVisibleReminders(
                         memberId,
                         LifecycleStatus.ACTIVE,
-                        LocalDateTime.now(),
-                        LocalDateTime.now().plusMinutes(setting.getReminderTiming().getMinutes())
+                        now,
+                        now.plusMinutes(setting.getReminderTiming().getMinutes())
                 );
 
         return reminders.stream()
@@ -72,6 +74,16 @@ public class ReminderQueryServiceImpl implements ReminderQueryService{
                 .toList();
     }
 
+    @Override
+    public List<Reminder> getActiveReminder() {
+        return reminderRepository.findAllByLifecycleStatus(LifecycleStatus.ACTIVE);
+    }
+
+    // =================================== private method ============================================
+
+    /**
+     * 리마인더 조회 시, 반환값에 쓰일 메세지 양식용
+     */
     private String createMessage(Reminder reminder, Setting setting) {
         return reminderMessageFactory.create(
                 reminder.getTitle(),
