@@ -24,7 +24,7 @@ public class OpenAiEmbeddingClient implements EmbeddingClient {
     private String apiKey;
 
     private static final String EMBEDDING_MODEL = "text-embedding-3-small";
-    private static final String EMBEDDING_URL = "https://api.oepnai.com/v1/embeddings";
+    private static final String EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
 
     @Override
     public float[] embed(String text) {

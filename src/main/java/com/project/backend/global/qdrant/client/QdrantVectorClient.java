@@ -74,7 +74,7 @@ public class QdrantVectorClient {
             );
 
             webClient.put()
-                    .uri("/collection/" + collection + "/points")
+                    .uri("/collections/" + collection + "/points")
                     .bodyValue(Map.of("points", List.of(point)))
                     .retrieve()
                     .bodyToMono(String.class)
