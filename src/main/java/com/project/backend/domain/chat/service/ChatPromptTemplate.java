@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Slf4j
 @Component
@@ -32,14 +35,21 @@ public class ChatPromptTemplate {
         }
     }
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd (E) HH:mm", Locale.KOREAN);
+
     public String getSystemPrompt() {
-        return systemPrompt.replace("{schedule_context}", "");
+        return systemPrompt
+                .replace("{current_date_time}", LocalDateTime.now().format(DATE_TIME_FORMATTER))
+                .replace("{schedule_context}", "");
     }
 
     public String getSystemPrompt(String scheduleContext) {
         String contextBlock = scheduleContext != null
                 ? "[사용자의 일정 및 할 일]\n" + scheduleContext + "\n\n위 내용을 참고하여 답변하세요."
                 : "[사용자의 일정 및 할 일]\n조회된 일정 및 할 일이 없어요.\n\n일정·할 일에 관한 질문이라면 '관련 일정이나 할 일을 찾지 못했어요'라고 답변하세요.";
-        return systemPrompt.replace("{schedule_context}", contextBlock);
+        return systemPrompt
+                .replace("{current_date_time}", LocalDateTime.now().format(DATE_TIME_FORMATTER))
+                .replace("{schedule_context}", contextBlock);
     }
 }
