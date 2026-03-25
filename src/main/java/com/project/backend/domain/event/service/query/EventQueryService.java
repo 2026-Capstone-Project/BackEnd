@@ -20,6 +20,4 @@ public interface EventQueryService {
     List<TodayOccurrenceResult> calculateTodayOccurrence(List<Long> eventId, LocalDate currentDate);
 
     EventResDTO.EventTitleHistoryRes getEventTitleHistory(Long memberId, String keyword);
-
-    EventResDTO.EventLocationHistoryRes getEventLocationHistory(Long memberId, String keyword);
 }

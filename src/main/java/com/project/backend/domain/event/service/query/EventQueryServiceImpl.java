@@ -53,8 +53,6 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final EventValidator eventValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final EventTitleHistoryRepository eventTitleHistoryRepository;
-    private final EventLocationHistoryRepository eventLocationHistoryRepository;
-
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
@@ -98,6 +96,19 @@ public class EventQueryServiceImpl implements EventQueryService {
         );
 
         return EventConverter.toEventsListRes(eventsListRes);
+    }
+
+    @Override
+    public EventResDTO.EventTitleHistoryRes getEventTitleHistory(Long memberId, String keyword) {
+        List<String> titleHistory;
+
+        if (keyword == null || keyword.isBlank()) {
+            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberId(memberId);
+        } else {
+            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberIdAndKeyword(memberId, keyword);
+        }
+
+        return EventHistoryConverter.toEventTitleHistoryRes(titleHistory);
     }
 
     /**
@@ -301,32 +312,6 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return null;
-    }
-
-    @Override
-    public EventResDTO.EventTitleHistoryRes getEventTitleHistory(Long memberId, String keyword) {
-        List<String> titleHistory;
-
-        if (keyword == null || keyword.isBlank()) {
-            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberId(memberId);
-        } else {
-            titleHistory = eventTitleHistoryRepository.findTitleHistoryByMemberIdAndKeyword(memberId, keyword);
-        }
-
-        return EventHistoryConverter.toEventTitleHistoryRes(titleHistory);
-    }
-
-    @Override
-    public EventResDTO.EventLocationHistoryRes getEventLocationHistory(Long memberId, String keyword) {
-        List<String> locationHistory;
-
-        if (keyword == null || keyword.isBlank()) {
-            locationHistory = eventLocationHistoryRepository.findLocationHistoryByMemberId(memberId);
-        } else {
-            locationHistory = eventLocationHistoryRepository.findLocationHistoryByMemberIdAndKeyword(memberId, keyword);
-        }
-
-        return EventHistoryConverter.toEventLocationHistoryRes(locationHistory);
     }
 
     // 최상위 이벤트 객체를 기준으로 검색 범위에 맞게 임시 시간 Detail DTO를 생성하여 리스트로 반환

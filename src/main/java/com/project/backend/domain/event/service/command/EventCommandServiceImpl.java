@@ -67,8 +67,11 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+<<<<<<< feat/#145-Qdrant_RAG
     private final EventLocationHistoryRepository eventLocationHistoryRepository;
     private final ScheduleVectorSyncService scheduleVectorSyncService;
+=======
+>>>>>>> develop
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -78,13 +81,12 @@ public class EventCommandServiceImpl implements EventCommandService {
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         RecurrenceGroup recurrenceGroup = null;
-        RecurrenceGroupSpec rgSpec;
 
         // 반복 일정 생성일 때
         if (req.recurrenceGroup() != null) {
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
 
-            rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
+            RecurrenceGroupSpec rgSpec = RecurrenceGroupConverter.from(req.recurrenceGroup(), req.startTime());
             recurrenceGroup = createRecurrenceGroup(rgSpec, member);
         }
 
@@ -134,19 +136,19 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        eventValidator.validateUpdate(event, req.recurrenceGroup(), occurrenceDate, scope);
+        eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
         EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 
         // 수정안한 계산된 일정의 날짜인지, 수정된 날짜인지 계산
-        LocalDateTime start = calStartTime(req, event, occurrenceDate);
-        LocalDateTime end = calEndTime(req, event, start, occurrenceDate);
+        LocalDateTime startTime = calStartTime(req, event, occurrenceDate);
+        LocalDateTime endTime = calEndTime(req, event, startTime, occurrenceDate);
 
-        eventValidator.validateTime(start, end);
-        eventValidator.validateBlank(req);
+        // 최종 start, end 값에 대한 null 여부, 모순 검증
+        eventValidator.validateTime(startTime, endTime);
 
         // 입력한 값이 기존 단일 일정 or 반복 일정의 필드값과 동일한 경우
-        if (!hasEventChanged(event, req, start, end, occurrenceDate)
+        if (!hasEventChanged(event, req, startTime, endTime, occurrenceDate)
                 && !hasEventRecurrenceChanged(event.getRecurrenceGroup(), req.recurrenceGroup())) {
             log.info("2.Event update request is not changed. eventId: {}", eventId);
             return;
@@ -156,6 +158,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 단일 일정의 일정 수정인 경우
         if (event.getRecurrenceGroup() == null) {
+<<<<<<< feat/#145-Qdrant_RAG
             updateSingleEvent(req, event);
             if (req.recurrenceGroup() != null) {
                 // 단일 일정에 반복 그룹을 추가하는 수정일때
@@ -207,6 +210,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
             scheduleVectorSyncService.syncOnUpdate(event);
 
+=======
+            handleSingleBaseEventUpdate(req, event, member, startTime, beforeSnapshot);
+>>>>>>> develop
             return;
         }
 
@@ -214,8 +220,9 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventOccurrenceResolver.assertOccurrenceExists(event, occurrenceDate);
 
         // 반복 그룹 수정할때만 validator 적용하기
-        if (req.recurrenceGroup() != null)
-            rgValidator.validateUpdate(req.recurrenceGroup(), event.getRecurrenceGroup(), start);
+        if (req.recurrenceGroup() != null) {
+            rgValidator.validateUpdate(req.recurrenceGroup(), event.getRecurrenceGroup(), startTime);
+        }
 
         // TODO : 임시
         // 모객체를 건드려서 완전 삭제되는 경우인가?
@@ -235,13 +242,14 @@ public class EventCommandServiceImpl implements EventCommandService {
         // 수정범위가 있는 수정일 때
         switch (scope){
             case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
-            case THIS_AND_FOLLOWING_EVENTS -> afterBase = updateThisAndFutureEvents(req, event, member, start, end, occurrenceDate);
+            case THIS_AND_FOLLOWING_EVENTS ->
+                    afterBase = updateThisAndFutureEvents(req, event, member, startTime, endTime, occurrenceDate);
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
 
+        // TODO private method로 뺄 수 있지 않을까?
         // 수정 시 history upsert
         upsertEventTitleHistory(req.title(), memberId);
-        upsertEventLocationHistory(req.location(), memberId);
 
         // 모객체 이후 전체로 업데이트 한 경우 새로운 반복 그룹이 생성되므로 삭제 이유는 반복 삭제, 그 외의 경우에는 반복 업데이트
         SuggestionInvalidateReason beforeRgReason =
@@ -357,6 +365,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
     }
+
+    // ========================= private method ===============================
+
 
     // 반복그룹이 없는 일정을 수정할 경우
     private void updateSingleEvent(EventReqDTO.UpdateReq req, Event event) {
@@ -629,7 +640,6 @@ public class EventCommandServiceImpl implements EventCommandService {
             Member member,
             RecurrenceGroup baseRg
     ) {
-      
         Event newEvent = EventConverter.toEvent(eventSpec, member, baseRg);
 
         if (baseRg != null) {
@@ -638,7 +648,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventRepository.save(newEvent);
 
         upsertEventTitleHistory(eventSpec.title(), member.getId());
-        upsertEventLocationHistory(eventSpec.location(), member.getId());
 
         return newEvent;
     }
@@ -652,20 +661,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (history == null) {
             history = EventHistoryConverter.toEventTitleHistory(memberId, trimmedTitle);
             eventTitleHistoryRepository.save(history);
-        } else {
-            history.updateLastUsedAt();
-        }
-    }
-
-    private void upsertEventLocationHistory(String location, Long memberId) {
-        if (location == null) return;
-        String trimmedLocation = location.trim();
-        EventLocationHistory history =
-                eventLocationHistoryRepository.findByMemberIdAndLocation(memberId, trimmedLocation)
-                        .orElse(null);
-        if (history == null) {
-            history = EventHistoryConverter.toEventLocationHistory(memberId, trimmedLocation);
-            eventLocationHistoryRepository.save(history);
         } else {
             history.updateLastUsedAt();
         }
@@ -907,5 +902,69 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventRepository.save(newEvent);
 
         return newEvent;
+    }
+
+    /**
+     * 단일 일정에 대한 일정 내용 수정인 경우 -> 일정 필드 업데이트 후, 리마인더 업데이트
+     * 단일 일정에 대한 반복 그룹을 추가하는 수정인 경우 (반복 일정으로 바뀐 경우) -> 반복그룹 필드 값 검증 후 기존 일정에 반복 그룹과 frequency 설정
+     */
+    private void handleSingleBaseEventUpdate(
+            EventReqDTO.UpdateReq req,
+            Event event,
+            Member member,
+            LocalDateTime startTime,
+            EventSuggestionSnapshot beforeSnapshot
+    ) {
+        updateSingleEvent(req, event);
+
+        if (req.recurrenceGroup() == null) {
+            // 이벤트 생성에 따른 리스너 생성 수정 실행
+            reminderEventBridge.handlePlanChanged(
+                    event.getId(),
+                    TargetType.EVENT,
+                    member.getId(),
+                    event.getTitle(),
+                    false,
+                    startTime,
+                    ChangeType.UPDATE_SINGLE);
+        } else {
+            // 단일 일정에 반복 그룹을 추가하는 수정일때
+            RecurrenceGroupReqDTO.CreateReq createReq =
+                    RecurrenceGroupConverter.toCreateReq(req.recurrenceGroup());
+            rgValidator.validateCreate(createReq, startTime);
+
+            RecurrenceGroup rg = updateToRecurrenceEvent(req, req.recurrenceGroup(), event, member, startTime);
+            event.updateRecurrenceGroup(rg);
+            rg.updateEvent(event);
+
+            // 이벤트 + 반복 생성에 따른 리스너 수정 로직 실행
+            reminderEventBridge.handlePlanChanged(
+                    event.getId(),
+                    TargetType.EVENT,
+                    member.getId(),
+                    event.getTitle(),
+                    true,
+                    startTime,
+                    ChangeType.UPDATE_ADD_RECURRENCE
+            );
+        }
+
+        // 수정 시 history upsert
+        upsertEventTitleHistory(req.title(), member.getId());
+        upsertEventLocationHistory(req.location(), member.getId());
+
+        // 단일 이벤트 after 스냅샷
+        EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
+        log.info("EventCommandImpl, after 스냅샷 생성 완료");
+
+        InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
+                beforeSnapshot,
+                afterSnapshot,
+                SuggestionInvalidateReason.EVENT_UPDATED,
+                SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED,
+                SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED
+        );
+
+        suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
     }
 }

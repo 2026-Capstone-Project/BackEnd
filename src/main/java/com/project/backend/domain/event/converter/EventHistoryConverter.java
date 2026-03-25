@@ -1,7 +1,6 @@
 package com.project.backend.domain.event.converter;
 
 import com.project.backend.domain.event.dto.response.EventResDTO;
-import com.project.backend.domain.event.entity.EventLocationHistory;
 import com.project.backend.domain.event.entity.EventTitleHistory;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -23,20 +22,6 @@ public class EventHistoryConverter {
     public static EventResDTO.EventTitleHistoryRes toEventTitleHistoryRes(List<String> titleHistory) {
         return EventResDTO.EventTitleHistoryRes.builder()
                 .titleHistory(titleHistory)
-                .build();
-    }
-
-    public static EventLocationHistory toEventLocationHistory(Long memberId, String location) {
-        return EventLocationHistory.builder()
-                .location(location)
-                .lastUsedAt(LocalDateTime.now())
-                .memberId(memberId)
-                .build();
-    }
-
-    public static EventResDTO.EventLocationHistoryRes toEventLocationHistoryRes(List<String> locationHistory) {
-        return EventResDTO.EventLocationHistoryRes.builder()
-                .locationHistory(locationHistory)
                 .build();
     }
 }

@@ -29,12 +29,13 @@ public class EventValidator {
 
     public void validateUpdate(
             Event event,
-            RecurrenceGroupReqDTO.UpdateReq req,
+            EventReqDTO.UpdateReq req,
             LocalDateTime occurrenceDate,
             RecurrenceUpdateScope scope
     ) {
         validateOccurrenceDate(event, occurrenceDate);
-        validateScope(event, req, occurrenceDate, scope);
+        validateScope(event, req.recurrenceGroup(), occurrenceDate, scope);
+        validateBlank(req);
     }
 
     public void validateDelete(

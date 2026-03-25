@@ -24,7 +24,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 "http://localhost:5174",
                 "http://localhost:8080",
                 "http://52.79.121.109:8080",
-                "https://api.calio.kr",
+                "https://api.calio.co.kr",
                 "https://calio.co.kr"
         ));
         configuration.setAllowCredentials(true);
