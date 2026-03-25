@@ -91,7 +91,7 @@ public class TodoController implements TodoDocs {
     /**
      * 할 일 제목 히스토리 조회
      */
-    @GetMapping("/history/title")
+    @GetMapping("/history/titles")
     public CustomResponse<TodoResDTO.TodoTitleHistoryRes> getTodoTitleHistory(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam(value = "keyword", required = false) String keyword
