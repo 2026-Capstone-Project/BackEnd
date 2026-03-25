@@ -67,11 +67,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
-<<<<<<< feat/#145-Qdrant_RAG
-    private final EventLocationHistoryRepository eventLocationHistoryRepository;
     private final ScheduleVectorSyncService scheduleVectorSyncService;
-=======
->>>>>>> develop
+
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -158,61 +155,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 단일 일정의 일정 수정인 경우
         if (event.getRecurrenceGroup() == null) {
-<<<<<<< feat/#145-Qdrant_RAG
-            updateSingleEvent(req, event);
-            if (req.recurrenceGroup() != null) {
-                // 단일 일정에 반복 그룹을 추가하는 수정일때
-                RecurrenceGroupReqDTO.CreateReq createReq =
-                        RecurrenceGroupConverter.toCreateReq(req.recurrenceGroup());
-                rgValidator.validateCreate(createReq, start);
-                RecurrenceGroup rg = updateToRecurrenceEvent(req, req.recurrenceGroup(), event, member, start);
-                event.updateRecurrenceGroup(rg);
-                rg.updateEvent(event);
-                // 이벤트 + 반복 생성에 따른 리스너 수정 로직 실행
-                reminderEventBridge.handlePlanChanged(
-                        eventId,
-                        TargetType.EVENT,
-                        memberId,
-                        event.getTitle(),
-                        true,
-                        start,
-                        ChangeType.UPDATE_ADD_RECURRENCE
-                );
-            } else{
-                // 이벤트 생성에 따른 리스너 생성 수정 실행
-                reminderEventBridge.handlePlanChanged(
-                        eventId,
-                        TargetType.EVENT,
-                        memberId,
-                        event.getTitle(),
-                        false,
-                        start,
-                        ChangeType.UPDATE_SINGLE);
-
-            }
-            // 수정 시 history upsert
-            upsertEventTitleHistory(req.title(), memberId);
-            upsertEventLocationHistory(req.location(), memberId);
-
-            // 단일 이벤트 after 스냅샷
-            EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
-            log.info("EventCommandImpl, after 스냅샷 생성 완료");
-
-            InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
-                    beforeSnapshot,
-                    afterSnapshot,
-                    SuggestionInvalidateReason.EVENT_UPDATED,
-                    SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED,
-                    SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED
-            );
-
-            suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
-
-            scheduleVectorSyncService.syncOnUpdate(event);
-
-=======
             handleSingleBaseEventUpdate(req, event, member, startTime, beforeSnapshot);
->>>>>>> develop
             return;
         }
 
@@ -951,7 +894,6 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 수정 시 history upsert
         upsertEventTitleHistory(req.title(), member.getId());
-        upsertEventLocationHistory(req.location(), member.getId());
 
         // 단일 이벤트 after 스냅샷
         EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
@@ -966,5 +908,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
+        scheduleVectorSyncService.syncOnUpdate(event);
     }
 }
