@@ -13,11 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.TextStyle;
-import java.time.temporal.TemporalAdjusters;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -60,9 +58,7 @@ public class DateRangeExtractor {
     private String buildSystemPrompt(LocalDate baseDate) {
         return promptTemplate
                 .replace("{current_date}", baseDate.toString())
-                .replace("{day_of_week}", baseDate.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN))
-                .replace("{week_dates}", buildWeekDatesTable(baseDate))
-                .replace("{next_week_dates}", buildNextWeekDatesTable(baseDate));
+                .replace("{day_of_week}", baseDate.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN));
     }
 
     private Optional<DateRange> parseResponse(String raw) throws Exception {
@@ -76,27 +72,5 @@ public class DateRangeExtractor {
         LocalDateTime start = LocalDateTime.parse(node.get("start").asText());
         LocalDateTime end = LocalDateTime.parse(node.get("end").asText());
         return Optional.of(new DateRange(start, end));
-    }
-
-    private String buildWeekDatesTable(LocalDate baseDate) {
-        LocalDate monday = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 7; i++) {
-            LocalDate date = monday.plusDays(i);
-            sb.append(String.format("- %s: %s%n",
-                    date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN), date));
-        }
-        return sb.toString().trim();
-    }
-
-    private String buildNextWeekDatesTable(LocalDate baseDate) {
-        LocalDate nextMonday = baseDate.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 7; i++) {
-            LocalDate date = nextMonday.plusDays(i);
-            sb.append(String.format("- %s: %s%n",
-                    date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN), date));
-        }
-        return sb.toString().trim();
     }
 }
