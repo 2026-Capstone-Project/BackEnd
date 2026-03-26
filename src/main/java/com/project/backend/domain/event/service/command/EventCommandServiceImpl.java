@@ -16,6 +16,7 @@ import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.*;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
+import com.project.backend.domain.event.service.ScheduleVectorSyncService;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.event.validator.RecurrenceGroupValidator;
 import com.project.backend.domain.member.entity.Member;
@@ -66,6 +67,8 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final EventSuggestionSnapshotFactory eventSuggestionSnapshotFactory;
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
+    private final ScheduleVectorSyncService scheduleVectorSyncService;
+
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
@@ -107,6 +110,8 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         log.info("event created");
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
+
+        scheduleVectorSyncService.syncOnCreate(event);
 
         return EventConverter.toCreateRes(event);
     }
@@ -246,6 +251,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
             log.info("event deleted");
             suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
+
+            scheduleVectorSyncService.syncOnDelete(eventId);
+
             return;
         }
 
@@ -886,7 +894,6 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 수정 시 history upsert
         upsertEventTitleHistory(req.title(), member.getId());
-        upsertEventLocationHistory(req.location(), member.getId());
 
         // 단일 이벤트 after 스냅샷
         EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
@@ -901,5 +908,6 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
+        scheduleVectorSyncService.syncOnUpdate(event);
     }
 }
