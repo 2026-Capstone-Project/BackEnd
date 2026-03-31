@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 public class EventReqDTO {
 
+    @Builder
     public record CreateReq(
             @NotBlank(message = "제목은 필수입니다.")
             String title,
