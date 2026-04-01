@@ -60,17 +60,19 @@ public class QdrantVectorClient {
     }
 
     // 벡터 저장 및 업데이트
-    public void upsert(Long pointId, Long memberId, String title, String startDate, String type, float[] vector) {
+    public void upsert(Long pointId, Long memberId, String title, String startDate, String type, boolean isRecurring, float[] vector) {
         try {
+            Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("memberId", memberId);
+            payload.put("title", title);
+            payload.put("startDate", startDate);
+            payload.put("type", type);
+            payload.put("isRecurring", isRecurring);
+
             Map<String, Object> point = Map.of(
                     "id", pointId,
                     "vector", toList(vector),
-                    "payload", Map.of(
-                            "memberId", memberId,
-                            "title", title,
-                            "startDate", startDate,
-                            "type", type
-                    )
+                    "payload", payload
             );
 
             webClient.put()

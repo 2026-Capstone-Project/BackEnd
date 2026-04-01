@@ -28,6 +28,7 @@ public class TodoVectorSyncService {
                     todo.getTitle(),
                     todo.getStartDate().toString(),
                     "TODO",
+                    todo.getTodoRecurrenceGroup() != null,
                     vector
             );
             log.debug("Qdrant 저장 완료 - todoId: {}", todo.getId());

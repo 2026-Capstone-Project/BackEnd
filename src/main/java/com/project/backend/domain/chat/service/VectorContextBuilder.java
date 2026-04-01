@@ -40,8 +40,16 @@ public class VectorContextBuilder {
             String title = (String) result.payload().get("title");
             String startDate = (String) result.payload().get("startDate");
             String type = (String) result.payload().getOrDefault("type", "EVENT");
+            boolean isRecurring = Boolean.TRUE.equals(result.payload().get("isRecurring"));
+
             String label = "TODO".equals(type) ? "[할 일]" : "[일정]";
-            sb.append(String.format("- %s %s: %s%n", label, startDate, title));
+            String recurringMarker = isRecurring ? " (반복일정)" : "";
+
+            // Qdrant point ID → DB ID 변환 (Todo는 오프셋 제거)
+            long dbId = "TODO".equals(type) ? result.id() - 2_000_000_000L : result.id();
+
+            sb.append(String.format("- %s [ID:%d, TYPE:%s]%s %s: %s%n",
+                    label, dbId, type, recurringMarker, startDate, title));
         }
         return sb.toString().trim();
     }
