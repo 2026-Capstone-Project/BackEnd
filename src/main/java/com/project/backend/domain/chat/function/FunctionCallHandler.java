@@ -282,7 +282,7 @@ public class FunctionCallHandler {
     // Scope 매핑 — LLM 값 → 기존 코드 enum
     // ─────────────────────────────────────────────────────
     private RecurrenceUpdateScope mapEventScope(String scope) {
-        if (scope == null) return RecurrenceUpdateScope.THIS_EVENT;
+        if (scope == null) return null;
         return switch (scope) {
             case "THIS_ONLY"      -> RecurrenceUpdateScope.THIS_EVENT;
             case "THIS_AND_AFTER" -> RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS;

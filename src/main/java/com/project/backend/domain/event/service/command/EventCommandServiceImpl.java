@@ -133,6 +133,11 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        // occurrenceDate가 없으면 event의 startTime을 기본값으로 사용
+        if (occurrenceDate == null) {
+            occurrenceDate = event.getStartTime();
+        }
+
         eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
         EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
@@ -224,6 +229,11 @@ public class EventCommandServiceImpl implements EventCommandService {
     ) {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        // occurrenceDate가 없으면 event의 startTime을 기본값으로 사용
+        if (occurrenceDate == null) {
+            occurrenceDate = event.getStartTime();
+        }
 
         eventValidator.validateDelete(event, occurrenceDate ,scope);
 
