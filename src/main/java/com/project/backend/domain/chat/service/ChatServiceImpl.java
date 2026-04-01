@@ -1,19 +1,24 @@
 package com.project.backend.domain.chat.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.backend.domain.chat.converter.ChatConverter;
 import com.project.backend.domain.chat.dto.request.ChatReqDTO;
 import com.project.backend.domain.chat.dto.response.ChatResDTO;
+import com.project.backend.domain.chat.enums.ActionType;
+import com.project.backend.domain.chat.enums.ScheduleType;
 import com.project.backend.domain.chat.exception.ChatErrorCode;
 import com.project.backend.domain.chat.exception.ChatException;
+import com.project.backend.domain.chat.function.FunctionCallHandler;
+import com.project.backend.domain.chat.function.FunctionDefinitionBuilder;
+import com.project.backend.domain.chat.function.ScheduleActionResult;
+import com.project.backend.domain.nlp.client.FunctionCallResponse;
 import com.project.backend.domain.nlp.client.LlmClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -27,18 +32,21 @@ public class ChatServiceImpl implements ChatService {
     private final DateRangeExtractor dateRangeExtractor;
     private final ScheduleContextBuilder scheduleContextBuilder;
     private final VectorContextBuilder vectorContextBuilder;
+    private final FunctionDefinitionBuilder functionDefinitionBuilder;
+    private final FunctionCallHandler functionCallHandler;
+    private final ObjectMapper objectMapper;
 
     @Override
     public ChatResDTO.SendRes sendMessage(Long memberId, ChatReqDTO.SendReq reqDTO) {
         try {
             String message = reqDTO.message();
 
-            // 1. 날짜 범위 파싱 → 일정/할 일 조회 → 컨텍스트 텍스트 생성 (MySQL RAG)
+            // 1. MySQL RAG
             String mysqlContext = dateRangeExtractor.extract(message)
                     .map(range -> scheduleContextBuilder.build(memberId, range))
                     .orElse(null);
 
-            // 2. Qdrant RAG(의미 기반) -> 실패해도 채팅은 동작
+            // 2. Qdrant RAG (실패해도 채팅 동작 유지)
             String vectorContext = null;
             try {
                 vectorContext = vectorContextBuilder.build(memberId, message);
@@ -46,36 +54,114 @@ public class ChatServiceImpl implements ChatService {
                 log.warn("Qdrant RAG 실패, MySQL RAG만으로 진행: {}", e.getMessage());
             }
 
-            // 3. 두 결과 합치기 + 중복 제거
             String scheduleContext = mergeContexts(mysqlContext, vectorContext);
+            String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext);
+            List<Map<String, Object>> tools = functionDefinitionBuilder.build();
 
-            // 4. 시스템 프롬프트에 일정 컨텍스트 주입
-            String systemPrompt = chatPromptTemplate.getSystemPrompt(scheduleContext);
-
-            // 5. Redis에서 기존 히스토리 조회 후 새 메시지 추가
-            List<Map<String, String>> messages = new ArrayList<>(conversationHistoryService.getHistory(memberId));
+            // 3. Redis 히스토리 조회 + Map<String,String> → Map<String,Object> 변환
+            // 이유: chatWithFunctions()는 tool_calls 중첩 구조를 위해 Map<String,Object> 필요
+            //       Java 제네릭 불변성으로 Map<String,String>은 Map<String,Object>의 서브타입 아님
+            List<Map<String, Object>> messages = convertHistory(
+                    conversationHistoryService.getHistory(memberId));
             messages.add(Map.of("role", "user", "content", message));
 
-            // 6. 히스토리 + 컨텍스트 포함 시스템 프롬프트로 OpenAI 호출
-            String reply = llmClient.chatWithHistory(systemPrompt, messages);
+            // 4. 1차 LLM 호출 (Function Calling)
+            FunctionCallResponse llmRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
 
-            // 7. 유저 메시지와 GPT 응답을 Redis에 저장
+            // 5. 응답 분기
+            String reply;
+            ActionType action         = ActionType.NONE;
+            Long scheduleId           = null;
+            Long recurrenceGroupId    = null;
+            ScheduleType scheduleType = null;
+
+            if (llmRes.isClarification()) {
+                // C. 되묻기
+                reply  = parseClarificationQuestion(llmRes.functionArguments());
+                action = ActionType.CLARIFYING;
+
+            } else if (llmRes.isFunctionCall()) {
+                // B. CRUD 실행
+                ScheduleActionResult result = functionCallHandler.handle(
+                        llmRes.functionName(), llmRes.functionArguments(), memberId);
+
+                // 실행 결과를 tool 메시지로 추가 후 2차 LLM 호출 → 자연어 응답 생성
+                messages.add(buildAssistantToolCallMessage(llmRes));
+                messages.add(Map.of(
+                        "role", "tool",
+                        "tool_call_id", llmRes.toolCallId(),
+                        "content", result.summary()
+                ));
+
+                FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
+                reply = secondRes.textContent() != null ? secondRes.textContent() : result.summary();
+
+                action            = result.action();
+                scheduleId        = result.scheduleId();
+                recurrenceGroupId = result.recurrenceGroupId();
+                scheduleType      = result.scheduleType();
+
+            } else {
+                // A. 일반 텍스트
+                reply = llmRes.textContent();
+            }
+
+            // 6. Redis 히스토리 저장 — user/assistant만, tool 메시지는 저장하지 않음
             conversationHistoryService.saveMessage(memberId, "user", message);
             conversationHistoryService.saveMessage(memberId, "assistant", reply);
 
-            return ChatConverter.toSendResDTO(reply);
+            return ChatConverter.toSendResDTO(reply, action, scheduleId, recurrenceGroupId, scheduleType);
+
         } catch (Exception e) {
             log.error("챗봇 응답 생성 실패", e);
             throw new ChatException(ChatErrorCode.CHAT_API_ERROR);
         }
     }
 
+    // OpenAI 2차 호출용 assistant tool_call 메시지 구성
+    // HashMap 사용 이유: content를 키에서 제외해야 함 (Map.of()는 null 값 비허용)
+    // OpenAI 스펙상 tool_calls 있는 assistant 메시지는 content 생략 가능
+    private Map<String, Object> buildAssistantToolCallMessage(FunctionCallResponse llmRes) {
+        Map<String, Object> msg = new HashMap<>();
+        msg.put("role", "assistant");
+        msg.put("tool_calls", List.of(Map.of(
+                "id", llmRes.toolCallId(),
+                "type", "function",
+                "function", Map.of(
+                        "name", llmRes.functionName(),
+                        "arguments", llmRes.functionArguments()
+                )
+        )));
+        return msg;
+    }
+
+    private String parseClarificationQuestion(String argsJson) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> args = objectMapper.readValue(argsJson, Map.class);
+            return (String) args.get("question");
+        } catch (Exception e) {
+            log.error("Clarification question 파싱 실패: {}", argsJson, e);
+            return "좀 더 자세히 말씀해 주시겠어요?";
+        }
+    }
+
+    // Map<String, String> → Map<String, Object> 변환
+    private List<Map<String, Object>> convertHistory(List<Map<String, String>> history) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, String> h : history) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("role", h.get("role"));
+            m.put("content", h.get("content"));
+            result.add(m);
+        }
+        return result;
+    }
+
     private String mergeContexts(String mysqlContext, String vectorContext) {
         if (mysqlContext == null && vectorContext == null) return null;
         if (mysqlContext == null) return "[의미 유사 일정]\n" + vectorContext;
         if (vectorContext == null) return mysqlContext;
-
-        // 둘 다 있으면 합치기
         return mysqlContext + "\n\n[의미 유사 일정]\n" + vectorContext;
     }
 }
