@@ -130,7 +130,7 @@ public class OpenAiLlmClient implements LlmClient {
     {
         List<Map<String, Object>> messageBody = new ArrayList<>();
         messageBody.add(Map.of("role", "system", "content", systemPrompt));
-        messages.addAll(messages);
+        messageBody.addAll(messages);
 
         // tool_choice: "auto" -> LLM이 스스로 함수 호출 여부를 판단
         // temperature: 0.3 -> 파라미터 추출 정확도 우선
