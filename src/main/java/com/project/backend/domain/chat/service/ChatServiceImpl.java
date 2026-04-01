@@ -54,8 +54,10 @@ public class ChatServiceImpl implements ChatService {
                 log.warn("Qdrant RAG 실패, MySQL RAG만으로 진행: {}", e.getMessage());
             }
 
+            // pending context 주입: clarification 후속 메시지에서 대상 일정을 명시적으로 알려줌
+            Map<String, String> pendingCtx = conversationHistoryService.getPendingContext(memberId);
             String scheduleContext = mergeContexts(mysqlContext, vectorContext);
-            String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext);
+            String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext, pendingCtx);
             List<Map<String, Object>> tools = functionDefinitionBuilder.build();
 
             // 3. Redis 히스토리 조회 + Map<String,String> → Map<String,Object> 변환
@@ -76,12 +78,14 @@ public class ChatServiceImpl implements ChatService {
             ScheduleType scheduleType = null;
 
             if (llmRes.isClarification()) {
-                // C. 되묻기
+                // C. 되묻기 — 대상 scheduleId/scheduleType을 pending context로 저장
                 reply  = parseClarificationQuestion(llmRes.functionArguments());
                 action = ActionType.CLARIFYING;
+                savePendingContextIfPresent(memberId, llmRes.functionArguments());
 
             } else if (llmRes.isFunctionCall()) {
-                // B. CRUD 실행
+                // B. CRUD 실행 — pending context 사용 완료 후 삭제
+                conversationHistoryService.clearPendingContext(memberId);
                 ScheduleActionResult result = functionCallHandler.handle(
                         llmRes.functionName(), llmRes.functionArguments(), memberId);
 
@@ -133,6 +137,21 @@ public class ChatServiceImpl implements ChatService {
                 )
         )));
         return msg;
+    }
+
+    private void savePendingContextIfPresent(Long memberId, String argsJson) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> args = objectMapper.readValue(argsJson, Map.class);
+            Object rawId   = args.get("scheduleId");
+            Object rawType = args.get("scheduleType");
+            if (rawId != null && rawType != null) {
+                Long id = ((Number) rawId).longValue();
+                conversationHistoryService.savePendingContext(memberId, id, (String) rawType);
+            }
+        } catch (Exception e) {
+            log.warn("pending context 저장 실패 (무시): {}", e.getMessage());
+        }
     }
 
     private String parseClarificationQuestion(String argsJson) {

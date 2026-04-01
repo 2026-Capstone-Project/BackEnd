@@ -89,7 +89,9 @@ public class FunctionDefinitionBuilder {
     // → 프론트가 action: CLARIFYING으로 별도 UI 처리 가능
     private Map<String, Object> buildAskForClarification() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("question", strProp("사용자에게 보여줄 질문"));
+        props.put("question",      strProp("사용자에게 보여줄 질문"));
+        props.put("scheduleId",    intProp("대상 일정/할 일의 ID (컨텍스트 [ID:N] 값, 특정 가능한 경우)"));
+        props.put("scheduleType",  enumProp("대상 유형 (특정 가능한 경우)", "EVENT", "TODO"));
 
         return wrapFunction("askForClarification",
                 "요청이 애매하거나 반복 일정 수정/삭제 범위 확인이 필요할 때 사용자에게 되묻는다.",
