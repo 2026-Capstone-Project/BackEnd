@@ -16,4 +16,8 @@ public interface ConversationHistoryService {
     Map<String, String> getPendingContext(Long memberId);
 
     void clearPendingContext(Long memberId);
+
+    void saveLastActionContext(Long memberId, Long scheduleId, String scheduleType);
+
+    Map<String, String> getLastActionContext(Long memberId);
 }

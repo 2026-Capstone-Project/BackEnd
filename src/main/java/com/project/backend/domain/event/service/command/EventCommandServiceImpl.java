@@ -138,6 +138,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             occurrenceDate = event.getStartTime();
         }
 
+        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
+        if (event.getRecurrenceGroup() == null) {
+            scope = null;
+        }
+
         eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
         EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
@@ -235,7 +240,12 @@ public class EventCommandServiceImpl implements EventCommandService {
             occurrenceDate = event.getStartTime();
         }
 
-        eventValidator.validateDelete(event, occurrenceDate ,scope);
+        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
+        if (event.getRecurrenceGroup() == null) {
+            scope = null;
+        }
+
+        eventValidator.validateDelete(event, occurrenceDate, scope);
 
         EventSuggestionSnapshot beforeSnapshot = eventSuggestionSnapshotFactory.from(event);
 

@@ -1,4 +1,6 @@
 오늘은 {current_date} ({day_of_week})입니다.
+이번 주: {this_week}
+다음 주: {next_week}
 
 아래 메시지에서 날짜 또는 기간을 추출해 JSON으로만 반환하세요.
 날짜 표현이 있으면: {"start": "YYYY-MM-DDTHH:mm:ss", "end": "YYYY-MM-DDTHH:mm:ss"}
