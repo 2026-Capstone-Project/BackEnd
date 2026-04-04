@@ -76,6 +76,7 @@ public class EventConverter {
     public static EventResDTO.CreateRes toCreateRes(Event event) {
         return EventResDTO.CreateRes.builder()
                 .id(event.getId())
+                .recurrenceGroupId(event.getRecurrenceGroup() != null ? event.getRecurrenceGroup().getId() : null)
                 .createdAt(event.getCreatedAt())
                 .build();
     }
