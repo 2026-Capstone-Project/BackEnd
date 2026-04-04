@@ -22,6 +22,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +67,22 @@ public class FunctionCallHandler {
         LocalDateTime startTime = parseDateTime((String) args.get("startTime"));
         LocalDateTime endTime   = parseDateTime((String) args.get("endTime"));
 
+        // 반복 EVENT: LLM이 잘못된 날짜로 startTime을 전달하는 경우 recurrenceDaysOfWeek 기반으로 보정
+        // (TODO의 startDate 보정 로직과 동일한 원리)
+        if (isRecurring && startTime != null) {
+            @SuppressWarnings("unchecked")
+            List<String> daysOfWeekList = (List<String>) args.get("recurrenceDaysOfWeek");
+            if (daysOfWeekList != null && !daysOfWeekList.isEmpty()) {
+                DayOfWeek targetDay = DayOfWeek.valueOf(daysOfWeekList.get(0));
+                LocalDate correctedDate = LocalDate.now().with(TemporalAdjusters.nextOrSame(targetDay));
+                if (!correctedDate.equals(startTime.toLocalDate())) {
+                    log.debug("반복 EVENT startTime 날짜 보정: {} → {} ({})", startTime.toLocalDate(), correctedDate, targetDay);
+                    if (endTime != null) endTime = correctedDate.atTime(endTime.toLocalTime());
+                    startTime = correctedDate.atTime(startTime.toLocalTime());
+                }
+            }
+        }
+
         EventReqDTO.CreateReq req = EventReqDTO.CreateReq.builder()
                 .title((String) args.get("title"))
                 .startTime(startTime)
@@ -88,6 +105,26 @@ public class FunctionCallHandler {
         boolean isRecurring = Boolean.TRUE.equals(args.get("isRecurring"));
 
         LocalDate startDate = parseDate((String) args.get("startDate"));
+
+        // 반복 TODO: recurrenceDaysOfWeek 기반으로 startDate 보정
+        // (null이거나 잘못된 요일로 전달된 경우 모두 수정 — createEvent 패턴과 동일)
+        if (isRecurring) {
+            @SuppressWarnings("unchecked")
+            List<String> daysOfWeekList = (List<String>) args.get("recurrenceDaysOfWeek");
+            if (daysOfWeekList != null && !daysOfWeekList.isEmpty()) {
+                DayOfWeek targetDay = DayOfWeek.valueOf(daysOfWeekList.get(0));
+                LocalDate correctedDate = LocalDate.now().with(TemporalAdjusters.nextOrSame(targetDay));
+                if (startDate == null || !startDate.getDayOfWeek().equals(targetDay)) {
+                    log.debug("반복 TODO startDate 보정: {} → {} ({})", startDate, correctedDate, targetDay);
+                    startDate = correctedDate;
+                }
+            } else if (startDate == null) {
+                startDate = LocalDate.now();
+            }
+        } else if (startDate == null) {
+            startDate = LocalDate.now();
+        }
+
         LocalTime dueTime   = args.get("dueTime") != null
                 ? LocalTime.parse((String) args.get("dueTime")) : null;
         Priority priority   = args.get("priority") != null
@@ -208,7 +245,10 @@ public class FunctionCallHandler {
     }
 
     private ScheduleActionResult deleteTodo(Long todoId, Map<String, Object> args, Long memberId) {
-        com.project.backend.domain.todo.enums.RecurrenceUpdateScope scope = mapTodoScope((String) args.get("scope"));
+        // delete는 scope 미제공 시 null로 전달 — TodoCommandServiceImpl에서 방어 처리
+        // (mapTodoScope(null)=THIS_TODO를 쓰면 occurrenceDate 필수 검증에서 예외 발생)
+        com.project.backend.domain.todo.enums.RecurrenceUpdateScope scope =
+                args.get("scope") != null ? mapTodoScope((String) args.get("scope")) : null;
         LocalDate occurrenceDate = args.get("occurrenceDate") != null
                 ? parseDate((String) args.get("occurrenceDate")) : null;
 
