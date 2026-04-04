@@ -132,13 +132,14 @@ public class OpenAiLlmClient implements LlmClient {
         messageBody.add(Map.of("role", "system", "content", systemPrompt));
         messageBody.addAll(messages);
 
-        // tool_choice: "auto" -> LLM이 스스로 함수 호출 여부를 판단
+        // tool_choice: "required" -> LLM이 반드시 함수 중 하나를 호출해야 함 (텍스트 단독 응답 불가)
+        // 일반 텍스트 응답은 respondToUser 함수를 통해 반환됨
         // temperature: 0.3 -> 파라미터 추출 정확도 우선
         Map<String, Object> requestBody = Map.of(
                 "model", llmConfig.getModel(),
                 "messages", messageBody,
                 "tools", tools,
-                "tool_choice", "auto",
+                "tool_choice", "required",
                 "temperature", 0.3
         );
 

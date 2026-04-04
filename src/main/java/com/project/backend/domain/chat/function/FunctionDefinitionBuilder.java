@@ -14,19 +14,20 @@ public class FunctionDefinitionBuilder {
                 buildCreateSchedule(),
                 buildUpdateSchedule(),
                 buildDeleteSchedule(),
-                buildAskForClarification()
+                buildAskForClarification(),
+                buildRespondToUser()
         );
     }
 
     // createSchedule
     private Map<String, Object> buildCreateSchedule() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("scheduleType",          enumProp("일정 유형", "EVENT", "TODO"));
+        props.put("scheduleType",          enumProp("일정 유형 — 특정 시작/종료 시간이 있으면 반드시 EVENT, 체크리스트·할 일 성격이면 TODO", "EVENT", "TODO"));
         props.put("title",                 strProp("제목"));
         props.put("isRecurring",           boolProp("반복 여부"));
         props.put("startTime",             strProp("시작 시간 ISO-8601 (EVENT 필수): 2026-03-27T10:00:00"));
         props.put("endTime",               strProp("종료 시간 ISO-8601 (EVENT 필수)"));
-        props.put("startDate",             strProp("시작 날짜 yyyy-MM-dd (TODO 필수)"));
+        props.put("startDate",             strProp("시작 날짜 yyyy-MM-dd (TODO 필수, 반복TODO는 첫 발생일)"));
         props.put("dueTime",               strProp("마감 시간 HH:mm (TODO 선택)"));
         props.put("location",              strProp("장소 (EVENT 선택)"));
         props.put("isAllDay",              boolProp("종일 여부"));
@@ -40,7 +41,7 @@ public class FunctionDefinitionBuilder {
         props.put("recurrenceCount",       intProp("반복 횟수 (END_BY_COUNT 전용)"));
 
         return wrapFunction("createSchedule",
-                "새 일정 또는 할 일을 등록한다. 반복 일정이면 isRecurring=true와 recurrenceType을 반드시 포함한다.",
+                "새 일정(EVENT) 또는 할 일(TODO)을 등록한다. '~시', '~분' 등 특정 시간이 언급되면 반드시 EVENT를 사용한다. 반복이면 isRecurring=true와 recurrenceType을 반드시 포함한다.",
                 props,
                 List.of("scheduleType", "title", "isRecurring"));
     }
@@ -97,6 +98,17 @@ public class FunctionDefinitionBuilder {
                 "요청이 애매하거나 반복 일정 수정/삭제 범위 확인이 필요할 때 사용자에게 되묻는다.",
                 props,
                 List.of("question"));
+    }
+
+    // respondToUser
+    // [핵심] tool_choice:"required" 환경에서 일반 텍스트 응답(조회 안내, 일반 대화 등)을 함수 형태로 반환
+    private Map<String, Object> buildRespondToUser() {
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("message", strProp("사용자에게 전달할 텍스트 응답"));
+        return wrapFunction("respondToUser",
+                "일정 CRUD나 되묻기가 아닌 경우 — 일반 대화, 질문 답변, 조회 결과 안내 등 텍스트로만 응답할 때 사용한다.",
+                props,
+                List.of("message"));
     }
 
     // OpenAI tools 포맷 래핑

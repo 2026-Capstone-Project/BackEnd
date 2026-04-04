@@ -55,9 +55,10 @@ public class ChatServiceImpl implements ChatService {
             }
 
             // pending context 주입: clarification 후속 메시지에서 대상 일정을 명시적으로 알려줌
-            Map<String, String> pendingCtx = conversationHistoryService.getPendingContext(memberId);
+            Map<String, String> pendingCtx    = conversationHistoryService.getPendingContext(memberId);
+            Map<String, String> lastActionCtx = conversationHistoryService.getLastActionContext(memberId);
             String scheduleContext = mergeContexts(mysqlContext, vectorContext);
-            String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext, pendingCtx);
+            String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext, pendingCtx, lastActionCtx);
             List<Map<String, Object>> tools = functionDefinitionBuilder.build();
 
             // 3. Redis 히스토리 조회 + Map<String,String> → Map<String,Object> 변환
@@ -83,36 +84,57 @@ public class ChatServiceImpl implements ChatService {
                 action = ActionType.CLARIFYING;
                 savePendingContextIfPresent(memberId, llmRes.functionArguments());
 
-            } else if (llmRes.isFunctionCall()) {
-                // B. CRUD 실행 — pending context 사용 완료 후 삭제
-                conversationHistoryService.clearPendingContext(memberId);
-                ScheduleActionResult result = functionCallHandler.handle(
-                        llmRes.functionName(), llmRes.functionArguments(), memberId);
-
-                // 실행 결과를 tool 메시지로 추가 후 2차 LLM 호출 → 자연어 응답 생성
-                messages.add(buildAssistantToolCallMessage(llmRes));
-                messages.add(Map.of(
-                        "role", "tool",
-                        "tool_call_id", llmRes.toolCallId(),
-                        "content", result.summary()
-                ));
-
-                FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
-                reply = secondRes.textContent() != null ? secondRes.textContent() : result.summary();
-
-                action            = result.action();
-                scheduleId        = result.scheduleId();
-                recurrenceGroupId = result.recurrenceGroupId();
-                scheduleType      = result.scheduleType();
-
             } else {
-                // A. 일반 텍스트
-                reply = llmRes.textContent();
+                // B/A. CRUD 실행 또는 일반 텍스트 — pending context 소비 완료 후 삭제
+                conversationHistoryService.clearPendingContext(memberId);
+
+                if (llmRes.isFunctionCall()) {
+                    // B. CRUD 실행
+                    ScheduleActionResult result = functionCallHandler.handle(
+                            llmRes.functionName(), llmRes.functionArguments(), memberId);
+
+                    // 실행 결과를 tool 메시지로 추가 후 2차 LLM 호출 → 자연어 응답 생성
+                    messages.add(buildAssistantToolCallMessage(llmRes));
+                    messages.add(Map.of(
+                            "role", "tool",
+                            "tool_call_id", llmRes.toolCallId(),
+                            "content", result.summary()
+                    ));
+
+                    FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
+                    reply = secondRes.isRespondToUser()
+                            ? parseRespondToUserMessage(secondRes.functionArguments())
+                            : result.summary();
+
+                    action            = result.action();
+                    scheduleId        = result.scheduleId();
+                    recurrenceGroupId = result.recurrenceGroupId();
+                    scheduleType      = result.scheduleType();
+
+                    // 직전 처리 일정 저장 — 다음 턴에서 "그냥 삭제/수정" 같은 모호한 요청 처리에 사용
+                    if (result.scheduleId() != null && result.scheduleType() != null) {
+                        conversationHistoryService.saveLastActionContext(
+                                memberId, result.scheduleId(), result.scheduleType().name());
+                    }
+
+                } else if (llmRes.isRespondToUser()) {
+                    // A. 일반 텍스트 응답 (respondToUser 함수 호출 형태)
+                    reply = parseRespondToUserMessage(llmRes.functionArguments());
+
+                } else {
+                    // Fallback: tool_choice:"required" 환경에서는 거의 발생하지 않음
+                    reply = llmRes.textContent();
+                }
             }
 
             // 6. Redis 히스토리 저장 — user/assistant만, tool 메시지는 저장하지 않음
+            // clarification 응답은 history에 저장하지 않음:
+            // "이번만? 이후전체?" 패턴이 누적되면 LLM이 단일 일정에도 같은 패턴을 반복하는 loop 발생.
+            // clarification 상태는 pendingContext(Redis)가 관리하므로 history 불필요.
             conversationHistoryService.saveMessage(memberId, "user", message);
-            conversationHistoryService.saveMessage(memberId, "assistant", reply);
+            if (action != ActionType.CLARIFYING) {
+                conversationHistoryService.saveMessage(memberId, "assistant", reply);
+            }
 
             return ChatConverter.toSendResDTO(reply, action, scheduleId, recurrenceGroupId, scheduleType);
 
@@ -151,6 +173,17 @@ public class ChatServiceImpl implements ChatService {
             }
         } catch (Exception e) {
             log.warn("pending context 저장 실패 (무시): {}", e.getMessage());
+        }
+    }
+
+    private String parseRespondToUserMessage(String argsJson) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> args = objectMapper.readValue(argsJson, Map.class);
+            return (String) args.get("message");
+        } catch (Exception e) {
+            log.error("respondToUser 파싱 실패: {}", argsJson, e);
+            return "죄송해요, 응답 처리 중 오류가 발생했어요.";
         }
     }
 

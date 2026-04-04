@@ -18,9 +18,16 @@ public record FunctionCallResponse(
         String toolCallId,
         String functionArguments
 ) {
-    /** CRUD 함수 호출 여부 (askForClarification 제외) */
+    /** CRUD 함수 호출 여부 (askForClarification, respondToUser 제외) */
     public boolean isFunctionCall() {
-        return functionName != null && !"askForClarification".equals(functionName);
+        return functionName != null
+                && !"askForClarification".equals(functionName)
+                && !"respondToUser".equals(functionName);
+    }
+
+    /** 일반 텍스트 응답 함수 호출 여부 */
+    public boolean isRespondToUser() {
+        return "respondToUser".equals(functionName);
     }
 
     /** 되묻기 함수 호출 여부 */
