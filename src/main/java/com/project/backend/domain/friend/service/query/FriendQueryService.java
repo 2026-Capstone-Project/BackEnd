@@ -7,4 +7,6 @@ public interface FriendQueryService {
     FriendResDTO.FriendRequestListRes getSentFriendRequest(Long memberId);
 
     FriendResDTO.FriendRequestListRes getReceivedFriendRequest(Long memberId);
+
+    FriendResDTO.FriendListRes getFriend(Long memberId);
 }

@@ -1,8 +1,11 @@
 package com.project.backend.domain.friend.service.query;
 
+import com.project.backend.domain.friend.converter.FriendConverter;
 import com.project.backend.domain.friend.converter.FriendRequestConverter;
 import com.project.backend.domain.friend.dto.response.FriendResDTO;
+import com.project.backend.domain.friend.entity.Friend;
 import com.project.backend.domain.friend.entity.FriendRequest;
+import com.project.backend.domain.friend.repository.FriendRepository;
 import com.project.backend.domain.friend.repository.FriendRequestRepository;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
@@ -21,6 +24,7 @@ public class FriendQueryServiceImpl implements FriendQueryService{
 
     private final MemberRepository memberRepository;
     private final FriendRequestRepository friendRequestRepository;
+    private final FriendRepository friendRepository;
 
     @Override
     public FriendResDTO.FriendRequestListRes getSentFriendRequest(Long memberId) {
@@ -38,6 +42,18 @@ public class FriendQueryServiceImpl implements FriendQueryService{
         // 세션 자기 자신이 받은 친구 요청 리스트 조회
         List<FriendRequest> friendRequests = friendRequestRepository.findByReceiverId(memberId);
         return buildFriendRequestList(friendRequests, me);
+    }
+
+    @Override
+    public FriendResDTO.FriendListRes getFriend(Long memberId) {
+        // 모든 친구 조회
+        List<Friend> friendList = friendRepository.findByMemberId(memberId);
+        // List<Friend> -> List<FriendDetailRes>
+        List<FriendResDTO.FriendDetailRes> detailResList = friendList.stream()
+                .map(FriendConverter::toFriendDetailRes)
+                .toList();
+
+        return FriendConverter.toFriendList(detailResList);
     }
 
     // id로 멤버 객체를 조회
