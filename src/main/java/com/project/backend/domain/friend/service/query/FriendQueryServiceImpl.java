@@ -22,27 +22,45 @@ public class FriendQueryServiceImpl implements FriendQueryService{
     private final MemberRepository memberRepository;
     private final FriendRequestRepository friendRequestRepository;
 
-
     @Override
     public FriendResDTO.FriendRequestListRes getSentFriendRequest(Long memberId) {
-
         // 세션 멤버 객체 조회
-        Member sender = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
+        Member me = getMember(memberId);
         // 세션 자기 자신이 보낸 친구 요청 리스트 조회
         List<FriendRequest> friendRequests = friendRequestRepository.findBySenderId(memberId);
+        return buildFriendRequestList(friendRequests, me);
+    }
 
-        // List<FriendRequest> -> List<FriendRequestDetailRes>
-        List<FriendResDTO.FriendRequestDetailRes> friendRequestDetailResList =
-                friendRequests.stream()
-                        .map(friendRequest -> { // 각각의 요청에 대하여 receiver 정보를 조회해 dto에 담기
-                            Member receiver = memberRepository.findById(friendRequest.getReceiver().getId())
-                                    .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-                            return FriendRequestConverter.toFriendRequestDetailRes(friendRequest, sender, receiver);
-                        })
-                        .toList();
+    @Override
+    public FriendResDTO.FriendRequestListRes getReceivedFriendRequest(Long memberId) {
+        // 세션 멤버 객체 조회
+        Member me = getMember(memberId);
+        // 세션 자기 자신이 받은 친구 요청 리스트 조회
+        List<FriendRequest> friendRequests = friendRequestRepository.findByReceiverId(memberId);
+        return buildFriendRequestList(friendRequests, me);
+    }
 
-        return FriendRequestConverter.toFriendRequestList(friendRequestDetailResList);
+    // id로 멤버 객체를 조회
+    private Member getMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    private FriendResDTO.FriendRequestListRes buildFriendRequestList(
+            List<FriendRequest> friendRequests,
+            Member me
+    ) {
+        List<FriendResDTO.FriendRequestDetailRes> detailResList = friendRequests.stream()
+                .map(friendRequest -> {
+                    // friendRequest의 receiver가 자기 자신인가?
+                    boolean sentByMe = friendRequest.getSender().getId().equals(me.getId());
+                    // 만약 나라면 상대를 receiver로 설정, 내가 아니라면 상대를 sender로 설정
+                    Member opponent = sentByMe ? friendRequest.getReceiver() : friendRequest.getSender();
+                    // 상대 정보를 기준으로 detail 생성
+                    return FriendRequestConverter.toFriendRequestDetailRes(friendRequest, opponent);
+                })
+                .toList();
+
+        return FriendRequestConverter.toFriendRequestList(detailResList);
     }
 }

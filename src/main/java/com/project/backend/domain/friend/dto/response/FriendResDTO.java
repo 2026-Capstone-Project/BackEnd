@@ -9,8 +9,8 @@ public class FriendResDTO {
     @Builder
     public record FriendRequestDetailRes(
             Long id,
-            String senderName,
-            String receiverName
+            String opponentName,
+            String opponentEmail
     ) {
     }
 

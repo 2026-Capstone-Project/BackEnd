@@ -21,13 +21,12 @@ public class FriendRequestConverter {
 
     public static FriendResDTO.FriendRequestDetailRes toFriendRequestDetailRes(
             FriendRequest friendRequest,
-            Member sender,
-            Member receiver
+            Member opponent
     ) {
         return FriendResDTO.FriendRequestDetailRes.builder()
                 .id(friendRequest.getId())
-                .senderName(sender.getNickname())
-                .receiverName(receiver.getNickname())
+                .opponentName(opponent.getNickname())
+                .opponentEmail(opponent.getEmail())
                 .build();
     }
 

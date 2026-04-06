@@ -5,4 +5,6 @@ import com.project.backend.domain.friend.dto.response.FriendResDTO;
 public interface FriendQueryService {
 
     FriendResDTO.FriendRequestListRes getSentFriendRequest(Long memberId);
+
+    FriendResDTO.FriendRequestListRes getReceivedFriendRequest(Long memberId);
 }

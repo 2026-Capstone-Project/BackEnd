@@ -27,6 +27,14 @@ public class FriendController {
         return CustomResponse.onSuccess("보낸 친구 요청 목록 조회 완료", resDTO);
     }
 
+    @GetMapping("/requests/received")
+    public CustomResponse<FriendResDTO.FriendRequestListRes> getReceivedFriendRequest(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        FriendResDTO.FriendRequestListRes resDTO = friendQueryService.getReceivedFriendRequest(customUserDetails.getId());
+        return CustomResponse.onSuccess("받은 친구 요청 목록 조회 완료", resDTO);
+    }
+
     @PostMapping("/requests")
     public CustomResponse<String> sendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
