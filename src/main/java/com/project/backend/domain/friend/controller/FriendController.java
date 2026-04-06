@@ -27,7 +27,7 @@ public class FriendController {
         return CustomResponse.onSuccess("보낸 친구 요청 목록 조회 완료", resDTO);
     }
 
-    @PostMapping("/request")
+    @PostMapping("/requests")
     public CustomResponse<String> sendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody @Valid FriendReqDTO.SendRequestReq reqDTO
