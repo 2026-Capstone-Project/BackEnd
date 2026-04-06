@@ -7,4 +7,6 @@ public interface FriendCommandService {
     void sendRequest(Long memberId, FriendReqDTO.SendRequestReq reqDTO);
 
     void acceptRequest(Long memberId, Long friendRequestId);
+
+    void rejectRequest(Long memberId, Long friendRequestId);
 }

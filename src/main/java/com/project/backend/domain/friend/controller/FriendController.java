@@ -47,9 +47,18 @@ public class FriendController {
     @PostMapping("/reqeusts/{requestId}/accept")
     public CustomResponse<String> acceptFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable("requestId") Long friendRequestId
+    ) {
+        friendCommandService.acceptRequest(customUserDetails.getId(), friendRequestId);
+        return CustomResponse.onSuccess("친구 요청 수락 완료", null);
+    }
+
+    @PostMapping("/requests/{requestId}/reject")
+    public CustomResponse<String> rejectFriendRequest(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long requestId
     ) {
-        friendCommandService.acceptRequest(customUserDetails.getId(), requestId);
-        return CustomResponse.onSuccess("친구 요청 수락 완료", null);
+        friendCommandService.rejectRequest(customUserDetails.getId(), requestId);
+        return CustomResponse.onSuccess("친구 요청 거절 완료", null);
     }
 }

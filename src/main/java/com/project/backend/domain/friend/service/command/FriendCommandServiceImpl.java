@@ -68,17 +68,19 @@ public class FriendCommandServiceImpl implements FriendCommandService{
 
     @Override
     public void acceptRequest(Long memberId, Long friendRequestId) {
-
         // 친구 요청 객체 찾기
-        FriendRequest friendRequest = friendRequestRepository.findById(friendRequestId)
-                .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_REQUEST_NOT_FOUND));
-
-        // 해당 친구 요청의 receiver가 세션 자기 자신인지 확인
-        if (!friendRequest.getReceiver().getId().equals(memberId)) {
-            throw new FriendException(FriendErrorCode.FRIEND_REQUEST_FORBIDDEN);
-        }
-
+        FriendRequest friendRequest = getValidatedFriendRequest(memberId, friendRequestId);
+        // 수락 시 친구 객체 생성
         saveFriend(friendRequest);
+    }
+
+    @Override
+    public void rejectRequest(Long memberId, Long friendRequestId) {
+        // 친구 요청 객체 찾기
+        FriendRequest friendRequest = getValidatedFriendRequest(memberId, friendRequestId);
+
+        // 거절시 완전 삭제
+        friendRequestRepository.delete(friendRequest);
     }
 
     private Member getRequestTarget(Long memberId, String email) {
@@ -119,5 +121,17 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         }
         // 저장 완료 후 요청 정보 삭제
         friendRequestRepository.delete(friendRequest);
+    }
+
+    private FriendRequest getValidatedFriendRequest(Long memberId, Long friendRequestId) {
+        // 친구 요청 객체 찾기
+        FriendRequest friendRequest = friendRequestRepository.findById(friendRequestId)
+                .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_REQUEST_NOT_FOUND));
+
+        // 해당 친구 요청의 receiver가 세션 자기 자신인지 확인
+        if (!friendRequest.getReceiver().getId().equals(memberId)) {
+            throw new FriendException(FriendErrorCode.FRIEND_REQUEST_FORBIDDEN);
+        }
+        return friendRequest;
     }
 }
