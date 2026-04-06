@@ -36,17 +36,17 @@ public class FriendCommandServiceImpl implements FriendCommandService{
     public void sendRequest(Long memberId, FriendReqDTO.SendRequestReq reqDTO) {
 
         // 요청자 객체
-        Member requester = memberRepository.findById(memberId)
+        Member me = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // memberId : 요청자, reqDTO.email() : 피요청자
         // 피요청자 객체
         // 이미 친구이거나, 친구 요청을 보낸 상태라면 409 반환
-        Member requestTarget = getRequestTarget(memberId, reqDTO.email());
+        Member opponent = getOpponent(memberId, reqDTO.email());
 
         // 만약 피요청자가 요청자에게 친구 요청 조회
         FriendRequest reversedFriendRequest =
-                friendRequestRepository.findBySenderIdAndReceiverId(requestTarget.getId(), memberId)
+                friendRequestRepository.findBySenderIdAndReceiverId(opponent.getId(), memberId)
                         .orElse(null);
 
         // 만약 피요청자가 요청자에게 친구 요청을 보냈다면
@@ -57,7 +57,7 @@ public class FriendCommandServiceImpl implements FriendCommandService{
 
         // 피요청자가 요청자에게 친구 요청을 보내지 않았다면
         // 요청 객체 생성
-        FriendRequest friendRequest = FriendRequestConverter.toFriendRequest(requester, requestTarget);
+        FriendRequest friendRequest = FriendRequestConverter.toFriendRequest(me, opponent);
         // 저장
         try {
             friendRequestRepository.save(friendRequest);
@@ -83,24 +83,44 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         friendRequestRepository.delete(friendRequest);
     }
 
-    private Member getRequestTarget(Long memberId, String email) {
+    @Override
+    public void deleteFriend(Long memberId, Long friendId) {
+        // 내가 가진 나 -> 친구 (일방향 친구 객체)
+        Friend friend = friendRepository.findById(friendId)
+                .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_NOT_FOUND));
+        // 소유권 검사
+        if (!friend.getMember().getId().equals(memberId)) {
+            throw new FriendException(FriendErrorCode.FRIEND_FORBIDDEN);
+        }
+        // 친구 객체
+        Member opponent = friend.getOpponent();
+        // 쌍방향 친구 조회
+        Friend opponentFriend = friendRepository.findByMemberIdAndOpponentId(opponent.getId(), memberId)
+                .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_NOT_FOUND));
+
+        // 쌍방향 친구 삭제
+        friendRepository.delete(opponentFriend);
+        friendRepository.delete(friend);
+    }
+
+    private Member getOpponent(Long memberId, String email) {
         // 관리자가 아닌 유저이면서, 자기 자신이 아닌 피요청자 객체 검색
-        Member requestTarget = memberRepository.findByEmailAndRoleAndIdNot(email, Role.ROLE_USER, memberId)
+        Member opponent = memberRepository.findByEmailAndRoleAndIdNot(email, Role.ROLE_USER, memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 이미 친구인 경우
-        boolean alreadyFriend = friendRepository.existsByMemberIdAndFriendId(memberId, requestTarget.getId());
+        boolean alreadyFriend = friendRepository.existsByMemberIdAndOpponentId(memberId, opponent.getId());
         if (alreadyFriend) {
             throw new FriendException(FriendErrorCode.ALREADY_FRIEND);
         }
 
         // 이미 친구 요청이 보내진 경우
-        boolean alreadyRequested = friendRequestRepository.existsBySenderIdAndReceiverId(memberId, requestTarget.getId());
+        boolean alreadyRequested = friendRequestRepository.existsBySenderIdAndReceiverId(memberId, opponent.getId());
         if (alreadyRequested) {
             throw new FriendException(FriendErrorCode.ALREADY_REQUESTED);
         }
 
-        return requestTarget;
+        return opponent;
     }
 
     private void saveFriend(FriendRequest friendRequest) {

@@ -9,4 +9,6 @@ public interface FriendCommandService {
     void acceptRequest(Long memberId, Long friendRequestId);
 
     void rejectRequest(Long memberId, Long friendRequestId);
+
+    void deleteFriend(Long memberId, Long friendId);
 }

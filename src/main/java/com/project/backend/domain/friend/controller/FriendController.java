@@ -69,4 +69,13 @@ public class FriendController {
         friendCommandService.rejectRequest(customUserDetails.getId(), requestId);
         return CustomResponse.onSuccess("친구 요청 거절 완료", null);
     }
+
+    @DeleteMapping("/{friendId}")
+    public CustomResponse<String> deleteFriend(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long friendId
+    ) {
+        friendCommandService.deleteFriend(customUserDetails.getId(), friendId);
+        return CustomResponse.onSuccess("친구 삭제 완료", null);
+    }
 }
