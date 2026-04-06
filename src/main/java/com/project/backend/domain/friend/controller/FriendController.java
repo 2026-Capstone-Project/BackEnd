@@ -8,6 +8,7 @@ import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +50,7 @@ public class FriendController {
             @RequestBody @Valid FriendReqDTO.SendRequestReq reqDTO
     ) {
         friendCommandService.sendRequest(customUserDetails.getId(), reqDTO);
-        return CustomResponse.onSuccess("친구 요청 완료", null);
+        return CustomResponse.onSuccess(HttpStatus.CREATED, "친구 요청 완료", null);
     }
 
     @PostMapping("/reqeusts/{requestId}/accept")
@@ -76,6 +77,6 @@ public class FriendController {
             @PathVariable Long friendId
     ) {
         friendCommandService.deleteFriend(customUserDetails.getId(), friendId);
-        return CustomResponse.onSuccess("친구 삭제 완료", null);
+        return CustomResponse.onSuccess(HttpStatus.NO_CONTENT, "친구 삭제 완료", null);
     }
 }
