@@ -19,4 +19,6 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     // memberId와 OpponentId로 친구 찾기
     Optional<Friend> findByMemberIdAndOpponentId(Long memberId, Long friendId);
 
+    // memberId와 OpponentId로 친구 여부 카운트
+    long countByMemberIdAndOpponentIdIn(Long memberId, List<Long> participantIds);
 }

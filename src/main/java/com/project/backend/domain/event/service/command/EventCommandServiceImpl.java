@@ -17,6 +17,7 @@ import com.project.backend.domain.event.repository.*;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.service.ScheduleVectorSyncService;
+import com.project.backend.domain.event.validator.EventParticipantValidator;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.event.validator.RecurrenceGroupValidator;
 import com.project.backend.domain.member.entity.Member;
@@ -60,6 +61,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceExceptionRepository recurrenceExRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
+    private final EventParticipantValidator eventParticipantValidator;
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
@@ -68,11 +70,13 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
     private final ScheduleVectorSyncService scheduleVectorSyncService;
+    private final EventParticipantRepository eventParticipantRepository;
 
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
         eventValidator.validateCreate(req);
+        eventParticipantValidator.validate(memberId, req.participantIds());
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -89,6 +93,9 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         EventSpec eventSpec = EventConverter.from(req, req.startTime(), req.endTime());
         Event event = createEvent(eventSpec, member, recurrenceGroup);
+
+        // 일정 참여자 객체 생성
+        createEventParticipants(event, req.participantIds());
 
         // 이벤트 생성에 따른 리스너 생성 로직 실행
         reminderEventBridge.handlePlanChanged(
@@ -909,5 +916,23 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
         scheduleVectorSyncService.syncOnUpdate(event);
+    }
+
+    private void createEventParticipants(Event event, List<Long> participantIds) {
+        if (participantIds == null || participantIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> distinctParticipantIds = participantIds.stream()
+                .distinct()
+                .toList();
+
+        List<Member> participants = memberRepository.findAllById(distinctParticipantIds);
+
+        List<EventParticipant> eventParticipants = participants.stream()
+                .map(participant -> EventParticipantConverter.toEventParticipant(event, participant))
+                .toList();
+
+        eventParticipantRepository.saveAll(eventParticipants);
     }
 }

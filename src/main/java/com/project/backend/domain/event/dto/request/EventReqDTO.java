@@ -10,6 +10,7 @@ import lombok.Builder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class EventReqDTO {
 
@@ -27,6 +28,8 @@ public class EventReqDTO {
 
             EventColor color,
             Boolean isAllDay,
+
+            List<Long> participantIds,
 
             @Schema(
                     description = "반복 일정 설정 (반복 미사용 시 아예 보내지 않음)",

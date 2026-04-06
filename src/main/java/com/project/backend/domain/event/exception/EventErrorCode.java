@@ -27,8 +27,11 @@ public enum EventErrorCode implements BaseErrorCode {
     NOT_RECURRING_EVENT(HttpStatus.BAD_REQUEST, "EVENT400_9", "단일 일정입니다."),
     THIS_AND_FOLLOWING_EVENTS_ONLY
             (HttpStatus.BAD_REQUEST, "EVENT400_10",
-                    "반복 필드 수정, 단일 일정 -> 반복 일정으로 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다.")
+                    "반복 필드 수정, 단일 일정 -> 반복 일정으로 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다."),
+    EVENT_INVITEE_NOT_FRIEND(HttpStatus.NOT_FOUND, "EVENT404_5", "주최자와 친구사이가 아닙니다."),
+    EVENT_SELF_INVITE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "EVENT400_11", "자기자신은 초대할 수 없습니다.")
     ;
+
 
 
     private final HttpStatus httpStatus;
