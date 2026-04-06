@@ -25,6 +25,9 @@ public class EventParticipant extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+
     @Column(name = "invite_status", nullable = false)
     @Enumerated(EnumType.STRING)
     private InviteStatus status;
@@ -36,6 +39,4 @@ public class EventParticipant extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
-
-
 }

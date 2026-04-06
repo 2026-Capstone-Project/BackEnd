@@ -13,8 +13,9 @@ import java.util.List;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class EventParticipantConverter {
 
-    public static EventParticipant toEventParticipant(Event event, Member member) {
+    public static EventParticipant toEventParticipant(Event event, Member member, Long ownerId) {
         return EventParticipant.builder()
+                .ownerId(ownerId)
                 .status(InviteStatus.PENDING)
                 .event(event)
                 .member(member)

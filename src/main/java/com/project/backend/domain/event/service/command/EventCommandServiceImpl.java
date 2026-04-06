@@ -930,7 +930,8 @@ public class EventCommandServiceImpl implements EventCommandService {
         List<Member> participants = memberRepository.findAllById(distinctParticipantIds);
 
         List<EventParticipant> eventParticipants = participants.stream()
-                .map(participant -> EventParticipantConverter.toEventParticipant(event, participant))
+                .map(participant ->
+                        EventParticipantConverter.toEventParticipant(event, participant, event.getMember().getId()))
                 .toList();
 
         eventParticipantRepository.saveAll(eventParticipants);
