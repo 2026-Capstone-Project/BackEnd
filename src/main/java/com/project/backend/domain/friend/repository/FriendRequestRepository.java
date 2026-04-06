@@ -4,6 +4,7 @@ import com.project.backend.domain.friend.entity.FriendRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +15,7 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, Lo
 
     // 친구 요청 객체 조회
     Optional<FriendRequest> findBySenderIdAndReceiverId(Long memberId, Long friendId);
+
+    // senderId로 객체 조회
+    List<FriendRequest> findBySenderId(Long memberId);
 }
