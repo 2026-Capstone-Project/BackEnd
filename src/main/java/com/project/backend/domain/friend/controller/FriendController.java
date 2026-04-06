@@ -43,4 +43,13 @@ public class FriendController {
         friendCommandService.sendRequest(customUserDetails.getId(), reqDTO);
         return CustomResponse.onSuccess("친구 요청 완료", null);
     }
+
+    @PostMapping("/reqeusts/{requestId}/accept")
+    public CustomResponse<String> acceptFriendRequest(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long requestId
+    ) {
+        friendCommandService.acceptRequest(customUserDetails.getId(), requestId);
+        return CustomResponse.onSuccess("친구 요청 수락 완료", null);
+    }
 }

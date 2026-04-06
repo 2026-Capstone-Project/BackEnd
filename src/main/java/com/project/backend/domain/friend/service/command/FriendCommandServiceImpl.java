@@ -51,19 +51,7 @@ public class FriendCommandServiceImpl implements FriendCommandService{
 
         // 만약 피요청자가 요청자에게 친구 요청을 보냈다면
         if (reversedFriendRequest != null) {
-            // 쌍방향 저장을 위한 친구 객체 생성
-            List<Friend> friendships = List.of(
-                    FriendConverter.toFriend(requester, requestTarget),
-                    FriendConverter.toFriend(requestTarget, requester)
-            );
-            // 저장
-            try {
-                friendRepository.saveAll(friendships);
-            } catch (DataIntegrityViolationException e) {
-                throw new FriendException(FriendErrorCode.FRIEND_SAVE_CONFLICT);
-            }
-            // 저장 완료 후 요청 정보 삭제
-            friendRequestRepository.delete(reversedFriendRequest);
+            saveFriend(reversedFriendRequest);
             return;
         }
 
@@ -76,6 +64,21 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         } catch (DataIntegrityViolationException e) {
             throw new FriendException(FriendErrorCode.FRIEND_REQUEST_SAVE_CONFLICT);
         }
+    }
+
+    @Override
+    public void acceptRequest(Long memberId, Long friendRequestId) {
+
+        // 친구 요청 객체 찾기
+        FriendRequest friendRequest = friendRequestRepository.findById(friendRequestId)
+                .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_REQUEST_NOT_FOUND));
+
+        // 해당 친구 요청의 receiver가 세션 자기 자신인지 확인
+        if (!friendRequest.getReceiver().getId().equals(memberId)) {
+            throw new FriendException(FriendErrorCode.FRIEND_REQUEST_FORBIDDEN);
+        }
+
+        saveFriend(friendRequest);
     }
 
     private Member getRequestTarget(Long memberId, String email) {
@@ -96,5 +99,25 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         }
 
         return requestTarget;
+    }
+
+    private void saveFriend(FriendRequest friendRequest) {
+
+        Member sender = friendRequest.getSender();
+        Member receiver = friendRequest.getReceiver();
+
+        // 쌍방향 저장을 위한 친구 객체 생성
+        List<Friend> friendships = List.of(
+                FriendConverter.toFriend(sender, receiver),
+                FriendConverter.toFriend(receiver, sender)
+        );
+        // 저장
+        try {
+            friendRepository.saveAll(friendships);
+        } catch (DataIntegrityViolationException e) {
+            throw new FriendException(FriendErrorCode.FRIEND_SAVE_CONFLICT);
+        }
+        // 저장 완료 후 요청 정보 삭제
+        friendRequestRepository.delete(friendRequest);
     }
 }
