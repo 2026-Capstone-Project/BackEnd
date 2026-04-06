@@ -53,7 +53,7 @@ public class FriendController {
         return CustomResponse.onSuccess(HttpStatus.CREATED, "친구 요청 완료", null);
     }
 
-    @PostMapping("/friend-reqeusts/{friendRequestId}/accept")
+    @PostMapping("/friend-requests/{friendRequestId}/accept")
     public CustomResponse<String> acceptFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long friendRequestId
@@ -62,7 +62,7 @@ public class FriendController {
         return CustomResponse.onSuccess("친구 요청 수락 완료", null);
     }
 
-    @PostMapping("/friend-reqeusts/{friendRequestId}/reject")
+    @PostMapping("/friend-requests/{friendRequestId}/reject")
     public CustomResponse<String> rejectFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long friendRequestId
