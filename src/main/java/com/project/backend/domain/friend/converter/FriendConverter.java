@@ -13,15 +13,15 @@ public class FriendConverter {
     public static Friend toFriend(Member member, Member friend) {
         return Friend.builder()
                 .member(member)
-                .friend(friend)
+                .opponent(friend)
                 .build();
     }
 
     public static FriendResDTO.FriendDetailRes toFriendDetailRes(Friend friend) {
         return FriendResDTO.FriendDetailRes.builder()
                 .id(friend.getId())
-                .opponentName(friend.getFriend().getNickname())
-                .opponentEmail(friend.getFriend().getEmail())
+                .opponentName(friend.getOpponent().getNickname())
+                .opponentEmail(friend.getOpponent().getEmail())
                 .build();
     }
 
