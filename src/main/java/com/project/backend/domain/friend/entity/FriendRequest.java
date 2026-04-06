@@ -1,6 +1,5 @@
 package com.project.backend.domain.friend.entity;
 
-import com.project.backend.domain.friend.enums.FriendRequestStatus;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -26,8 +25,4 @@ public class FriendRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receiver_id", nullable = false)
     private Member receiver;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private FriendRequestStatus status;
 }
