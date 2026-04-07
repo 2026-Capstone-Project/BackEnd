@@ -2,11 +2,13 @@ package com.project.backend.domain.event.repository;
 
 import com.project.backend.domain.event.dto.EventParticipantCountProjection;
 import com.project.backend.domain.event.entity.EventParticipant;
+import com.project.backend.domain.event.enums.InviteStatus;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, Long> {
 
@@ -25,4 +27,6 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     """)
     List<EventParticipantCountProjection> countParticipantsByEventIds(@Param("eventIds") List<Long> eventIds);
 
+    // 상태가 PENDING이면서, participantId로 조회
+    Optional<EventParticipant> findByIdAndStatus(Long eventParticipantId, InviteStatus inviteStatus);
 }

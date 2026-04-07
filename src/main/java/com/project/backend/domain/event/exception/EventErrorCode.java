@@ -30,7 +30,10 @@ public enum EventErrorCode implements BaseErrorCode {
                     "반복 필드 수정, 단일 일정 -> 반복 일정으로 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다."),
     EVENT_INVITEE_NOT_FRIEND(HttpStatus.NOT_FOUND, "EVENT404_5", "주최자와 친구사이가 아닙니다."),
     EVENT_SELF_INVITE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "EVENT400_11", "자기자신은 초대할 수 없습니다."),
-    INVALID_PARTICIPANT_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "EVENT400_12", "ThisEvent일 때는 공유 불가.")
+    INVALID_PARTICIPANT_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "EVENT400_12", "ThisEvent일 때는 공유 불가."),
+
+    EVENT_INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "EVENT404_6", "해당 일정 공유 초대가 존재하지 않습니다."),
+    EVENT_INVITATION_FORBIDDEN(HttpStatus.FORBIDDEN, "EVENT403_1", "해다 일정 공유 초대에 대한 권한이 없습니다"),
     ;
 
 
