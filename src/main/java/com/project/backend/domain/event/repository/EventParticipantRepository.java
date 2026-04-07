@@ -5,6 +5,7 @@ import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.enums.InviteStatus;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -39,6 +40,10 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
 
     // 상태가 PENDING이면서, participantId로 조회
     Optional<EventParticipant> findByIdAndStatus(Long eventParticipantId, InviteStatus inviteStatus);
+
+    @Modifying
+    @Query("delete from EventParticipant ep where ep.event.id = :eventId")
+    void deleteAllByEventId(Long eventId);
 
     // 멤버 아이디와 이벤트 아이디로 객체 조회
     Optional<EventParticipant> findByMemberIdAndEventId(Long memberId, Long eventId);
