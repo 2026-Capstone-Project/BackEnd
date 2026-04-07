@@ -48,12 +48,20 @@ public class FriendQueryServiceImpl implements FriendQueryService{
     public FriendResDTO.FriendListRes getFriend(Long memberId) {
         // 모든 친구 조회
         List<Friend> friendList = friendRepository.findByMemberId(memberId);
-        // List<Friend> -> List<FriendDetailRes>
-        List<FriendResDTO.FriendDetailRes> detailResList = friendList.stream()
-                .map(FriendConverter::toFriendDetailRes)
-                .toList();
+        // List<Friend> -> FriendListRes
+        return getFriendListRes(friendList);
+    }
 
-        return FriendConverter.toFriendList(detailResList);
+    @Override
+    public FriendResDTO.FriendListRes searchFriend(Long memberId, String keyword) {
+        // 키워드가 없는 경우에는 일반 조회 반환
+        if (keyword == null || keyword.isBlank()) {
+            return getFriend(memberId);
+        }
+        // 내 친구 중에서 검색한 keyword를 포함한 이름을 갖는 친구 조회
+        List<Friend> searchedFriendList = friendRepository.findByMemberIdAndKeyword(memberId, keyword);
+        // List<Friend> -> FriendListRes
+        return getFriendListRes(searchedFriendList);
     }
 
     // id로 멤버 객체를 조회
@@ -78,5 +86,13 @@ public class FriendQueryServiceImpl implements FriendQueryService{
                 .toList();
 
         return FriendRequestConverter.toFriendRequestList(detailResList);
+    }
+
+    private FriendResDTO.FriendListRes getFriendListRes(List<Friend> searchedFriendList) {
+        List<FriendResDTO.FriendDetailRes> detailResList = searchedFriendList.stream()
+                .map(FriendConverter::toFriendDetailRes)
+                .toList();
+
+        return FriendConverter.toFriendList(detailResList);
     }
 }

@@ -47,6 +47,15 @@ public class FriendController implements FriendDocs{
         return CustomResponse.onSuccess("친구 목록 조회 완료", resDTO);
     }
 
+    @GetMapping("/friends/search")
+    public CustomResponse<FriendResDTO.FriendListRes> searchFriend(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam(required = false) String keyword
+    ) {
+        FriendResDTO.FriendListRes resDTO = friendQueryService.searchFriend(customUserDetails.getId(), keyword);
+        return CustomResponse.onSuccess("친구 검색 완료", resDTO);
+    }
+
     @Override
     @PostMapping("/friend-requests")
     public CustomResponse<String> sendRequest(
