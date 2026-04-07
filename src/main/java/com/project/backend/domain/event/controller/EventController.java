@@ -94,4 +94,13 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("삭제 완료", null);
     }
 
+    @DeleteMapping("/{eventId}/participants")
+    public CustomResponse<Void> deleteEventParticipants(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId
+    ) {
+        eventCommandService.deleteEventParticipants(eventId, customUserDetails.getId());
+        return CustomResponse.onSuccess("삭제 완료", null);
+    }
+
 }
