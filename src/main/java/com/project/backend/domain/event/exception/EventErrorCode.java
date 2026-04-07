@@ -33,7 +33,7 @@ public enum EventErrorCode implements BaseErrorCode {
     INVALID_PARTICIPANT_UPDATE_SCOPE(HttpStatus.BAD_REQUEST, "EVENT400_12", "ThisEvent일 때는 공유 불가."),
 
     EVENT_INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "EVENT404_6", "해당 일정 공유 초대가 존재하지 않습니다."),
-    EVENT_INVITATION_FORBIDDEN(HttpStatus.FORBIDDEN, "EVENT403_1", "해다 일정 공유 초대에 대한 권한이 없습니다"),
+    EVENT_INVITATION_FORBIDDEN(HttpStatus.FORBIDDEN, "EVENT403_1", "해당 일정 공유 초대에 대한 권한이 없습니다"),
 
     EVENT_OWNER_CANNOT_LEAVE(HttpStatus.FORBIDDEN, "EVENT403_2", "이벤트 소유자는 이벤트를 떠날 수 없습니다"),
     ;
