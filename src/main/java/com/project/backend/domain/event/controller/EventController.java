@@ -25,7 +25,6 @@ public class EventController implements EventDocs {
 
     private final EventCommandService eventCommandService;
     private final EventQueryService eventQueryService;
-    private final EventParticipantCommandService eventParticipantCommandService;
 
     @PostMapping("")
     @Override
