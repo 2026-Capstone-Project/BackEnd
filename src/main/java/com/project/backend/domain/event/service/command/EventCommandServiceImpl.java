@@ -988,7 +988,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         List<EventParticipant> participants = members.stream()
                 .map(member -> EventParticipantConverter.toEventParticipant(
-                        event, member, event.getMember().getId()
+                        event, member, event.getMember()
                 ))
                 .toList();
 
