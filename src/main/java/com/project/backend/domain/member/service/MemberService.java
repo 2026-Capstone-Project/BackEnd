@@ -12,6 +12,7 @@ import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
 import com.project.backend.domain.member.repository.MemberRepository;
+import com.project.backend.domain.reminder.repository.ReminderRepository;
 import com.project.backend.domain.setting.repository.SettingRepository;
 import com.project.backend.domain.suggestion.repository.SuggestionRepository;
 import com.project.backend.domain.todo.repository.TodoRecurrenceExceptionRepository;
@@ -46,6 +47,7 @@ public class MemberService {
     private final SettingRepository settingRepository;
     private final FriendRepository friendRepository;
     private final FriendRequestRepository friendRequestRepository;
+    private final ReminderRepository reminderRepository;
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -97,6 +99,8 @@ public class MemberService {
         // 친구 관련 정보 삭제 (친구 + 친구 요청)
         friendRepository.deleteAllByMemberId(memberId);
         friendRequestRepository.deleteAllByMemberId(memberId);
+        // 리마인더 관련 정보 삭제
+        reminderRepository.deleteAllByMemberId(memberId);
 
         // 4. Member Soft Delete
         member.delete();
