@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "친구 API", description = "친구 요청 및 친구 관계 관리 API")
 public interface FriendDocs {
@@ -83,7 +84,7 @@ public interface FriendDocs {
     @Operation(
             summary = "친구 요청 전송",
             description = """
-                    이메일로 다른 사용자에게 친구 요청을 전송합니다.
+                    이름과 이메일로 다른 사용자에게 친구 요청을 전송합니다.
 
                     - 이미 친구인 경우 409를 반환합니다.
                     - 이미 친구 요청을 보낸 경우 409를 반환합니다.
@@ -398,5 +399,28 @@ public interface FriendDocs {
                     required = true
             )
             @PathVariable Long friendId
+    );
+
+    @Operation(
+            summary = "친구 검색",
+            description = "인증된 사용자의 친구 목록에서 keyword를 기준으로 친구를 검색합니다. keyword가 없으면 전체 친구 목록을 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "친구 검색 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CustomResponse.class)
+                    )
+            )
+    })
+    CustomResponse<FriendResDTO.FriendListRes> searchFriend(
+            @AuthenticationPrincipal
+            @Parameter(hidden = true)
+            CustomUserDetails customUserDetails,
+
+            @RequestParam(required = false)
+            String keyword
     );
 }
