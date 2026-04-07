@@ -3,6 +3,7 @@ package com.project.backend.domain.friend.repository;
 import com.project.backend.domain.friend.entity.Friend;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -38,5 +39,14 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     List<Friend> findByMemberIdAndKeyword(
             @Param("memberId") Long memberId,
             @Param("keyword") String keyword
+    );
+
+    // 회원 탈퇴 시 모든 친구 관련 정보 삭제
+    @Modifying
+    @Query("DELETE " +
+            "FROM Friend f " +
+            "WHERE f.member.id = :memberId OR f.opponent.id = :memberId")
+    void deleteAllByMemberId(
+            @Param("memberId") Long memberId
     );
 }
