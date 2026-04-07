@@ -85,7 +85,7 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("수정 완료", null);
     }
 
-    @PostMapping("/{eventId}/participants/leave")
+    @DeleteMapping("/{eventId}/participants/leave")
     public CustomResponse<String> leaveSharedEvent(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId
