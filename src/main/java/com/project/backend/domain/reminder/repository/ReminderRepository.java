@@ -93,4 +93,8 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     Optional<Reminder> findByRecurrenceExceptionIdAndTargetType(Long id, TargetType type);
 
     void deleteByTargetIdAndTargetType(Long targetId, TargetType type);
+
+    @Modifying
+    @Query("DELETE FROM Reminder r WHERE r.member.id = :memberId")
+    void deleteAllByMemberId(Long memberId);
 }

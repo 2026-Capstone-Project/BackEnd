@@ -9,4 +9,6 @@ public interface FriendQueryService {
     FriendResDTO.FriendRequestListRes getReceivedFriendRequest(Long memberId);
 
     FriendResDTO.FriendListRes getFriend(Long memberId);
+
+    FriendResDTO.FriendListRes searchFriend(Long memberId, String keyword);
 }

@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class FriendController {
+public class FriendController implements FriendDocs{
 
     private final FriendCommandService friendCommandService;
     private final FriendQueryService friendQueryService;
 
+    @Override
     @GetMapping("/friend-requests/sent")
     public CustomResponse<FriendResDTO.FriendRequestListRes> getSentFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -28,6 +29,7 @@ public class FriendController {
         return CustomResponse.onSuccess("보낸 친구 요청 목록 조회 완료", resDTO);
     }
 
+    @Override
     @GetMapping("/friend-requests/received")
     public CustomResponse<FriendResDTO.FriendRequestListRes> getReceivedFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -36,6 +38,7 @@ public class FriendController {
         return CustomResponse.onSuccess("받은 친구 요청 목록 조회 완료", resDTO);
     }
 
+    @Override
     @GetMapping("/friends")
     public CustomResponse<FriendResDTO.FriendListRes> getFriend(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -44,6 +47,16 @@ public class FriendController {
         return CustomResponse.onSuccess("친구 목록 조회 완료", resDTO);
     }
 
+    @GetMapping("/friends/search")
+    public CustomResponse<FriendResDTO.FriendListRes> searchFriend(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam(required = false) String keyword
+    ) {
+        FriendResDTO.FriendListRes resDTO = friendQueryService.searchFriend(customUserDetails.getId(), keyword);
+        return CustomResponse.onSuccess("친구 검색 완료", resDTO);
+    }
+
+    @Override
     @PostMapping("/friend-requests")
     public CustomResponse<String> sendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -53,7 +66,8 @@ public class FriendController {
         return CustomResponse.onSuccess(HttpStatus.CREATED, "친구 요청 완료", null);
     }
 
-    @PostMapping("/friend-reqeusts/{friendRequestId}/accept")
+    @Override
+    @PostMapping("/friend-requests/{friendRequestId}/accept")
     public CustomResponse<String> acceptFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long friendRequestId
@@ -62,7 +76,8 @@ public class FriendController {
         return CustomResponse.onSuccess("친구 요청 수락 완료", null);
     }
 
-    @PostMapping("/friend-reqeusts/{friendRequestId}/reject")
+    @Override
+    @PostMapping("/friend-requests/{friendRequestId}/reject")
     public CustomResponse<String> rejectFriendRequest(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long friendRequestId
@@ -71,6 +86,7 @@ public class FriendController {
         return CustomResponse.onSuccess("친구 요청 거절 완료", null);
     }
 
+    @Override
     @DeleteMapping("/friends/{friendId}")
     public CustomResponse<String> deleteFriend(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
