@@ -6,5 +6,4 @@ public interface EventParticipantCommandService {
 
     void rejectInvitation(Long memberId, Long eventParticipantId);
 
-    void leaveSharedEvent(Long memberId, Long eventId);
 }

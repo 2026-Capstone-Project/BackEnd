@@ -90,7 +90,7 @@ public class EventController implements EventDocs {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventId
     ) {
-        eventParticipantCommandService.leaveSharedEvent(customUserDetails.getId(), eventId);
+        eventCommandService.leaveSharedEvent(customUserDetails.getId(), eventId);
         return CustomResponse.onSuccess("이벤트 공유 탈퇴 완료", null);
     }
 
