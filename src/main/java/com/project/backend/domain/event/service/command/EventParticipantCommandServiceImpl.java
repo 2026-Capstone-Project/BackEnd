@@ -39,7 +39,7 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
                 eventParticipantRepository.findByIdAndStatus(eventParticipantId, InviteStatus.PENDING)
                         .orElseThrow(() -> new EventException(EventErrorCode.EVENT_INVITATION_NOT_FOUND));
         // 초대 객체 소유권 확인
-        if (!eventParticipant.getId().equals(memberId)) {
+        if (!eventParticipant.getMember().getId().equals(memberId)) {
             throw new EventException(EventErrorCode.EVENT_INVITATION_FORBIDDEN);
         }
         return eventParticipant;
