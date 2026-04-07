@@ -25,7 +25,7 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Query("""
     select f.opponent.id
     from Friend f
-    where f.opponent.id in :friendIds
+    where f.id in :friendIds
       and f.member.id = :memberId
 """)
     List<Long> findOpponentMemberIdsByFriendIdsAndMemberId(@Param("friendIds") List<Long> friendIds,

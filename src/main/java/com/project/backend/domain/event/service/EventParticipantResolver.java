@@ -29,12 +29,10 @@ public class EventParticipantResolver {
                 .distinct()
                 .toList();
 
-        log.info("distinctFriendIds = {}", distinctFriendIds);
         // 입력한 친구 아이디를 바탕으로 해당 친구 memberId를 가져옴
         List<Long> participantIds =
                 friendRepository.findOpponentMemberIdsByFriendIdsAndMemberId(distinctFriendIds, memberId);
 
-        log.info("participantIds = {}", participantIds);
         // 자신의 memberId를 입력한 경우
         if (participantIds.contains(memberId)) {
             throw new EventException(EventErrorCode.EVENT_SELF_INVITE_NOT_ALLOWED);

@@ -19,6 +19,14 @@ public class EventParticipantController {
     public final EventParticipantQueryService eventParticipantQueryService;
     private final EventParticipantCommandService eventParticipantCommandService;
 
+    @GetMapping("/shared-events")
+    public CustomResponse<EventParticipantResDTO.SharedEventsRes> getSharedEvents(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        EventParticipantResDTO.SharedEventsRes resDto =
+                eventParticipantQueryService.getSharedEvents(customUserDetails.getId());
+        return CustomResponse.onSuccess("공유 중인 일정 목록 조회 완료", resDto);
+    }
     @GetMapping("/invitations")
     public CustomResponse<EventParticipantResDTO.InvitationRes> getEventInvitations(
             @AuthenticationPrincipal CustomUserDetails customUserDetails

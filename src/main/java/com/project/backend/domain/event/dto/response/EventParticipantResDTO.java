@@ -24,4 +24,18 @@ public class EventParticipantResDTO {
             String location,
             Long participantCount
     ){}
+
+    @Builder
+    public record SharedEventsRes(
+            List<SharedEventItem> sharedEvents
+    ) {}
+
+    @Builder
+    public record SharedEventItem(
+            Long eventId,
+            String ownerName,
+            String title,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {}
 }

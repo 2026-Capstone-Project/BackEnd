@@ -49,4 +49,22 @@ public class EventParticipantConverter {
                 .build();
     }
 
+    public static EventParticipantResDTO.SharedEventsRes toSharedEventsRes(
+            List<EventParticipantResDTO.SharedEventItem> sharedEvents
+    ) {
+        return  EventParticipantResDTO.SharedEventsRes.builder()
+                .sharedEvents(sharedEvents)
+                .build();
+    }
+
+    public static EventParticipantResDTO.SharedEventItem toSharedEventItem(Event event, String ownerName) {
+        return EventParticipantResDTO.SharedEventItem.builder()
+                .eventId(event.getId())
+                .ownerName(ownerName)
+                .title(event.getTitle())
+                .startDate(event.getStartTime().toLocalDate())
+                .endDate(event.getEndTime().toLocalDate())
+                .build();
+    }
+
 }

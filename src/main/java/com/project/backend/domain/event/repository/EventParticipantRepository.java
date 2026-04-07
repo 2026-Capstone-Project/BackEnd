@@ -17,15 +17,25 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
 
     List<EventParticipant> findAllByEventId(Long eventId);
 
-    List<EventParticipant> findAllByMemberId(Long memberId);
+    @Query("""
+    select ep
+    from EventParticipant ep
+    join fetch ep.event
+    join fetch ep.owner
+    where ep.member.id = :memberId
+      and ep.status = :status
+""")
+    List<EventParticipant> findAllByMemberIdAndStatus(
+            @Param("memberId") Long memberId, @Param("status") InviteStatus status);
 
     @Query("""
         select ep.event.id as eventId, count(ep) as participantCount
         from EventParticipant ep
-        where ep.event.id in :eventIds
+        where ep.event.id in :eventIds and ep.status = :status
         group by ep.event.id
     """)
-    List<EventParticipantCountProjection> countParticipantsByEventIds(@Param("eventIds") List<Long> eventIds);
+    List<EventParticipantCountProjection> countParticipantsByEventIds(
+            @Param("eventIds") List<Long> eventIds, @Param("status") InviteStatus status);
 
     // 상태가 PENDING이면서, participantId로 조회
     Optional<EventParticipant> findByIdAndStatus(Long eventParticipantId, InviteStatus inviteStatus);
