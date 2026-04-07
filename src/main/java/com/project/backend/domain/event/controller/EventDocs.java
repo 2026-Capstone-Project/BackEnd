@@ -44,6 +44,7 @@ public interface EventDocs {
                 - location (String) : 장소
                 - address (String) : location 주소
                 - isAllDay (Boolean) : 종일 여부 (미전송 시 false)
+                - friendIds (List<Long>) : 공유할 member와의 친구 id
                 - color (EventColor) : 색상 (미전송 시 기본값 적용) [BLUE(기본값), GREEN, PINK, PURPLE, GRAY, YELLOW]
                 - recurrenceGroup (RecurrenceGroup) : 반복 설정 (없으면 단일 일정)
                 
@@ -170,7 +171,8 @@ public interface EventDocs {
                                               "location": "회의실 A",
                                               "address": "서울특별시 종로구 홍지문2길 20",
                                               "color": "BLUE",
-                                              "isAllDay": false
+                                              "isAllDay": false,
+                                              "friendIds": []
                                             }
                                             """
                             ),
