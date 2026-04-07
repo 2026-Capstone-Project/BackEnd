@@ -4,6 +4,7 @@ import com.project.backend.domain.event.converter.EventParticipantConverter;
 import com.project.backend.domain.event.dto.EventParticipantCountProjection;
 import com.project.backend.domain.event.dto.response.EventParticipantResDTO;
 import com.project.backend.domain.event.entity.EventParticipant;
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.event.repository.EventParticipantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,9 +25,8 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
 
     @Override
     public EventParticipantResDTO.InvitationRes getInvitations(Long memberId) {
-
         List<EventParticipant> participantList
-                = eventParticipantRepository.findAllByMemberId(memberId);
+                = eventParticipantRepository.findAllByMemberIdAndStatus(memberId, InviteStatus.PENDING);
 
         List<Long> eventIds = participantList.stream()
                 .map(participant -> participant.getEvent().getId())
@@ -35,7 +35,7 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
 
         Map<Long, Long> participantCountMap = eventIds.isEmpty()
                 ? Collections.emptyMap()
-                : eventParticipantRepository.countParticipantsByEventIds(eventIds).stream()
+                : eventParticipantRepository.countParticipantsByEventIds(eventIds, InviteStatus.ACCEPTED).stream()
                 .collect(Collectors.toMap(
                         EventParticipantCountProjection::getEventId,
                         EventParticipantCountProjection::getParticipantCount
@@ -52,4 +52,21 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
 
         return EventParticipantConverter.toInvitationRes(items);
     }
+
+    @Override
+    public EventParticipantResDTO.SharedEventsRes getSharedEvents(Long memberId) {
+        List<EventParticipant> participantList
+                = eventParticipantRepository.findAllByMemberIdAndStatus(memberId, InviteStatus.ACCEPTED);
+
+        List<EventParticipantResDTO.SharedEventItem> items = participantList.stream()
+                .map(participant ->
+                        EventParticipantConverter.toSharedEventItem(
+                                participant.getEvent(), participant.getOwner().getNickname()
+                        ))
+                .toList();
+
+        return EventParticipantConverter.toSharedEventsRes(items);
+    }
+
+
 }
