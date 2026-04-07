@@ -35,6 +35,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findActiveByIdWithAuth(@Param("id") Long id);
 
     // 친구 피요청자의 객체 조회 (역할이 유저이며, 세션 멤버 자기 자신이 아닌)
-    Optional<Member> findByEmailAndRoleAndIdNot(String email, Role role, Long memberId);
+    Optional<Member> findByNicknameAndEmailAndRoleAndIdNot(String name, String email, Role role, Long memberId);
 
 }
