@@ -47,7 +47,7 @@ public class FriendQueryServiceImpl implements FriendQueryService{
     @Override
     public FriendResDTO.FriendListRes getFriend(Long memberId) {
         // 모든 친구 조회
-        List<Friend> friendList = friendRepository.findByMemberId(memberId);
+        List<Friend> friendList = friendRepository.findByMemberIdOrderByOpponent_NicknameAsc(memberId);
         // List<Friend> -> FriendListRes
         return getFriendListRes(friendList);
     }
