@@ -27,7 +27,7 @@ public class EventParticipantController {
         return CustomResponse.onSuccess("일정 참여 초대 목록 조회 완료", resDto);
     }
 
-    @PostMapping("/{eventParticipantId}")
+    @PostMapping("/{eventParticipantId}/acceptance")
     public CustomResponse<String> acceptInvitation(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long eventParticipantId
