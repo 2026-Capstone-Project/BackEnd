@@ -14,11 +14,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/event-participant")
 @RequiredArgsConstructor
-public class EventParticipantController {
+public class EventParticipantController implements EventParticipantDocs{
 
     public final EventParticipantQueryService eventParticipantQueryService;
     private final EventParticipantCommandService eventParticipantCommandService;
 
+    @Override
     @GetMapping("/shared-events")
     public CustomResponse<EventParticipantResDTO.SharedEventsRes> getSharedEvents(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -27,6 +28,8 @@ public class EventParticipantController {
                 eventParticipantQueryService.getSharedEvents(customUserDetails.getId());
         return CustomResponse.onSuccess("공유 중인 일정 목록 조회 완료", resDto);
     }
+
+    @Override
     @GetMapping("/invitations")
     public CustomResponse<EventParticipantResDTO.InvitationRes> getEventInvitations(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
@@ -36,6 +39,7 @@ public class EventParticipantController {
         return CustomResponse.onSuccess("일정 참여 초대 목록 조회 완료", resDto);
     }
 
+    @Override
     @PostMapping("/{eventParticipantId}/acceptance")
     public CustomResponse<String> acceptInvitation(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -45,6 +49,7 @@ public class EventParticipantController {
         return CustomResponse.onSuccess("일정 참여 초대 수락 완료", null);
     }
 
+    @Override
     @PostMapping("/{eventParticipantId}/rejection")
     public CustomResponse<String> rejectInvitation(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
