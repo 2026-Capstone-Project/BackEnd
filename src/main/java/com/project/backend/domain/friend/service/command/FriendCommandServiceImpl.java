@@ -42,7 +42,7 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         // memberId : 요청자, reqDTO.email() : 피요청자
         // 피요청자 객체
         // 이미 친구이거나, 친구 요청을 보낸 상태라면 409 반환
-        Member opponent = getOpponent(memberId, reqDTO.email());
+        Member opponent = getOpponent(memberId, reqDTO.name(), reqDTO.email());
 
         // 만약 피요청자가 요청자에게 친구 요청 조회
         FriendRequest reversedFriendRequest =
@@ -103,10 +103,11 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         friendRepository.delete(friend);
     }
 
-    private Member getOpponent(Long memberId, String email) {
+    private Member getOpponent(Long memberId, String name, String email) {
         // 관리자가 아닌 유저이면서, 자기 자신이 아닌 피요청자 객체 검색
-        Member opponent = memberRepository.findByEmailAndRoleAndIdNot(email, Role.ROLE_USER, memberId)
+        Member opponent = memberRepository.findByNicknameAndEmailAndRoleAndIdNot(name, email, Role.ROLE_USER, memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
 
         // 이미 친구인 경우
         boolean alreadyFriend = friendRepository.existsByMemberIdAndOpponentId(memberId, opponent.getId());

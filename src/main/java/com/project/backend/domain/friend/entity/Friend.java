@@ -11,7 +11,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "friend",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"member_id", "friend_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"member_id", "opponent_id"}))
 public class Friend extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
