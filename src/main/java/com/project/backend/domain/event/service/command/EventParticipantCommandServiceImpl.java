@@ -7,6 +7,7 @@ import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventParticipantRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,6 +19,21 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
 
     @Override
     public void acceptInvitation(Long memberId, Long eventParticipantId) {
+        EventParticipant eventParticipant = getEventParticipant(memberId, eventParticipantId);
+
+        eventParticipant.accept();
+    }
+
+    @Override
+    public void rejectInvitation(Long memberId, Long eventParticipantId) {
+        // 이벤트 공유 초대 객체 조회 (status = PENDING)
+        EventParticipant eventParticipant = getEventParticipant(memberId, eventParticipantId);
+
+        eventParticipantRepository.delete(eventParticipant);
+    }
+
+    // EventParticipant 객체 검증 후 반환
+    private EventParticipant getEventParticipant(Long memberId, Long eventParticipantId) {
         // 이벤트 공유 초대 객체 조회 (status = PENDING)
         EventParticipant eventParticipant =
                 eventParticipantRepository.findByIdAndStatus(eventParticipantId, InviteStatus.PENDING)
@@ -26,7 +42,6 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
         if (!eventParticipant.getId().equals(memberId)) {
             throw new EventException(EventErrorCode.EVENT_INVITATION_FORBIDDEN);
         }
-
-        eventParticipant.accept();
+        return eventParticipant;
     }
 }

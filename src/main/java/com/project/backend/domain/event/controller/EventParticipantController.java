@@ -5,6 +5,7 @@ import com.project.backend.domain.event.service.command.EventCommandService;
 import com.project.backend.domain.event.service.command.EventParticipantCommandService;
 import com.project.backend.domain.event.service.query.EventParticipantQueryService;
 import com.project.backend.global.apiPayload.CustomResponse;
+import com.project.backend.global.security.csrf.repository.CustomCookieCsrfTokenRepository;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,5 +35,14 @@ public class EventParticipantController {
     ) {
         eventParticipantCommandService.acceptInvitation(customUserDetails.getId(), eventParticipantId);
         return CustomResponse.onSuccess("일정 참여 초대 수락 완료", null);
+    }
+
+    @PostMapping("/{eventParticipantId}/rejection")
+    public CustomResponse<String> rejectInvitation(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventParticipantId
+    ) {
+        eventParticipantCommandService.rejectInvitation(customUserDetails.getId(), eventParticipantId);
+        return CustomResponse.onSuccess("일정 참여 초대 거절 완료", null);
     }
 }
