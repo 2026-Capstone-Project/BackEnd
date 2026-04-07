@@ -39,4 +39,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
 
     // 상태가 PENDING이면서, participantId로 조회
     Optional<EventParticipant> findByIdAndStatus(Long eventParticipantId, InviteStatus inviteStatus);
+
+    // 멤버 아이디와 이벤트 아이디로 객체 조회
+    Optional<EventParticipant> findByMemberIdAndEventId(Long memberId, Long eventId);
 }

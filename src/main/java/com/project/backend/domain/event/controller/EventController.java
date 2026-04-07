@@ -4,6 +4,8 @@ import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.service.command.EventCommandService;
+import com.project.backend.domain.event.service.command.EventParticipantCommandService;
+import com.project.backend.domain.event.service.query.EventParticipantQueryService;
 import com.project.backend.domain.event.service.query.EventQueryService;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
@@ -23,6 +25,7 @@ public class EventController implements EventDocs {
 
     private final EventCommandService eventCommandService;
     private final EventQueryService eventQueryService;
+    private final EventParticipantCommandService eventParticipantCommandService;
 
     @PostMapping("")
     @Override
@@ -80,6 +83,15 @@ public class EventController implements EventDocs {
     ){
         eventCommandService.updateEvent(req, eventId, customUserDetails.getId(), scope, occurrenceDate);
         return CustomResponse.onSuccess("수정 완료", null);
+    }
+
+    @PostMapping("/{eventId}/participants/leave")
+    public CustomResponse<String> leaveSharedEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId
+    ) {
+        eventParticipantCommandService.leaveSharedEvent(customUserDetails.getId(), eventId);
+        return CustomResponse.onSuccess("이벤트 공유 탈퇴 완료", null);
     }
 
     @DeleteMapping("/{eventId}")
