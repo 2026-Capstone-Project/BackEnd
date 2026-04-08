@@ -155,18 +155,26 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             return TodoConverter.toTodoInfo(todo);
         }
 
+        // scope null 정규화
+        if (scope == null) {
+            scope = RecurrenceUpdateScope.THIS_TODO;
+        }
+
+        // occurrenceDate 미제공 시 startDate 폴백 (deleteTodo 패턴과 동일)
+        boolean startDateFallback = false;
+        if (occurrenceDate == null) {
+            occurrenceDate = todo.getStartDate();
+            startDateFallback = true;
+            log.debug("반복 할 일 수정: occurrenceDate 미제공 → startDate({}) 폴백", occurrenceDate);
+        }
+
         // 반복 할 일인 경우 occurrenceDate 필수
         if (occurrenceDate == null) {
             throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
         }
 
-        // scope 필수
-        if (scope == null) {
-            throw new TodoException(TodoErrorCode.INVALID_UPDATE_SCOPE);
-        }
-
-        // 유효한 반복 날짜인지 검증
-        if (!todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
+        // 유효한 반복 날짜인지 검증 (startDate 폴백 시 skip)
+        if (!startDateFallback && !todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
             throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 
@@ -260,18 +268,27 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             return;
         }
 
+        // scope null 정규화 — EventCommandServiceImpl 패턴과 동일
+        // chatbot이 반복 여부를 모르고 scope 없이 호출한 경우: THIS_AND_FOLLOWING = 전체 삭제
+        if (scope == null) {
+            scope = RecurrenceUpdateScope.THIS_AND_FOLLOWING;
+        }
+
+        // occurrenceDate 미제공 시 startDate 폴백 (chatbot이 scope만 주고 occurrenceDate를 빠뜨린 경우 포함)
+        boolean startDateFallback = false;
+        if (occurrenceDate == null) {
+            occurrenceDate = todo.getStartDate();
+            startDateFallback = true;
+            log.debug("반복 할 일 삭제: occurrenceDate 미제공 → startDate({}) 폴백", occurrenceDate);
+        }
+
         // 반복 할 일인 경우 occurrenceDate 필수
         if (occurrenceDate == null) {
             throw new TodoException(TodoErrorCode.OCCURRENCE_DATE_REQUIRED);
         }
 
-        // scope 필수
-        if (scope == null) {
-            throw new TodoException(TodoErrorCode.INVALID_UPDATE_SCOPE);
-        }
-
-        // 유효한 반복 날짜인지 검증
-        if (!todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
+        // 유효한 반복 날짜인지 검증 (startDate 폴백 시 skip — DB 원본 레코드이므로 검증 불필요)
+        if (!startDateFallback && !todoQueryService.isValidOccurrenceDate(todoId, occurrenceDate)) {
             throw new TodoException(TodoErrorCode.TODO_NOT_FOUND);
         }
 

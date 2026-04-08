@@ -18,7 +18,7 @@ public class VectorContextBuilder {
     private final QdrantVectorClient qdrantVectorClient;
 
     private static final int SEARCH_LIMIT = 5;
-    private static final double MIN_SCORE = 0.25; // text-embedding-3-small 코사인 유사도 기준, 한국어 의미 검색 최적화
+    private static final double MIN_SCORE = 0.50; // text-embedding-3-small 코사인 유사도 기준, 0.25는 이종 활동 명사 간 노이즈 허용 → 0.5로 상향
 
     public String build(Long memberId, String query) {
         float[] queryVector = embeddingClient.embed(query);
@@ -40,8 +40,16 @@ public class VectorContextBuilder {
             String title = (String) result.payload().get("title");
             String startDate = (String) result.payload().get("startDate");
             String type = (String) result.payload().getOrDefault("type", "EVENT");
+
+            boolean isRecurring = Boolean.TRUE.equals(result.payload().get("isRecurring"));
             String label = "TODO".equals(type) ? "[할 일]" : "[일정]";
-            sb.append(String.format("- %s %s: %s%n", label, startDate, title));
+            String recurringMarker = isRecurring ? " (반복일정)" : "";
+
+            // Qdrant point ID → DB ID 변환 (Todo는 오프셋 제거)
+            long dbId = "TODO".equals(type) ? result.id() - 2_000_000_000L : result.id();
+
+            sb.append(String.format("- %s [ID:%d, TYPE:%s]%s %s: %s%n",
+                    label, dbId, type, recurringMarker, startDate, title));
         }
         return sb.toString().trim();
     }

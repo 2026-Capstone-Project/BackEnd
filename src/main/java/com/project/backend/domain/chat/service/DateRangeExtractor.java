@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.TextStyle;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -55,10 +57,28 @@ public class DateRangeExtractor {
         }
     }
 
+    private static final String[] DAY_LABELS = {"월", "화", "수", "목", "금", "토", "일"};
+
     private String buildSystemPrompt(LocalDate baseDate) {
+        LocalDate thisMonday = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate nextMonday = thisMonday.plusWeeks(1);
+
         return promptTemplate
                 .replace("{current_date}", baseDate.toString())
-                .replace("{day_of_week}", baseDate.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN));
+                .replace("{day_of_week}", baseDate.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.KOREAN))
+                .replace("{this_week}", formatWeekDays(thisMonday, baseDate))
+                .replace("{next_week}", formatWeekDays(nextMonday, baseDate));
+    }
+
+    private String formatWeekDays(LocalDate monday, LocalDate today) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 7; i++) {
+            LocalDate d = monday.plusDays(i);
+            sb.append(d).append("(").append(DAY_LABELS[i]).append(")");
+            if (d.equals(today)) sb.append("←오늘");
+            if (i < 6) sb.append(" ");
+        }
+        return sb.toString();
     }
 
     private Optional<DateRange> parseResponse(String raw) throws Exception {
