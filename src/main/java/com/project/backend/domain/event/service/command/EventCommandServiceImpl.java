@@ -15,10 +15,12 @@ import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.*;
 import com.project.backend.domain.event.service.EventOccurrenceResolver;
+import com.project.backend.domain.event.service.EventParticipantResolver;
 import com.project.backend.domain.event.service.RecurrenceTimeAdjuster;
 import com.project.backend.domain.event.service.ScheduleVectorSyncService;
 import com.project.backend.domain.event.validator.EventValidator;
 import com.project.backend.domain.event.validator.RecurrenceGroupValidator;
+import com.project.backend.domain.friend.repository.FriendRepository;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.member.exception.MemberErrorCode;
 import com.project.backend.domain.member.exception.MemberException;
@@ -43,9 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -60,6 +60,7 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final RecurrenceExceptionRepository recurrenceExRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final EventValidator eventValidator;
+    private final EventParticipantResolver eventParticipantResolver;
     private final RecurrenceGroupValidator rgValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final ReminderEventBridge reminderEventBridge;
@@ -68,17 +69,20 @@ public class EventCommandServiceImpl implements EventCommandService {
     private final SuggestionInvalidationPlanner suggestionInvalidationPlanner;
     private final SuggestionInvalidationDispatcher suggestionInvalidationDispatcher;
     private final ScheduleVectorSyncService scheduleVectorSyncService;
+    private final EventParticipantRepository eventParticipantRepository;
+    private final FriendRepository friendRepository;
 
 
     @Override
     public EventResDTO.CreateRes createEvent(EventReqDTO.CreateReq req, Long memberId) {
         eventValidator.validateCreate(req);
 
+        List<Long> participantIds = eventParticipantResolver.resolveParticipantIds(memberId, req.friendIds());
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         RecurrenceGroup recurrenceGroup = null;
-
         // 반복 일정 생성일 때
         if (req.recurrenceGroup() != null) {
             rgValidator.validateCreate(req.recurrenceGroup(), req.startTime());
@@ -89,6 +93,11 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         EventSpec eventSpec = EventConverter.from(req, req.startTime(), req.endTime());
         Event event = createEvent(eventSpec, member, recurrenceGroup);
+
+        // 일정 참여자 객체 생성
+        if (!participantIds.isEmpty()) {
+            syncEventParticipants(event, participantIds);
+        }
 
         // 이벤트 생성에 따른 리스너 생성 로직 실행
         reminderEventBridge.handlePlanChanged(
@@ -151,11 +160,21 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
+        // 공유하는 일정일 경우에 대한 참여자 목록 생성
+        List<Long> participantIds = null;
+        if (req.friendIds() != null) {
+             participantIds = eventParticipantResolver.resolveParticipantIds(memberId, req.friendIds());
+        }
+
         Member member = event.getMember();
 
         // 단일 일정의 일정 수정인 경우
         if (event.getRecurrenceGroup() == null) {
             handleSingleBaseEventUpdate(req, event, member, startTime, beforeSnapshot);
+            // 일정 참여자 초대 전송
+            if (req.friendIds() != null) {
+                syncEventParticipants(event, participantIds);
+            }
             return;
         }
 
@@ -184,9 +203,18 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 수정범위가 있는 수정일 때
         switch (scope){
-            case THIS_EVENT -> updateThisEventOnly(req, event, member, occurrenceDate);
-            case THIS_AND_FOLLOWING_EVENTS ->
-                    afterBase = updateThisAndFutureEvents(req, event, member, startTime, endTime, occurrenceDate);
+            case THIS_EVENT -> {
+                updateThisEventOnly(req, event, member, occurrenceDate);
+                if (req.friendIds() != null) {
+                    throw new EventException(EventErrorCode.INVALID_PARTICIPANT_UPDATE_SCOPE);
+                }
+            }
+            case THIS_AND_FOLLOWING_EVENTS ->{
+                afterBase = updateThisAndFutureEvents(req, event, member, startTime, endTime, occurrenceDate);
+                if (req.friendIds() != null) {
+                    syncEventParticipants(afterBase, participantIds);
+                }
+            }
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
 
@@ -307,6 +335,32 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
+    }
+
+    @Override
+    public void deleteEventParticipants(Long eventId, Long memberId) {
+        eventRepository.findByIdAndMemberId(eventId, memberId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        eventParticipantRepository.deleteAllByEventId(eventId);
+    }
+
+    @Override
+    public void leaveSharedEvent(Long memberId, Long eventId) {
+        // 이벤트 객체 조회
+        Event ownerEvent  = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+        // 이벤트의 소유주가 탈퇴하려고 할 때
+        if (ownerEvent.getMember().getId().equals(memberId)) {
+            throw new EventException(EventErrorCode.EVENT_OWNER_CANNOT_LEAVE);
+        }
+        // 멤버 아이디와 이벤트 아이디로 객체 조회
+        EventParticipant eventParticipant =
+                eventParticipantRepository.findByMemberIdAndEventId(memberId, eventId)
+                        .orElseThrow(() -> new EventException(EventErrorCode.EVENT_INVITATION_NOT_FOUND));
+
+        // 공유 탈퇴시 바로 연관 관계 삭제
+        eventParticipantRepository.delete(eventParticipant);
     }
 
     // ========================= private method ===============================
@@ -617,7 +671,8 @@ public class EventCommandServiceImpl implements EventCommandService {
                 || req.location() != null
                 || req.address() != null
                 || req.color() != null
-                || req.isAllDay() != null;
+                || req.isAllDay() != null
+                || req.friendIds() != null;
     }
 
     private boolean hasAnyRecurrenceGroupFieldProvided(RecurrenceGroupReqDTO.UpdateReq req) {
@@ -697,6 +752,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (req.address() != null) changed |= !Objects.equals(req.address(), event.getAddress());
         if (req.color() != null) changed |= req.color() != event.getColor();
         if (req.isAllDay() != null) changed |= !Objects.equals(req.isAllDay(), event.getIsAllDay());
+        if (req.friendIds() != null) changed |= !sameParticipants(req.friendIds(), event);
         if (req.startTime() != null) changed |= !start.equals(occurrenceDate);
         if (req.endTime() != null) changed |= !end.equals(occurrenceDate.plusMinutes(event.getDurationMinutes()));
 
@@ -909,5 +965,79 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
         scheduleVectorSyncService.syncOnUpdate(event);
+    }
+
+    private void syncEventParticipants(Event event, List<Long> participantIds) {
+        Set<Long> requestedIds = normalizeParticipantIds(participantIds);
+        List<EventParticipant> savedParticipants = eventParticipantRepository.findAllByEventId(event.getId());
+
+        Set<Long> savedIds = extractSavedIds(savedParticipants);
+
+        List<Long> idsToAdd = findIdsToAdd(requestedIds, savedIds);
+        List<EventParticipant> participantsToDelete = findParticipantsToDelete(savedParticipants, requestedIds);
+
+        addParticipants(event, idsToAdd);
+        deleteParticipants(participantsToDelete);
+    }
+
+    private Set<Long> normalizeParticipantIds(List<Long> participantIds) {
+        if (participantIds == null) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(participantIds);
+    }
+
+    private Set<Long> extractSavedIds(List<EventParticipant> savedParticipants) {
+        return savedParticipants.stream()
+                .map(ep -> ep.getMember().getId())
+                .collect(Collectors.toSet());
+    }
+
+    private List<Long> findIdsToAdd(Set<Long> requestedIds, Set<Long> savedIds) {
+        return requestedIds.stream()
+                .filter(id -> !savedIds.contains(id))
+                .toList();
+    }
+
+    private List<EventParticipant> findParticipantsToDelete(List<EventParticipant> savedParticipants, Set<Long> requestedIds) {
+        return savedParticipants.stream()
+                .filter(ep -> !requestedIds.contains(ep.getMember().getId()))
+                .toList();
+    }
+
+    private void addParticipants(Event event, List<Long> idsToAdd) {
+        if (idsToAdd.isEmpty()) {
+            return;
+        }
+
+        List<Member> members = memberRepository.findAllById(idsToAdd);
+
+        List<EventParticipant> participants = members.stream()
+                .map(member -> EventParticipantConverter.toEventParticipant(
+                        event, member, event.getMember()
+                ))
+                .toList();
+
+        eventParticipantRepository.saveAll(participants);
+    }
+
+    private void deleteParticipants(List<EventParticipant> participantsToDelete) {
+        if (participantsToDelete.isEmpty()) {
+            return;
+        }
+        eventParticipantRepository.deleteAll(participantsToDelete);
+    }
+
+    // 리스트 내 맴버 아이디 값이 동일한지 확인
+    private boolean sameParticipants(List<Long> friendIds, Event event) {
+        //해당 이벤트의 참여자 id 목록
+        List<Long> savedIds = eventParticipantRepository.findMemberIdsByEventId(event.getId());
+        log.info("sameParticipants, savedIds: {}", savedIds);
+        // 해당 friendIds에 대한 opponentId 목록
+        List<Long> memberIdsInFriends =
+                friendRepository.findOpponentMemberIdsByFriendIdsAndMemberId(friendIds, event.getMember().getId());
+
+        log.info("sameParticipants, memberIdsInFriends: {}", memberIdsInFriends);
+        return new HashSet<>(savedIds).equals(new HashSet<>(memberIdsInFriends));
     }
 }
