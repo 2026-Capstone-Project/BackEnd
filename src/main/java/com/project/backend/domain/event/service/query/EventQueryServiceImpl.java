@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.query;
 
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventHistoryConverter;
@@ -53,12 +54,21 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final EventValidator eventValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final EventTitleHistoryRepository eventTitleHistoryRepository;
+    private final EventParticipantRepository eventParticipantRepository;
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
-        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        boolean isOwner = Objects.equals(event.getMember().getId(), memberId);
+
+        boolean isAcceptedParticipant = eventParticipantRepository
+                .existsByEventIdAndMemberIdAndStatus(eventId, memberId, InviteStatus.ACCEPTED);
+
+        if (!isOwner && !isAcceptedParticipant) {
+            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+        }
         eventValidator.validateRead(event, occurrenceDate);
 
         // 찾고자 하는 것이 부모 이벤트인 경우

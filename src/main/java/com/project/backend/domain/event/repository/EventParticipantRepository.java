@@ -47,4 +47,6 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
 
     // 멤버 아이디와 이벤트 아이디로 객체 조회
     Optional<EventParticipant> findByMemberIdAndEventId(Long memberId, Long eventId);
+
+    boolean existsByEventIdAndMemberIdAndStatus(Long eventId, Long memberId, InviteStatus status);
 }
