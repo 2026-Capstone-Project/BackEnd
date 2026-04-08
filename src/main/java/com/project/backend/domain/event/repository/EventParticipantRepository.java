@@ -1,13 +1,17 @@
 package com.project.backend.domain.event.repository;
 
 import com.project.backend.domain.event.dto.EventParticipantCountProjection;
+import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.EventParticipant;
+import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.InviteStatus;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,4 +53,26 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     Optional<EventParticipant> findByMemberIdAndEventId(Long memberId, Long eventId);
 
     boolean existsByEventIdAndMemberIdAndStatus(Long eventId, Long memberId, InviteStatus status);
+
+    // 시작과 종료 범위를 만족하는 내가 공유 받은 반복하지 않는 이벤트를 검색
+    @Query("SELECT DISTINCT e " +
+            "FROM EventParticipant ep " +
+            "JOIN ep.event e " +
+            "WHERE ep.member.id = :memberId " +
+            "AND ep.status = :status " +
+            "AND e.recurrenceGroup IS NULL " +
+            "AND e.startTime <= :endRange " +
+            "AND e.endTime >= :startRange ")
+    List<Event> findByMemberIdAndOverlappingRange(Long memberId, LocalDateTime startRange, LocalDateTime endRange, InviteStatus status);
+
+    // 그룹의 모객체가 종료기간 전에 있는 공유 받은 반복하는 이벤트 검색
+    @Query("SELECT DISTINCT rg " +
+            "FROM EventParticipant ep " +
+            "JOIN ep.event e " +
+            "JOIN e.recurrenceGroup rg " +
+            "WHERE ep.member.id = :memberId " +
+            "AND ep.status = :status  " +
+            "AND (rg.endDate IS NULL OR rg.endDate >= :startDate)"
+    )
+    List<RecurrenceGroup> findSharedActiveRecurrenceGroups(Long memberId, LocalDate startDate, InviteStatus status);
 }
