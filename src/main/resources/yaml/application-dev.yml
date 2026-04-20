@@ -27,7 +27,7 @@ spring:
     host: ${QDRANT_HOST}
     port: 6333
     collection: calio_schedules
-    vector-size: 1536
+    vector-size: 4096
 
   jwt:
     secret: ${JWT_SECRET_KEY} # JWT 시크릿 키
@@ -70,3 +70,5 @@ spring:
   scheduler:
     suggestion:
       enabled: ${SUGGESTION_SCHEDULER_ENABLE:true}
+
+  embedding-api-key: ${UPSTAGE_EMBEDDING_API_KEY}
