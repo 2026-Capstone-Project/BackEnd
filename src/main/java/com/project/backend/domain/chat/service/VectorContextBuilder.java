@@ -18,7 +18,7 @@ public class VectorContextBuilder {
     private final QdrantVectorClient qdrantVectorClient;
 
     private static final int SEARCH_LIMIT = 5;
-    private static final double MIN_SCORE = 0.50; // text-embedding-3-small 코사인 유사도 기준, 0.25는 이종 활동 명사 간 노이즈 허용 → 0.5로 상향
+    private static final double MIN_SCORE = 0.60; // solar-embedding-1-large 코사인 유사도 기준, 실측값 0.55~0.65 범위에서 보정 가능
 
     public String build(Long memberId, String query) {
         float[] queryVector = embeddingClient.embed(query);
