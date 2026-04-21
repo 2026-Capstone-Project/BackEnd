@@ -8,11 +8,15 @@ import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
+import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
+import com.project.backend.domain.event.repository.EventRepository;
 import com.project.backend.domain.event.service.command.EventCommandService;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
+import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.domain.todo.service.command.TodoCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +37,8 @@ public class FunctionCallHandler {
 
     private final EventCommandService eventCommandService;
     private final TodoCommandService todoCommandService;
+    private final EventRepository eventRepository;
+    private final TodoRepository todoRepository;
     private final ObjectMapper objectMapper;
 
     // ─────────────────────────────────────────────────────
@@ -154,6 +160,29 @@ public class FunctionCallHandler {
     private ScheduleActionResult handleUpdate(Map<String, Object> args, Long memberId) {
         Long scheduleId     = getLong(args, "scheduleId");
         String scheduleType = (String) args.get("scheduleType");
+        String scope        = (String) args.get("scope");
+
+        if (scope == null) {
+            if ("EVENT".equals(scheduleType)) {
+                Event event = eventRepository.findByIdAndMemberId(scheduleId, memberId).orElse(null);
+                if (event != null && event.getRecurrenceGroup() != null) {
+                    return new ScheduleActionResult(
+                            ActionType.CLARIFYING, ScheduleType.EVENT, scheduleId,
+                            event.getRecurrenceGroup().getId(),
+                            "이번 일정만 수정할까요, 이후 전체를 수정할까요?"
+                    );
+                }
+            } else if ("TODO".equals(scheduleType)) {
+                Todo todo = todoRepository.findById(scheduleId).orElse(null);
+                if (todo != null && todo.getTodoRecurrenceGroup() != null) {
+                    return new ScheduleActionResult(
+                            ActionType.CLARIFYING, ScheduleType.TODO, scheduleId,
+                            todo.getTodoRecurrenceGroup().getId(),
+                            "이번 할 일만 수정할까요, 이후 전체를 수정할까요?"
+                    );
+                }
+            }
+        }
 
         if ("EVENT".equals(scheduleType)) return updateEvent(scheduleId, args, memberId);
         if ("TODO".equals(scheduleType))  return updateTodo(scheduleId, args, memberId);

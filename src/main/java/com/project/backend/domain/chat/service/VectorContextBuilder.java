@@ -18,10 +18,10 @@ public class VectorContextBuilder {
     private final QdrantVectorClient qdrantVectorClient;
 
     private static final int SEARCH_LIMIT = 5;
-    private static final double MIN_SCORE = 0.60; // solar-embedding-1-large 코사인 유사도 기준, 실측값 0.55~0.65 범위에서 보정 가능
+    private static final double MIN_SCORE = 0.40; // solar-embedding asymmetric 모델 기준, cross-model 실측값 0.40~0.55 범위
 
     public String build(Long memberId, String query) {
-        float[] queryVector = embeddingClient.embed(query);
+        float[] queryVector = embeddingClient.embedQuery(query);
         List<QdrantSearchResult> results = qdrantVectorClient.search(memberId, queryVector, SEARCH_LIMIT);
 
         results.forEach(r -> log.debug("Qdrant 검색 결과 - id: {}, score: {}, payload: {}", r.id(), r.score(), r.payload()));

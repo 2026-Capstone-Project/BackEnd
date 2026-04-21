@@ -63,7 +63,9 @@ spring:
 
   llm:
     provider: openai
+    embedding-provider: upstage
     api-key: ${LLM_API_KEY}
+    embedding-api-key: ${UPSTAGE_EMBEDDING_API_KEY}
     model: gpt-4o-mini
     timeout: 30s
 

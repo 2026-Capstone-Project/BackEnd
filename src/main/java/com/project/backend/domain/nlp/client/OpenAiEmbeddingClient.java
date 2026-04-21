@@ -14,7 +14,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.llm.provider", havingValue = "openai") //spring.llm.provider=openai 일때만 Bean 등록
+@ConditionalOnProperty(name = "spring.llm.embedding-provider", havingValue = "openai")
 public class OpenAiEmbeddingClient implements EmbeddingClient {
 
     private final WebClient webClient;
