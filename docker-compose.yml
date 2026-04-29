@@ -7,27 +7,10 @@ services:
     env_file:
       - ./.env
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
-
-  mysql:
-    container_name: mysql
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DEV_DB_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./mysql_data:/var/lib/mysql
-    depends_on:
-      redis:
+      qdrant:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping"]
-      interval: 5s
-      retries: 5
 
   redis:
     container_name: redis
