@@ -62,6 +62,12 @@ public class FunctionCallHandler {
     private ScheduleActionResult handleCreate(Map<String, Object> args, Long memberId) {
         String scheduleType = (String) args.get("scheduleType");
 
+        // startTime 없이 EVENT로 분류된 경우 → TODO로 fallback
+        if ("EVENT".equals(scheduleType) && args.get("startTime") == null) {
+            log.warn("EVENT 요청이지만 startTime 없음 → TODO로 fallback");
+            scheduleType = "TODO";
+        }
+
         if ("EVENT".equals(scheduleType)) return createEvent(args, memberId);
         if ("TODO".equals(scheduleType))  return createTodo(args, memberId);
         throw new IllegalArgumentException("Unknown scheduleType: " + scheduleType);
@@ -255,6 +261,29 @@ public class FunctionCallHandler {
     private ScheduleActionResult handleDelete(Map<String, Object> args, Long memberId) {
         Long scheduleId     = getLong(args, "scheduleId");
         String scheduleType = (String) args.get("scheduleType");
+        String scope        = (String) args.get("scope");
+
+        if (scope == null) {
+            if ("EVENT".equals(scheduleType)) {
+                Event event = eventRepository.findByIdAndMemberId(scheduleId, memberId).orElse(null);
+                if (event != null && event.getRecurrenceGroup() != null) {
+                    return new ScheduleActionResult(
+                            ActionType.CLARIFYING, ScheduleType.EVENT, scheduleId,
+                            event.getRecurrenceGroup().getId(),
+                            "이번 일정만 삭제할까요, 이후 전체를 삭제할까요?"
+                    );
+                }
+            } else if ("TODO".equals(scheduleType)) {
+                Todo todo = todoRepository.findById(scheduleId).orElse(null);
+                if (todo != null && todo.getTodoRecurrenceGroup() != null) {
+                    return new ScheduleActionResult(
+                            ActionType.CLARIFYING, ScheduleType.TODO, scheduleId,
+                            todo.getTodoRecurrenceGroup().getId(),
+                            "이번 할 일만 삭제할까요, 이후 전체를 삭제할까요?"
+                    );
+                }
+            }
+        }
 
         if ("EVENT".equals(scheduleType)) return deleteEvent(scheduleId, args, memberId);
         if ("TODO".equals(scheduleType))  return deleteTodo(scheduleId, args, memberId);

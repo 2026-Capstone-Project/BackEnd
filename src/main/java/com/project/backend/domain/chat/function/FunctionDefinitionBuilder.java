@@ -2,6 +2,9 @@ package com.project.backend.domain.chat.function;
 
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,10 +12,29 @@ import java.util.Map;
 @Component
 public class FunctionDefinitionBuilder {
 
+    private static final String[] DAY_LABELS = {"월", "화", "수", "목", "금", "토", "일"};
+
     public List<Map<String, Object>> build() {
+        return build(LocalDate.now());
+    }
+
+    public List<Map<String, Object>> build(LocalDate today) {
+        LocalDate thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate nextMonday = thisMonday.plusWeeks(1);
+
+        StringBuilder dateRef = new StringBuilder("날짜 직접 계산 금지 — 아래 값을 그대로 사용: 오늘=").append(today);
+        dateRef.append(", 내일=").append(today.plusDays(1));
+        for (int i = 0; i < 7; i++) {
+            dateRef.append(", 이번주").append(DAY_LABELS[i]).append("요일=").append(thisMonday.plusDays(i));
+        }
+        for (int i = 0; i < 7; i++) {
+            dateRef.append(", 다음주").append(DAY_LABELS[i]).append("요일=").append(nextMonday.plusDays(i));
+        }
+        String dateHint = dateRef.toString();
+
         return List.of(
-                buildCreateSchedule(),
-                buildUpdateSchedule(),
+                buildCreateSchedule(dateHint),
+                buildUpdateSchedule(dateHint),
                 buildDeleteSchedule(),
                 buildAskForClarification(),
                 buildRespondToUser()
@@ -20,15 +42,15 @@ public class FunctionDefinitionBuilder {
     }
 
     // createSchedule
-    private Map<String, Object> buildCreateSchedule() {
+    private Map<String, Object> buildCreateSchedule(String dateHint) {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("scheduleType",          enumProp("일정 유형 — 특정 시작/종료 시간이 있으면 반드시 EVENT, 체크리스트·할 일 성격이면 TODO", "EVENT", "TODO"));
+        props.put("scheduleType",          enumProp("일정 유형 — '몇 시에', '오전/오후 N시' 등 구체적 시간이 명시된 약속·미팅·회의면 EVENT; 날짜만 있거나 시간 없이 할 일·체크리스트 성격이면 반드시 TODO", "EVENT", "TODO"));
         props.put("title",                 strProp("제목"));
         props.put("isRecurring",           boolProp("반복 여부"));
-        props.put("startTime",             strProp("시작 시간 ISO-8601 (EVENT 필수): 2026-03-27T10:00:00"));
+        props.put("startTime",             strProp("시작 시간 ISO-8601 (EVENT 필수). " + dateHint));
         props.put("endTime",               strProp("종료 시간 ISO-8601 (EVENT 필수)"));
-        props.put("startDate",             strProp("시작 날짜 yyyy-MM-dd (TODO 필수, 반복TODO는 첫 발생일)"));
-        props.put("dueTime",               strProp("마감 시간 HH:mm (TODO 선택)"));
+        props.put("startDate",             strProp("시작 날짜 yyyy-MM-dd (TODO 필수, 반복TODO는 첫 발생일). " + dateHint));
+        props.put("dueTime",               strProp("할 일 수행 시각 HH:mm (TODO 전용, '오후 7시' 등 시간이 언급된 경우 반드시 설정)"));
         props.put("location",              strProp("장소 (EVENT 선택)"));
         props.put("isAllDay",              boolProp("종일 여부"));
         props.put("priority",              enumProp("우선순위 (TODO 전용)", "HIGH", "MEDIUM", "LOW"));
@@ -41,31 +63,31 @@ public class FunctionDefinitionBuilder {
         props.put("recurrenceCount",       intProp("반복 횟수 (END_BY_COUNT 전용)"));
 
         return wrapFunction("createSchedule",
-                "새 일정(EVENT) 또는 할 일(TODO)을 등록한다. '~시', '~분' 등 특정 시간이 언급되면 반드시 EVENT를 사용한다. 반복이면 isRecurring=true와 recurrenceType을 반드시 포함한다.",
+                "새 일정(EVENT) 또는 할 일(TODO)을 등록한다. '~시', '~분' 등 특정 시간이 언급되고 일정·미팅·약속·회의 성격이면 EVENT, 할 일·체크리스트·루틴 성격이면 TODO로 등록하고 해당 시간을 dueTime에 설정한다. 반복이면 isRecurring=true와 recurrenceType을 반드시 포함한다.",
                 props,
                 List.of("scheduleType", "title", "isRecurring"));
     }
 
     // updateSchedule
-    private Map<String, Object> buildUpdateSchedule() {
+    private Map<String, Object> buildUpdateSchedule(String dateHint) {
         Map<String, Object> props = new LinkedHashMap<>();
         props.put("scheduleId",     intProp("수정할 ID — 컨텍스트 [ID:N] 값 사용"));
         props.put("scheduleType",   enumProp("일정 유형", "EVENT", "TODO"));
         // [핵심] occurrenceDate: 반복 일정의 해당 회차를 특정하기 위한 날짜
-        props.put("occurrenceDate", strProp("반복 일정 해당 회차 날짜 yyyy-MM-dd (반복일정만)"));
+        props.put("occurrenceDate", strProp("반복 일정 해당 회차 날짜 yyyy-MM-dd (반복일정만). " + dateHint));
         props.put("title",          strProp("새 제목"));
-        props.put("startTime",      strProp("새 시작 시간 ISO-8601 (EVENT 전용)"));
+        props.put("startTime",      strProp("새 시작 시간 ISO-8601 (EVENT 전용). " + dateHint));
         props.put("endTime",        strProp("새 종료 시간 ISO-8601 (EVENT 전용)"));
-        props.put("startDate",      strProp("새 시작 날짜 yyyy-MM-dd (TODO 전용)"));
+        props.put("startDate",      strProp("새 시작 날짜 yyyy-MM-dd (TODO 전용). " + dateHint));
         props.put("dueTime",        strProp("새 마감 시간 HH:mm (TODO 전용)"));
         props.put("location",       strProp("새 장소 (EVENT 전용)"));
         props.put("isAllDay",       boolProp("종일 여부"));
         props.put("priority",       enumProp("우선순위 (TODO 전용)", "HIGH", "MEDIUM", "LOW"));
         // [핵심] scope: ALL 없음 — 실제 enum에 없으므로
-        props.put("scope",          enumProp("반복 일정 수정 범위 (반복일정만)", "THIS_ONLY", "THIS_AND_AFTER"));
+        props.put("scope",          enumProp("사용자가 '이번만', '이후 전체' 등 범위를 직접 언급한 경우에만 포함. 명시하지 않았으면 절대 포함하지 말 것", "THIS_ONLY", "THIS_AND_AFTER"));
 
         return wrapFunction("updateSchedule",
-                "기존 일정 또는 할 일을 수정한다. 반복 일정이면 scope를 반드시 포함한다.",
+                "기존 일정 또는 할 일을 수정한다. 반복 일정인데 사용자가 범위를 언급하지 않았으면 반드시 먼저 askForClarification으로 범위를 확인해야 한다. scope는 사용자가 직접 명시한 경우에만 포함한다.",
                 props,
                 List.of("scheduleId", "scheduleType"));
     }
@@ -76,10 +98,10 @@ public class FunctionDefinitionBuilder {
         props.put("scheduleId",     intProp("삭제할 ID — 컨텍스트 [ID:N] 값 사용"));
         props.put("scheduleType",   enumProp("일정 유형", "EVENT", "TODO"));
         props.put("occurrenceDate", strProp("반복 일정 해당 회차 날짜 yyyy-MM-dd (반복일정만)"));
-        props.put("scope",          enumProp("반복 일정 삭제 범위 (반복일정만)", "THIS_ONLY", "THIS_AND_AFTER"));
+        props.put("scope",          enumProp("사용자가 '이번만', '이후 전체' 등 범위를 직접 언급한 경우에만 포함. 명시하지 않았으면 절대 포함하지 말 것", "THIS_ONLY", "THIS_AND_AFTER"));
 
         return wrapFunction("deleteSchedule",
-                "일정 또는 할 일을 삭제한다. 반복 일정이면 scope를 반드시 포함한다.",
+                "일정 또는 할 일을 삭제한다. 반복 일정인데 사용자가 범위를 언급하지 않았으면 반드시 먼저 askForClarification으로 범위를 확인해야 한다. scope는 사용자가 직접 명시한 경우에만 포함한다.",
                 props,
                 List.of("scheduleId", "scheduleType"));
     }

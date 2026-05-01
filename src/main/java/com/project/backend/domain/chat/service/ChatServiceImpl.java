@@ -66,7 +66,10 @@ public class ChatServiceImpl implements ChatService {
             //       Java 제네릭 불변성으로 Map<String,String>은 Map<String,Object>의 서브타입 아님
             List<Map<String, Object>> messages = convertHistory(
                     conversationHistoryService.getHistory(memberId));
-            messages.add(Map.of("role", "user", "content", message));
+            // 상대 날짜(다음주 목요일 등)를 절대 날짜로 치환 — LLM 자체 날짜 산술 방지
+            // history 저장은 원본 message로 하고, LLM 호출만 치환된 메시지 사용
+            String llmMessage = chatPromptTemplate.replaceRelativeDates(message);
+            messages.add(Map.of("role", "user", "content", llmMessage));
 
             // 4. 1차 LLM 호출 (Function Calling)
             FunctionCallResponse llmRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
@@ -111,10 +114,16 @@ public class ChatServiceImpl implements ChatService {
                     recurrenceGroupId = result.recurrenceGroupId();
                     scheduleType      = result.scheduleType();
 
-                    // 직전 처리 일정 저장 — 다음 턴에서 "그냥 삭제/수정" 같은 모호한 요청 처리에 사용
                     if (result.scheduleId() != null && result.scheduleType() != null) {
-                        conversationHistoryService.saveLastActionContext(
-                                memberId, result.scheduleId(), result.scheduleType().name());
+                        if (result.action() == ActionType.CLARIFYING) {
+                            // 백엔드 guard가 CLARIFYING 반환 → pendingCtx 저장 (LLM askForClarification과 동일하게 처리)
+                            conversationHistoryService.savePendingContext(
+                                    memberId, result.scheduleId(), result.scheduleType().name());
+                        } else {
+                            // CRUD 완료 → 다음 턴 "그냥 삭제/수정" 모호한 요청 처리용
+                            conversationHistoryService.saveLastActionContext(
+                                    memberId, result.scheduleId(), result.scheduleType().name());
+                        }
                     }
 
                 } else if (llmRes.isRespondToUser()) {
