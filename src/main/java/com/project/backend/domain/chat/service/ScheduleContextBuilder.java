@@ -59,24 +59,31 @@ public class ScheduleContextBuilder {
     }
 
     private String formatEvent(Event event) {
+        // [핵심] ID와 TYPE을 prefix로 추가 → LLM이 scheduleId로 참조
+        // isRecurring() → recurrenceGroup != null 여부로 판단
+        String idPrefix = String.format("[ID:%d, TYPE:EVENT]", event.getId());
+        String recurringMark = event.isRecurring() ? " (반복일정)" : "";
         String date = event.getStartTime().format(DATE_FMT);
         String title = event.getTitle();
 
         if (Boolean.TRUE.equals(event.getIsAllDay())) {
-            return String.format("- %s: %s (종일)", date, title);
+            return String.format("- %s %s: %s (종일)%s", idPrefix, date, title, recurringMark);
         }
 
         String time = event.getStartTime().format(TIME_FMT) + "~" + event.getEndTime().format(TIME_FMT);
         String location = event.getLocation() != null ? " @" + event.getLocation() : "";
-        return String.format("- %s %s: %s%s", date, time, title, location);
+        return String.format("- %s %s %s: %s%s%s", idPrefix, date, time, title, location, recurringMark);
     }
 
     private String formatTodo(Todo todo) {
+        // [핵심] 동일하게 ID, TYPE 포함
+        String idPrefix = String.format("[ID:%d, TYPE:TODO]", todo.getId());
+        String recurringMark = todo.isRecurring() ? " (반복할일)" : "";
         String date = todo.getStartDate().format(DATE_FMT);
         String title = todo.getTitle();
         String dueTime = todo.getDueTime() != null
                 ? " (" + todo.getDueTime().format(DateTimeFormatter.ofPattern("HH:mm")) + "까지)"
                 : "";
-        return String.format("• %s: %s%s", date, title, dueTime);
+        return String.format("• %s %s: %s%s%s", idPrefix, date, title, dueTime, recurringMark);
     }
 }

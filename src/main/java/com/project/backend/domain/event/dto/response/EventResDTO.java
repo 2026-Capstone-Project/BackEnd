@@ -11,6 +11,7 @@ public class EventResDTO {
     @Builder
     public record CreateRes(
             Long id,
+            Long recurrenceGroupId, // 반복 일정이면 그룹 ID, 단순 일정이면 null
             LocalDateTime createdAt
     ) {
     }

@@ -24,6 +24,7 @@ public class ScheduleVectorSyncService {
                     event.getTitle(),
                     event.getStartTime().toLocalDate().toString(),
                     "EVENT",
+                    event.getRecurrenceGroup() != null,
                     vector
             );
             log.debug("Qdrant 저장 완료 - eventId: {}", event.getId());

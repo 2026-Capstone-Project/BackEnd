@@ -77,4 +77,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
      */
     boolean existsByMemberIdAndTitleAndMemoAndStartDateAndDueTime(Long memberId, String title, String memo, LocalDate startDate, LocalTime dueTime);
 
+    @Query("SELECT t FROM Todo t JOIN FETCH t.member")
+    List<Todo> findAllWithMember();
 }
