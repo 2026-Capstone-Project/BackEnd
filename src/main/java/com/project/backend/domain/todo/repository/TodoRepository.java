@@ -1,5 +1,6 @@
 package com.project.backend.domain.todo.repository;
 
+import com.project.backend.domain.common.enums.VectorSyncStatus;
 import com.project.backend.domain.todo.entity.Todo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
@@ -79,4 +81,15 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     @Query("SELECT t FROM Todo t JOIN FETCH t.member")
     List<Todo> findAllWithMember();
+
+    @Query("SELECT t FROM Todo t JOIN FETCH t.member WHERE t.id = :id")
+    Optional<Todo> findWithMemberById(@Param("id") Long id);
+
+    @Query("SELECT t FROM Todo t JOIN FETCH t.member " +
+            "WHERE t.vectorSyncStatus = :failed " +
+            "OR (t.vectorSyncStatus = :pending AND t.createdAt < :cutoff)")
+    List<Todo> findSyncRetryTargets(
+            @Param("failed") VectorSyncStatus failed,
+            @Param("pending") VectorSyncStatus pending,
+            @Param("cutoff") LocalDateTime cutoff);
 }
