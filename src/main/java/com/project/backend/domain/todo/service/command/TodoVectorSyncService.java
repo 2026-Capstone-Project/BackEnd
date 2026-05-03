@@ -1,25 +1,54 @@
 package com.project.backend.domain.todo.service.command;
 
+import com.project.backend.domain.common.enums.VectorSyncStatus;
 import com.project.backend.domain.todo.entity.Todo;
+import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.domain.nlp.client.EmbeddingClient;
 import com.project.backend.global.qdrant.client.QdrantVectorClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TodoVectorSyncService {
 
-    // Event ID와 충돌 방지를 위한 오프셋
-    // Todo Qdrant point ID = todoId + TODO_ID_OFFSET
     private static final long TODO_ID_OFFSET = 2_000_000_000L;
 
+    private final TodoRepository todoRepository;
     private final EmbeddingClient embeddingClient;
     private final QdrantVectorClient qdrantVectorClient;
 
-    public void syncOnCreate(Todo todo) {
+    @Async("vectorSyncExecutor")
+    @Transactional
+    public void syncOnCreate(Long todoId) {
+        Todo todo = todoRepository.findWithMemberById(todoId)
+                .orElseThrow(() -> new IllegalStateException("벡터 동기화 대상 Todo 없음 - todoId: " + todoId));
+        doUpsertSync(todo);
+    }
+
+    @Async("vectorSyncExecutor")
+    @Transactional
+    public void syncOnUpdate(Long todoId) {
+        Todo todo = todoRepository.findWithMemberById(todoId)
+                .orElseThrow(() -> new IllegalStateException("벡터 동기화 대상 Todo 없음 - todoId: " + todoId));
+        doUpsertSync(todo);
+    }
+
+    @Async("vectorSyncExecutor")
+    public void syncOnDelete(Long todoId) {
+        try {
+            qdrantVectorClient.delete(todoId + TODO_ID_OFFSET);
+            log.debug("Qdrant 삭제 완료 - todoId: {}", todoId);
+        } catch (Exception e) {
+            log.error("Qdrant 삭제 실패 - todoId: {}", todoId, e);
+        }
+    }
+
+    private void doUpsertSync(Todo todo) {
         try {
             float[] vector = embeddingClient.embed(buildEmbedText(todo));
             qdrantVectorClient.upsert(
@@ -31,26 +60,14 @@ public class TodoVectorSyncService {
                     todo.getTodoRecurrenceGroup() != null,
                     vector
             );
-            log.debug("Qdrant 저장 완료 - todoId: {}", todo.getId());
+            todo.updateVectorSyncStatus(VectorSyncStatus.SUCCESS);
+            log.debug("Qdrant 동기화 완료 - todoId: {}", todo.getId());
         } catch (Exception e) {
-            log.error("Qdrant 동기화 실패 (create) - todoId: {}", todo.getId(), e);
+            log.error("Qdrant 동기화 실패 - todoId: {}", todo.getId(), e);
+            todo.updateVectorSyncStatus(VectorSyncStatus.FAILED);
         }
     }
 
-    public void syncOnUpdate(Todo todo) {
-        syncOnCreate(todo);
-    }
-
-    public void syncOnDelete(Long todoId) {
-        try {
-            qdrantVectorClient.delete(todoId + TODO_ID_OFFSET);
-            log.debug("Qdrant 삭제 완료 - todoId: {}", todoId);
-        } catch (Exception e) {
-            log.error("Qdrant 동기화 실패 (delete) - todoId: {}", todoId, e);
-        }
-    }
-
-    // 임베딩할 텍스트: title + memo 조합
     private String buildEmbedText(Todo todo) {
         StringBuilder sb = new StringBuilder(todo.getTitle());
         if (todo.getMemo() != null) {
