@@ -40,6 +40,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -111,7 +113,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         log.info("event created");
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
-        scheduleVectorSyncService.syncOnCreate(event);
+        afterCommit(() -> scheduleVectorSyncService.syncOnCreate(event.getId()));
 
         return EventConverter.toCreateRes(event);
     }
@@ -272,7 +274,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             log.info("event deleted");
             suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
-            scheduleVectorSyncService.syncOnDelete(eventId);
+            afterCommit(() -> scheduleVectorSyncService.syncOnDelete(eventId));
 
             return;
         }
@@ -928,6 +930,15 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
-        scheduleVectorSyncService.syncOnUpdate(event);
+        afterCommit(() -> scheduleVectorSyncService.syncOnUpdate(event.getId()));
+    }
+
+    private void afterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 }

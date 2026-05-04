@@ -39,6 +39,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -80,28 +82,28 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         // 3. Todo 생성
         Todo todo = TodoConverter.toTodo(reqDTO, member, recurrenceGroup);
-        todo = todoRepository.save(todo);
-        upsertTodoTitleHistory(memberId, todo.getTitle());
-        todoVectorSyncService.syncOnCreate(todo);
-        log.debug("할 일 생성 완료 - todoId: {}", todo.getId());
+        Todo savedTodo = todoRepository.save(todo);
+        upsertTodoTitleHistory(memberId, savedTodo.getTitle());
+        afterCommit(() -> todoVectorSyncService.syncOnCreate(savedTodo.getId()));
+        log.debug("할 일 생성 완료 - todoId: {}", savedTodo.getId());
 
         // 4. 반복 그룹에 Todo 연결
         if (recurrenceGroup != null) {
-            recurrenceGroup.setTodo(todo);
+            recurrenceGroup.setTodo(savedTodo);
         }
 
         // 투두 생성에 따른 리스너 생성 로직 실행
         reminderEventBridge.handlePlanChanged(
-                todo.getId(),
+                savedTodo.getId(),
                 TargetType.TODO,
                 memberId,
-                todo.getTitle(),
+                savedTodo.getTitle(),
                 recurrenceGroup != null,
-                todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
+                savedTodo.getDueTime() != null ? savedTodo.getStartDate().atTime(savedTodo.getDueTime()) : savedTodo.getStartDate().atStartOfDay(),
                 ChangeType.CREATED
         );
         // 반복의 유무와 상관없이 동일한 이름 + 메모로 생성된 할 일이 있으면 비활성화
-        TodoSuggestionSnapshot afterSnapshot = todoSuggestionSnapshotFactory.from(todo);
+        TodoSuggestionSnapshot afterSnapshot = todoSuggestionSnapshotFactory.from(savedTodo);
 
         InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForCreate(
                 afterSnapshot,
@@ -110,7 +112,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
-        return TodoConverter.toTodoInfo(todo);
+        return TodoConverter.toTodoInfo(savedTodo);
     }
 
     @Override
@@ -128,7 +130,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             updateSingleTodo(todo, reqDTO);
             // 수정이 완료되면 한 번 upsert
             upsertTodoTitleHistory(memberId, todo.getTitle());
-            todoVectorSyncService.syncOnUpdate(todo);
+            afterCommit(() -> todoVectorSyncService.syncOnUpdate(todo.getId()));
             // 할 일 생성에 따른 리스너 생성 로직 실행
             reminderEventBridge.handlePlanChanged(
                     todo.getId(),
@@ -202,9 +204,11 @@ public class TodoCommandServiceImpl implements TodoCommandService {
                 afterBase = updateThisAndFollowing(todo, occurrenceDate, reqDTO);
                 returnTodo = afterBase;
                 if (hardDeleteGroup) {
-                    todoVectorSyncService.syncOnDelete(todo.getId());
+                    final Long deletedId = todo.getId();
+                    afterCommit(() -> todoVectorSyncService.syncOnDelete(deletedId));
                 }
-                todoVectorSyncService.syncOnCreate(returnTodo);
+                final Long newTodoId = returnTodo.getId();
+                afterCommit(() -> todoVectorSyncService.syncOnCreate(newTodoId));
             }
         };
 
@@ -244,7 +248,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         if (!todo.isRecurring()) {
             suggestionRepository.detachPreviousTodo(memberId, todoId);
             todoRepository.delete(todo);
-            todoVectorSyncService.syncOnDelete(todoId);
+            afterCommit(() -> todoVectorSyncService.syncOnDelete(todoId));
             log.debug("단일 할 일 삭제 완료 - todoId: {}", todoId);
             reminderEventBridge.handleReminderDeleted(
                     null,
@@ -309,7 +313,7 @@ public class TodoCommandServiceImpl implements TodoCommandService {
             case THIS_AND_FOLLOWING -> {
                 deleteThisAndFollowing(todo, occurrenceDate, memberId);
                 if (hardDeleteGroup) {
-                    todoVectorSyncService.syncOnDelete(todoId);
+                    afterCommit(() -> todoVectorSyncService.syncOnDelete(todoId));
                 }
             }
         }
@@ -820,5 +824,14 @@ public class TodoCommandServiceImpl implements TodoCommandService {
         } else {
             history.updateLastUsedAt();
         }
+    }
+
+    private void afterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 }
