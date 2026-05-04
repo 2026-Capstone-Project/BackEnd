@@ -1,0 +1,38 @@
+package com.project.backend.domain.friend.converter;
+
+import com.project.backend.domain.friend.dto.response.FriendResDTO;
+import com.project.backend.domain.friend.entity.FriendRequest;
+import com.project.backend.domain.member.entity.Member;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
+public class FriendRequestConverter {
+
+    public static FriendRequest toFriendRequest(Member sender, Member receiver) {
+        return FriendRequest.builder()
+                .sender(sender)
+                .receiver(receiver)
+                .build();
+    }
+
+    public static FriendResDTO.FriendRequestDetailRes toFriendRequestDetailRes(
+            FriendRequest friendRequest,
+            Member opponent
+    ) {
+        return FriendResDTO.FriendRequestDetailRes.builder()
+                .id(friendRequest.getId())
+                .opponentName(opponent.getNickname())
+                .opponentEmail(opponent.getEmail())
+                .build();
+    }
+
+    public static FriendResDTO.FriendRequestListRes toFriendRequestList(
+            List<FriendResDTO.FriendRequestDetailRes> friendRequestDetailList
+    ) {
+        return FriendResDTO.FriendRequestListRes.builder()
+                .friendRequestDetailList(friendRequestDetailList)
+                .build();
+    }
+}

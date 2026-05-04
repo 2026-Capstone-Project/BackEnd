@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.converter;
 
 import com.project.backend.domain.common.recurrence.enums.*;
+import com.project.backend.domain.event.dto.FrequencyFields;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.request.RecurrenceGroupReqDTO;
 import com.project.backend.domain.event.dto.response.RecurrenceGroupResDTO;
@@ -46,17 +47,21 @@ public class RecurrenceGroupConverter {
     ) {
         RecurrenceFrequency frequency = req.frequency();
 
-        RecurrenceGroupSpec.RecurrenceGroupSpecBuilder b =
-                RecurrenceGroupSpec.builder()
-                        .frequency(frequency)
-                        .interval(req.intervalValue() != null ? req.intervalValue() : 1)
-                        .endType(req.endType() != null ? req.endType() : RecurrenceEndType.NEVER)
-                        .endDate(req.endDate())
-                        .occurrenceCount(req.occurrenceCount());
+        FrequencyFields fields = applyFrequencyFieldsForCreate(req, startTime, frequency);
 
-        normalizeFrequencyForCreate(req, startTime, frequency, b);
-
-        return b.build();
+        return RecurrenceGroupSpec.builder()
+                .frequency(frequency)
+                .interval(req.intervalValue() != null ? req.intervalValue() : 1)
+                .endType(req.endType() != null ? req.endType() : RecurrenceEndType.NEVER)
+                .endDate(req.endDate())
+                .occurrenceCount(req.occurrenceCount())
+                .daysOfWeek(fields.daysOfWeek())
+                .monthlyType(fields.monthlyType())
+                .daysOfMonth(fields.daysOfMonth())
+                .weekOfMonth(fields.weekOfMonth())
+                .dayOfWeekInMonth(fields.dayOfWeekInMonth())
+                .monthOfYear(fields.monthOfYear())
+                .build();
     }
 
     public static RecurrenceGroupSpec from(
@@ -261,15 +266,18 @@ public class RecurrenceGroupConverter {
                 || rgSpec.monthOfYear() != null;
     }
 
-    private static void normalizeFrequencyForCreate(
+    /**
+     * 입력한 frequency에 따른 필수 필드 값 초기화
+     */
+    private static FrequencyFields applyFrequencyFieldsForCreate(
             RecurrenceGroupReqDTO.CreateReq req,
             LocalDateTime startTime,
-            RecurrenceFrequency frequency,
-            RecurrenceGroupSpec.RecurrenceGroupSpecBuilder b) {
+            RecurrenceFrequency frequency
+    ) {
         switch (frequency) {
 
             case DAILY -> {
-                // DAILY는 추가 필드 없음
+                return FrequencyFields.empty();
             }
 
             case WEEKLY -> {
@@ -284,16 +292,13 @@ public class RecurrenceGroupConverter {
                         .sorted()
                         .toList();
 
-                b.daysOfWeek(daysOfWeek);
+                return FrequencyFields.weekly(daysOfWeek);
             }
 
             case MONTHLY -> {
-                MonthlyType monthlyType =
-                        req.monthlyType() != null
+                MonthlyType monthlyType = req.monthlyType() != null
                                 ? req.monthlyType()
                                 : MonthlyType.DAY_OF_MONTH; // 디폴트
-
-                b.monthlyType(monthlyType);
 
                 if (monthlyType == MonthlyType.DAY_OF_MONTH) {
                     List<Integer> daysOfMonth = req.daysOfMonth();
@@ -307,32 +312,30 @@ public class RecurrenceGroupConverter {
                             .sorted()
                             .toList();
 
-                    b.daysOfMonth(daysOfMonth);
+                    return FrequencyFields.monthlyByDayOfMonth(daysOfMonth);
                 }
 
                 if (monthlyType == MonthlyType.DAY_OF_WEEK) {
                     Integer weekOfMonth = req.weekOfMonth() != null ? req.weekOfMonth() : getWeekOfMonth(startTime);
 
-                    b.weekOfMonth(weekOfMonth);
-
-                    MonthlyWeekdayRule rule =
-                            req.weekdayRule() != null
+                    MonthlyWeekdayRule rule = req.weekdayRule() != null
                                     ? req.weekdayRule()
                                     : MonthlyWeekdayRule.SINGLE;
 
-                    List<DayOfWeek> daysOfWeekInMonth =
-                            rule == MonthlyWeekdayRule.SINGLE
+                    List<DayOfWeek> daysOfWeekInMonth = rule == MonthlyWeekdayRule.SINGLE
                             ? (req.dayOfWeekInMonth() != null
                                     ? List.of(req.dayOfWeekInMonth())
                                     : List.of(startTime.getDayOfWeek())) : resolveDaysFromRule(rule);
 
-                    b.dayOfWeekInMonth(daysOfWeekInMonth);
+                    return FrequencyFields.monthlyByDayOfWeek(weekOfMonth, daysOfWeekInMonth);
                 }
+
+                throw new IllegalArgumentException("Unsupported monthlyType");
             }
 
             case YEARLY ->  {
                 Integer monthOfYear = req.monthOfYear() != null ? req.monthOfYear() : startTime.getMonthValue();
-                b.monthOfYear(monthOfYear);
+                return FrequencyFields.yearly(monthOfYear);
             }
 
             default -> throw new IllegalArgumentException("Unsupported frequency");

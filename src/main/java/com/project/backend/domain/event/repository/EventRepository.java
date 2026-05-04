@@ -58,4 +58,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("memberId") Long memberId,
             @Param("currentDate") LocalDateTime currentDate
     );
+
+    @Query("SELECT e FROM Event e JOIN FETCH e.member")
+    List<Event> findAllWithMember();
 }

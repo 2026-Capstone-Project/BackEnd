@@ -19,6 +19,12 @@ spring:
       host: ${LOCAL_REDIS_HOST}
       port: 6379
 
+  qdrant:
+    host: ${QDRANT_HOST}
+    port : 6333
+    collection : calio_schedules
+    vector-size : 4096
+
   jwt:
     secret: ${JWT_SECRET_KEY} # JWT 시크릿 키
     token:
@@ -53,7 +59,9 @@ spring:
 
   llm:
     provider: openai
+    embedding-provider: upstage
     api-key: ${LLM_API_KEY}
+    embedding-api-key: ${UPSTAGE_EMBEDDING_API_KEY}
     model: gpt-4o-mini
     timeout: 30s
 
