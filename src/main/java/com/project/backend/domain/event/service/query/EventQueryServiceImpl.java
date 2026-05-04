@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.query;
 
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventHistoryConverter;
@@ -7,7 +8,6 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
-import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.factory.EndConditionFactory;
@@ -21,7 +21,6 @@ import com.project.backend.domain.occurrence.dto.NextOccurrenceResult;
 import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +30,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
@@ -53,12 +51,21 @@ public class EventQueryServiceImpl implements EventQueryService {
     private final EventValidator eventValidator;
     private final EventOccurrenceResolver eventOccurrenceResolver;
     private final EventTitleHistoryRepository eventTitleHistoryRepository;
+    private final EventParticipantRepository eventParticipantRepository;
 
     @Override
     public EventResDTO.DetailRes getEventDetail(Long eventId, LocalDateTime occurrenceDate, Long memberId) {
-        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        boolean isOwner = Objects.equals(event.getMember().getId(), memberId);
+
+        boolean isAcceptedParticipant = eventParticipantRepository
+                .existsByEventIdAndMemberIdAndStatus(eventId, memberId, InviteStatus.ACCEPTED);
+
+        if (!isOwner && !isAcceptedParticipant) {
+            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
+        }
         eventValidator.validateRead(event, occurrenceDate);
 
         // 찾고자 하는 것이 부모 이벤트인 경우
@@ -77,15 +84,12 @@ public class EventQueryServiceImpl implements EventQueryService {
         // 2026-01-02 -> 2026-01-02T23:59:59.999999999
         LocalDateTime endRange = endDate.atTime(LocalTime.MAX);
 
-        List<Event> baseEvents = eventRepository.findByMemberIdAndOverlappingRange(memberId, startRange, endRange);
-        log.debug("baseEvents = {}", baseEvents);
-        List<RecurrenceGroup> baseRg = recurrenceGroupRepository.findActiveRecurrenceGroups(memberId, startDate);
-        log.debug("baseRg = {}", baseRg);
-        List<Event> EventFromRg = baseRg.stream()
-                .map(RecurrenceGroup::getEvent)
-                .toList();
-
-        List<Event> result = concatEventList(baseEvents, EventFromRg);
+        // 범위에 맞는 내가 소유자인 이벤트 목록 조회
+        List<Event> OwnedEvents = getOwnedEvents(memberId, startRange, endRange);
+        // 범위에 맞는 내가 참여한 이벤트 목록 조회
+        List<Event> SharedEvents = getSharedEvents(memberId, startRange, endRange);
+        // 두 목록 병합
+        List<Event> result = concatEventList(OwnedEvents, SharedEvents);
 
         // 최상위 이벤트 확장
         List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
@@ -165,6 +169,42 @@ public class EventQueryServiceImpl implements EventQueryService {
     }
 
     //=========================================== private method ======================================================
+
+    // 범위에 맞는 내가 소유자인 이벤트 목록 조회
+    private List<Event> getOwnedEvents(Long memberId, LocalDateTime startRange, LocalDateTime endRange) {
+        // 범위에 맞는 단일 이벤트 목록
+        List<Event> baseEvents = eventRepository.findByMemberIdAndOverlappingRange(memberId, startRange, endRange);
+        log.debug("baseEvents = {}", baseEvents);
+        // 범위에 활성화 되어 있는 반복 그룹 목록
+        List<RecurrenceGroup> baseRg = recurrenceGroupRepository.findActiveRecurrenceGroups(memberId, startRange.toLocalDate());
+        log.debug("baseRg = {}", baseRg);
+        // 활성화된 반복 그룹에서 이벤트 객체 분리 후 리스트화
+        List<Event> EventFromRg = baseRg.stream()
+                .map(RecurrenceGroup::getEvent)
+                .toList();
+
+        return concatEventList(baseEvents, EventFromRg);
+    }
+
+    // 범위에 맞는 내가 참여한 이벤트 목록 조회
+    private List<Event> getSharedEvents(Long memberId, LocalDateTime startRange, LocalDateTime endRange) {
+        // 범위에 맞는 참여한 이벤트 목록
+        List<Event> baseParticipantEvents =
+                eventParticipantRepository.findByMemberIdAndOverlappingRange(
+                        memberId, startRange, endRange, InviteStatus.ACCEPTED);
+        log.debug("baseParticipantEvents = {}", baseParticipantEvents);
+        // 범위에 활성화 되어 있는 참여한 반복 그룹 목록
+        List<RecurrenceGroup> baseParticipantRg =
+                eventParticipantRepository.findSharedActiveRecurrenceGroups(
+                        memberId, startRange.toLocalDate(), InviteStatus.ACCEPTED);
+        // 활성화된 반복 그룹에서 이벤트 객체 분리 후 리스트화
+        List<Event> EventFromSharedRg = baseParticipantRg.stream()
+                .map(RecurrenceGroup::getEvent)
+                .toList();
+        log.debug("EventFromSharedRg = {}", EventFromSharedRg);
+
+        return concatEventList(baseParticipantEvents, EventFromSharedRg);
+    }
 
     private TodayOccurrenceResult calculateTodayOccurrence(Event event, LocalDate currentDate) {
         if (!event.isRecurring()) {

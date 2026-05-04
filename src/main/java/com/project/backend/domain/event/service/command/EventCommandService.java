@@ -20,4 +20,8 @@ public interface EventCommandService {
             );
 
     void deleteEvent(Long eventId, LocalDateTime occurrenceDate, RecurrenceUpdateScope scope, Long memberId);
+
+    void deleteEventParticipants(Long eventId, Long memberId);
+
+    void leaveSharedEvent(Long memberId, Long eventId);
 }
