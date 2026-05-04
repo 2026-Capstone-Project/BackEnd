@@ -28,9 +28,11 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
       interval: 5s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
 volumes:
   qdrant_data:
