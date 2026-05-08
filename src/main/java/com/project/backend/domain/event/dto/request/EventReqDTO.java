@@ -1,15 +1,14 @@
 package com.project.backend.domain.event.dto.request;
 
 import com.project.backend.domain.event.enums.EventColor;
-import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class EventReqDTO {
 
@@ -28,6 +27,8 @@ public class EventReqDTO {
 
             EventColor color,
             Boolean isAllDay,
+
+            List<Long> friendIds,
 
             @Schema(
                     description = "반복 일정 설정 (반복 미사용 시 아예 보내지 않음)",
@@ -49,6 +50,7 @@ public class EventReqDTO {
             String address,
             EventColor color,
             Boolean isAllDay,
+            List<Long> friendIds,
             RecurrenceGroupReqDTO.UpdateReq recurrenceGroup
     ) {
     }

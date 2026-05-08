@@ -4,6 +4,8 @@ import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.service.command.EventCommandService;
+import com.project.backend.domain.event.service.command.EventParticipantCommandService;
+import com.project.backend.domain.event.service.query.EventParticipantQueryService;
 import com.project.backend.domain.event.service.query.EventQueryService;
 import com.project.backend.global.apiPayload.CustomResponse;
 import com.project.backend.global.security.userdetails.CustomUserDetails;
@@ -82,6 +84,15 @@ public class EventController implements EventDocs {
         return CustomResponse.onSuccess("수정 완료", null);
     }
 
+    @DeleteMapping("/{eventId}/participants/leave")
+    public CustomResponse<String> leaveSharedEvent(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId
+    ) {
+        eventCommandService.leaveSharedEvent(customUserDetails.getId(), eventId);
+        return CustomResponse.onSuccess("이벤트 공유 탈퇴 완료", null);
+    }
+
     @DeleteMapping("/{eventId}")
     @Override
     public CustomResponse<Void> deleteEvent(
@@ -91,6 +102,15 @@ public class EventController implements EventDocs {
             @RequestParam(required = false) RecurrenceUpdateScope scope
     ){
         eventCommandService.deleteEvent(eventId, occurrenceDate, scope, customUserDetails.getId());
+        return CustomResponse.onSuccess("삭제 완료", null);
+    }
+
+    @DeleteMapping("/{eventId}/participants")
+    public CustomResponse<Void> deleteEventParticipants(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long eventId
+    ) {
+        eventCommandService.deleteEventParticipants(eventId, customUserDetails.getId());
         return CustomResponse.onSuccess("삭제 완료", null);
     }
 
