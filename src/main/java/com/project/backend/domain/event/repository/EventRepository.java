@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.repository;
 
+import com.project.backend.domain.common.enums.VectorSyncStatus;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,4 +62,15 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query("SELECT e FROM Event e JOIN FETCH e.member")
     List<Event> findAllWithMember();
+
+    @Query("SELECT e FROM Event e JOIN FETCH e.member WHERE e.id = :id")
+    Optional<Event> findWithMemberById(@Param("id") Long id);
+
+    @Query("SELECT e FROM Event e JOIN FETCH e.member " +
+            "WHERE e.vectorSyncStatus = :failed " +
+            "OR (e.vectorSyncStatus = :pending AND e.createdAt < :cutoff)")
+    List<Event> findSyncRetryTargets(
+            @Param("failed") VectorSyncStatus failed,
+            @Param("pending") VectorSyncStatus pending,
+            @Param("cutoff") LocalDateTime cutoff);
 }
