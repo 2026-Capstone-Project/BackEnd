@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/admin/vector")
 @RequiredArgsConstructor
-public class VectorAdminController {
+public class VectorAdminController implements VectorAdminDocs {
 
     private final VectorReSyncService vectorReSyncService;
 
