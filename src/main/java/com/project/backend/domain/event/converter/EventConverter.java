@@ -30,6 +30,7 @@ public class EventConverter {
                 (spec.startTime() != null && spec.endTime() != null)
                         ? (int) Duration.between(spec.startTime(), spec.endTime()).toMinutes()
                         : null;
+        Boolean isShared = !spec.friendIds().isEmpty();
 
         return Event.builder()
                 .title(spec.title())
@@ -44,6 +45,7 @@ public class EventConverter {
                 .durationMinutes(durationMinutes)
                 .member(member)
                 .recurrenceGroup(recurrenceGroup)
+                .isShared(isShared)
                 .build();
     }
 
@@ -57,6 +59,7 @@ public class EventConverter {
                 .address(req.address())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
+                .friendIds(req.friendIds())
                 .build();
     }
 
@@ -70,6 +73,7 @@ public class EventConverter {
                 .address(req.address() != null ? req.address() : event.getAddress())
                 .color(req.color() != null ? req.color() : event.getColor())
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : event.getIsAllDay())
+                .friendIds(req.friendIds())
                 .build();
     }
 
@@ -93,6 +97,7 @@ public class EventConverter {
                 .location(event.getLocation())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
                 .build();
     }
@@ -112,6 +117,7 @@ public class EventConverter {
                 .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
@@ -132,6 +138,7 @@ public class EventConverter {
                 .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 // TODO : 임시 조치이므로 리팩토링 대상
                 .recurrenceGroup(event.getRecurrenceGroup() != null
                         ? RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup())
@@ -153,6 +160,7 @@ public class EventConverter {
                 .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
                 .build();
     }
@@ -171,6 +179,7 @@ public class EventConverter {
                 .address(ex.getAddress() != null ? ex.getAddress() : event.getAddress())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )

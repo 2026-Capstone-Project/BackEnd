@@ -40,6 +40,9 @@ public class Event extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "is_shared", nullable = false)
+    private Boolean isShared;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", nullable = false, length = 10)
     private RecurrenceFrequency recurrenceFrequency;

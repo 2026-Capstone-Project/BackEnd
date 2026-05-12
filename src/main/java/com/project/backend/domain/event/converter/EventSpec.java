@@ -4,6 +4,7 @@ import com.project.backend.domain.event.enums.EventColor;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Builder
 public record EventSpec(
@@ -14,5 +15,6 @@ public record EventSpec(
         String location,
         String address,
         EventColor color,
-        Boolean isAllDay
+        Boolean isAllDay,
+        List<Long> friendIds
 ) {}

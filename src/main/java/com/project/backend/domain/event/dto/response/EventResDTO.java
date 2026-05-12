@@ -28,6 +28,7 @@ public class EventResDTO {
             String address,
             Boolean isAllDay,
             EventColor color,
+            Boolean isShared,
             RecurrenceGroupResDTO.DetailRes recurrenceGroup
     ) {
     }
