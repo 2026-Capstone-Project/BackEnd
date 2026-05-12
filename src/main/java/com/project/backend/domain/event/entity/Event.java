@@ -178,4 +178,8 @@ public class Event extends BaseEntity {
     public void markAsShared() {
         this.isShared = true;
     }
+
+    public void markAsNotShared() {
+        this.isShared = false;
+    }
 }

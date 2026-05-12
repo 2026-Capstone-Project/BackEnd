@@ -339,10 +339,12 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     @Override
     public void deleteEventParticipants(Long eventId, Long memberId) {
-        eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         eventParticipantRepository.deleteAllByEventId(eventId);
+
+        event.markAsNotShared();
     }
 
     @Override
