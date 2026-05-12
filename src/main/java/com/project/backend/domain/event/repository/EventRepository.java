@@ -41,6 +41,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "AND e.startTime >= :from " +
             "AND e.startTime <= :to " +
             "AND e.recurrenceGroup IS NULL " +
+            "AND e.isShared = false " +
             "ORDER BY e.startTime")
     List<Event> findByMemberIdAndInRangeAndRecurrenceGroupIsNull(
             @Param("memberId") Long memberId,

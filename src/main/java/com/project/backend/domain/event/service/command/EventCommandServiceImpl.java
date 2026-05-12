@@ -10,6 +10,7 @@ import com.project.backend.domain.event.entity.*;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -363,6 +364,14 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 공유 탈퇴시 바로 연관 관계 삭제
         eventParticipantRepository.delete(eventParticipant);
+
+        // 남은 수락 참여자가 없으면 공유 상태 해제
+        boolean hasAcceptedParticipant =
+                eventParticipantRepository.existsByEventIdAndStatus(eventId, InviteStatus.ACCEPTED);
+
+        if (!hasAcceptedParticipant) {
+            ownerEvent.markAsNotShared();
+        }
     }
 
     // ========================= private method ===============================
