@@ -174,4 +174,8 @@ public class Event extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
+    public void markAsShared() {
+        this.isShared = true;
+    }
 }

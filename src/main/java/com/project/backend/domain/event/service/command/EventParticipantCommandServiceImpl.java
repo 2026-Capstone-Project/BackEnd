@@ -25,6 +25,12 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
         EventParticipant eventParticipant = getEventParticipant(memberId, eventParticipantId);
 
         eventParticipant.accept();
+
+        Event event = eventParticipant.getEvent();
+
+        if (event.getIsShared() == false) {
+            event.markAsShared();
+        }
     }
 
     @Override
