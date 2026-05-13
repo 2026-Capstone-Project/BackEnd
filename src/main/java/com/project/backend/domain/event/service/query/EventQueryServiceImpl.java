@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.query;
 
+import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
@@ -58,10 +59,17 @@ public class EventQueryServiceImpl implements EventQueryService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        // 조회에 사용할 참여자들 목록
+        List<EventParticipant> participants =
+                eventParticipantRepository.findAllByEventId(eventId);
+
         boolean isOwner = Objects.equals(event.getMember().getId(), memberId);
 
-        boolean isAcceptedParticipant = eventParticipantRepository
-                .existsByEventIdAndMemberIdAndStatus(eventId, memberId, InviteStatus.ACCEPTED);
+        boolean isAcceptedParticipant = participants.stream()
+                .anyMatch(p ->
+                        Objects.equals(p.getMember().getId(), memberId)
+                                && p.getStatus() == InviteStatus.ACCEPTED
+                );
 
         if (!isOwner && !isAcceptedParticipant) {
             throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
@@ -70,10 +78,10 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         // 찾고자 하는 것이 부모 이벤트인 경우
         if (!event.isRecurring()) {
-            return EventConverter.toDetailRes(event);
+            return EventConverter.toDetailRes(event, participants);
         }
 
-        return eventOccurrenceResolver.resolveForRead(event, occurrenceDate);
+        return eventOccurrenceResolver.resolveForRead(event, occurrenceDate, participants);
     }
 
     @Override
@@ -369,6 +377,10 @@ public class EventQueryServiceImpl implements EventQueryService {
             // 반복 패턴에 맞는 정지 조건 전략 주입
             EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
 
+            // 각 이벤트 객체별 참여자들 목록
+            List<EventParticipant> participants =
+                    eventParticipantRepository.findAllByEventId(event.getId());
+
             // 익셉션 테이블 찾기
             List<RecurrenceException> recurrenceExceptions = new ArrayList<>();
             if (event.getRecurrenceGroup() != null) {
@@ -399,12 +411,12 @@ public class EventQueryServiceImpl implements EventQueryService {
                 // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
                 if (!isSkip && !tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
                     log.debug("예외 부모가 범위에 포함되었습니다");
-                    expandedEvents.add(EventConverter.toDetailRes(tempEx, event));
+                    expandedEvents.add(EventConverter.toDetailRes(tempEx, event, participants));
                 }
             } else {
                 if (!tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
                     log.debug("원본 부모가 범위에 포함되었습니다");
-                    expandedEvents.add(EventConverter.toDetailRes(event));
+                    expandedEvents.add(EventConverter.toDetailRes(event, participants));
                 }
             }
 
@@ -434,7 +446,7 @@ public class EventQueryServiceImpl implements EventQueryService {
                         current = generator.next(current, event.getRecurrenceGroup());
                     } else if (ex.getExceptionType() == OVERRIDE && current.isEqual(ex.getExceptionDate())) {
                         // 잘 찾았으니 리턴값에 추가
-                        expandedEvents.add(EventConverter.toDetailRes(ex, event));
+                        expandedEvents.add(EventConverter.toDetailRes(ex, event, participants));
                         current = generator.next(current, event.getRecurrenceGroup());
                     }
                 }
@@ -454,7 +466,7 @@ public class EventQueryServiceImpl implements EventQueryService {
                     break;
                 }
                 // 모든 탈출 조건을 통과한 객체는 DTO로 변환
-                expandedEvents.add(EventConverter.toDetailRes(event, current, current.plus(duration)));
+                expandedEvents.add(EventConverter.toDetailRes(event, current, current.plus(duration), participants));
                 // 카운트 증가
                 count++;
             }

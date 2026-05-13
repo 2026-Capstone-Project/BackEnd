@@ -29,13 +29,22 @@ public class EventResDTO {
             Boolean isAllDay,
             EventColor color,
             Boolean isShared,
-            RecurrenceGroupResDTO.DetailRes recurrenceGroup
+            RecurrenceGroupResDTO.DetailRes recurrenceGroup,
+            List<EventParticipantInfo> eventParticipantInfo
     ) {
     }
 
     @Builder
     public record EventsListRes(
             List<DetailRes> details
+    ) {
+    }
+
+    @Builder
+    public record EventParticipantInfo(
+            Long eventParticipantId,
+            String email,
+            String name
     ) {
     }
 
