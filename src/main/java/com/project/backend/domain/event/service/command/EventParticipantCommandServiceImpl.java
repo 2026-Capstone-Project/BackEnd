@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.service.command;
 
+import com.project.backend.domain.common.reminder.bridge.ReminderEventBridge;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.enums.InviteStatus;
@@ -7,6 +8,8 @@ import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.repository.EventParticipantRepository;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.reminder.enums.ChangeType;
+import com.project.backend.domain.reminder.enums.TargetType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -19,6 +22,7 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
 
     private final EventParticipantRepository eventParticipantRepository;
     private final EventRepository eventRepository;
+    private final ReminderEventBridge reminderEventBridge;
 
     @Override
     public void acceptInvitation(Long memberId, Long eventParticipantId) {
@@ -31,6 +35,16 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
         if (event.getIsShared() == false) {
             event.markAsShared();
         }
+
+        reminderEventBridge.handlePlanChanged(
+                event.getId(),
+                TargetType.EVENT,
+                memberId,
+                event.getTitle(),
+                event.isRecurring(),
+                event.getStartTime(),
+                ChangeType.CREATED
+        );
     }
 
     @Override
