@@ -111,4 +111,10 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     void deleteAllByMemberId(Long memberId);
 
     void deleteByTargetIdAndTargetTypeAndRole(Long targetId, TargetType type, ReminderRole role);
+
+    List<Reminder> findByTargetIdAndTargetTypeAndRole(
+            Long targetId,
+            TargetType type,
+            ReminderRole role
+    )
 }
