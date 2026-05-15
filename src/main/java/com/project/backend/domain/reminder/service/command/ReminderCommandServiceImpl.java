@@ -151,7 +151,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void deleteReminderOfSingle(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+    public void deleteReminderOfSingle(
+            Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
         reminderRepository.deleteByTargetIdAndTargetTypeAndOccurrenceTime(targetId, targetType, occurrenceTime);
     }
 
@@ -174,13 +175,22 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
 
     @Override
     public void deleteReminderOfAll(Long targetId, TargetType targetType) {
-        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
-                targetId, targetType, ReminderRole.BASE);
-
-        if (reminder.isEmpty()) return;
+//        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
+//                targetId, targetType, ReminderRole.BASE);
+//
+//        if (reminder.isEmpty()) return;
 
         // base, override 리마인더 모두 삭제
-        reminderRepository.deleteByTargetIdAndTargetType(targetId, targetType);
+        reminderRepository.deleteByTargetIdAndTargetTypeAndRole(targetId, targetType, ReminderRole.BASE);
+    }
+
+    @Override
+    public void deleteReminderForMembers(Long targetId, TargetType targetType, List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) return;
+
+        List<Long> ids = memberIds.stream().distinct().toList();
+
+        reminderRepository.deleteByTargetIdAndTargetTypeAndMemberIdsIn(targetId, targetType, ids);
     }
 
     // =================================== private method ============================================

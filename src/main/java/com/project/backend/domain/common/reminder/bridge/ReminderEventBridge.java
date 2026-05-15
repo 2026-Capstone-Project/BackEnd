@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -62,9 +63,29 @@ public class ReminderEventBridge {
         ));
     }
 
+    // 단일 맴버 대상
     public void handleReminderDeleted(
             Long exceptionId,
             Long memberId,
+            LocalDateTime occurrenceTime,
+            Long eventId,
+            TargetType targetType,
+            DeletedType deletedType
+    ) {
+        reminderDeletedHandler.handle(ReminderConverter.toReminderDeleted(
+                exceptionId,
+                List.of(memberId),
+                occurrenceTime,
+                eventId,
+                targetType,
+                deletedType
+        ));
+    }
+
+    // 다중 맴버 대상
+    public void handleReminderDeleted(
+            Long exceptionId,
+            List<Long> memberId,
             LocalDateTime occurrenceTime,
             Long eventId,
             TargetType targetType,

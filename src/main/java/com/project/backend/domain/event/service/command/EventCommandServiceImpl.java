@@ -343,9 +343,21 @@ public class EventCommandServiceImpl implements EventCommandService {
         Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        List<Long> memberIds = eventParticipantRepository.findMemberIdsByEventId(eventId);
+
         eventParticipantRepository.deleteAllByEventId(eventId);
 
         event.markAsNotShared();
+
+        // 주최자를 제외한 해당 일정 참여자 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberIds,
+                event.getStartTime(),
+                event.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     @Override
@@ -372,6 +384,16 @@ public class EventCommandServiceImpl implements EventCommandService {
         if (!hasAcceptedParticipant) {
             ownerEvent.markAsNotShared();
         }
+
+        // 해당 일정에 대한 사용자의 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberId,
+                ownerEvent.getStartTime(),
+                ownerEvent.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     // ========================= private method ===============================

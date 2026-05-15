@@ -48,7 +48,11 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     /**
      * 리마인더의 역할 구분 조회
      */
-    @Query("SELECT r FROM Reminder r WHERE r.targetId = :targetId AND r.targetType = :type AND r.role = :role")
+    @Query("SELECT r" +
+            " FROM Reminder r " +
+            "WHERE r.targetId = :targetId " +
+            "AND r.targetType = :type" +
+            " AND r.role = :role")
     Optional<Reminder> findByIdAndTypeAndRole(
             @Param("targetId") Long targetId,
             @Param("type") TargetType type,
@@ -69,7 +73,8 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     @Query("DELETE FROM Reminder r " +
             "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type " +
-            "AND r.occurrenceTime >= :occurrenceTime")
+            "AND r.occurrenceTime >= :occurrenceTime " +
+            "AND r.member.id = :memberId")
     void deleteByTargetIdAndTargetTypeAndOccurrenceTime(
             @Param("targetId") Long targetId,
             @Param("type") TargetType type,
@@ -95,6 +100,15 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     void deleteByTargetIdAndTargetType(Long targetId, TargetType type);
 
     @Modifying
+    @Query("DELETE FROM Reminder r" +
+            " WHERE r.targetId = :targetId" +
+            " AND r.targetType = :type" +
+            " AND r.member.id IN :memberIds")
+    void deleteByTargetIdAndTargetTypeAndMemberIdsIn(Long targetId, TargetType type, List<Long> memberIds);
+
+    @Modifying
     @Query("DELETE FROM Reminder r WHERE r.member.id = :memberId")
     void deleteAllByMemberId(Long memberId);
+
+    void deleteByTargetIdAndTargetTypeAndRole(Long targetId, TargetType type, ReminderRole role);
 }

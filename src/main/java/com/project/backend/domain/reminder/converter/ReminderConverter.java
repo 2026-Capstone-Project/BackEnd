@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ReminderConverter {
@@ -125,7 +126,7 @@ public class ReminderConverter {
 
     public static ReminderDeleted toReminderDeleted(
             Long exceptionId,
-            Long memberId,
+            List<Long> memberIds,
             LocalDateTime occurrenceTime,
             Long targetId,
             TargetType targetType,
@@ -133,7 +134,7 @@ public class ReminderConverter {
     ) {
         return ReminderDeleted.builder()
                 .exceptionId(exceptionId)
-                .memberId(memberId)
+                .memberId(memberIds)
                 .occurrenceTime(occurrenceTime)
                 .targetId(targetId)
                 .targetType(targetType)
