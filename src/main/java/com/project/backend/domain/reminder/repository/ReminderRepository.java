@@ -116,5 +116,5 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
             Long targetId,
             TargetType type,
             ReminderRole role
-    )
+    );
 }
