@@ -1,5 +1,6 @@
 package com.project.backend.domain.suggestion.service.command;
 
+import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
@@ -98,7 +99,8 @@ public class SuggestionCommandServiceImpl implements SuggestionCommandService {
         LocalDateTime to = now.atStartOfDay().plusYears(1);
 
         // 최근 1년 간의 Event 객체
-        List<Event> events = eventRepository.findByMemberIdAndInRangeAndRecurrenceGroupIsNull(memberId, from, to);
+        List<Event> events =
+                eventRepository.findByMemberIdAndInRangeAndIsSharedIsFalseAndRecurrenceGroupIsNull(memberId, from, to);
         // 최근 1년간의 Event 객체를 (이름 + 장소)로 그룹핑
         Map<SuggestionKey, List<SuggestionCandidate>> eventMap = groupByTitleAndLocation(events);
 

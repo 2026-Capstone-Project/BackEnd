@@ -40,10 +40,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "WHERE e.member.id = :memberId " +
             "AND e.startTime >= :from " +
             "AND e.startTime <= :to " +
-            "AND e.recurrenceGroup IS NULL " +
             "AND e.isShared = false " +
+            "AND e.recurrenceGroup IS NULL " +
             "ORDER BY e.startTime")
-    List<Event> findByMemberIdAndInRangeAndRecurrenceGroupIsNull(
+    List<Event> findByMemberIdAndInRangeAndIsSharedIsFalseAndRecurrenceGroupIsNull(
             @Param("memberId") Long memberId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
