@@ -42,7 +42,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     from EventParticipant ep
     join fetch ep.event
     join fetch ep.owner
-    where ep.member.id = :memberId or ep.owner.id = :memberId
+    where (ep.member.id = :memberId or ep.owner.id = :memberId)
       and ep.status = :status
 """)
     List<EventParticipant> findAllByParticipantOrOwnerIdAndStatus(
@@ -94,4 +94,16 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
             "AND (rg.endDate IS NULL OR rg.endDate >= :startDate)"
     )
     List<RecurrenceGroup> findSharedActiveRecurrenceGroups(Long memberId, LocalDate startDate, InviteStatus status);
+
+    // 나 또는 상대방의 아이디로 이루어진 모든 EventParticipant 객체 반환 (친구 삭제 시 사용)
+    @Query("SELECT ep " +
+            "FROM EventParticipant ep " +
+            "WHERE ep.member.id = :memberId " +
+            "AND ep.owner.id = :opponentId " +
+            "UNION " +
+            "SELECT ep " +
+            "FROM EventParticipant ep " +
+            "WHERE ep.member.id = :opponentId " +
+            "AND ep.owner.id = :memberId")
+    List<EventParticipant> findByMemberIdAndOpponentId(Long memberId, Long opponentId);
 }
