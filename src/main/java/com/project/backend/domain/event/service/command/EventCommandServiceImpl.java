@@ -484,17 +484,88 @@ public class EventCommandServiceImpl implements EventCommandService {
                 );
 
         if (re.isPresent()) {
-            RecurrenceException ex = re.get();
-            updateRecurrenceException(req, ex);
-            reminderEventBridge.handleExceptionChanged(
-                    ex.getId(),
-                    event.getId(),
-                    TargetType.EVENT,
-                    member.getId(),
-                    ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
-                    ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
-                    ExceptionChangeType.UPDATE_THIS_AGAIN
-            );
+
+            // 기존 반복 일정에서 실제 참여가 확정된 사용자 목록
+            // PENDING은 아직 참여자가 아니므로 비교 대상에서 제외한다.
+            Set<Long> oldAcceptedParticipantIds =
+                    eventParticipantRepository.findSetMemberIdsByEventId(
+                            event.getId(),
+                            InviteStatus.ACCEPTED
+                    );
+
+            // 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환
+            Set<Long> requestedParticipantIds =
+                    resolveRequestedParticipantIds(req.friendIds(), member.getId());
+
+            // 기존 확정 참여자 목록과 수정 요청 참여자 목록이 다르면
+            // 공유 구성 변경으로 보고 반복예외가 아닌 새 단일 Event로 분리 생성한다.
+            if (!oldAcceptedParticipantIds.equals(requestedParticipantIds)) {
+                LocalDateTime newStartTime = req.startTime() != null
+                        ? req.startTime()
+                        : occurrenceDate;
+
+                LocalDateTime newEndTime = req.endTime() != null
+                        ? req.endTime()
+                        : occurrenceDate.plusMinutes(event.getDurationMinutes());
+
+                EventSpec eventSpec = EventConverter.from(
+                        req,
+                        event,
+                        newStartTime,
+                        newEndTime
+                );
+
+                Event newEvent = createEvent(eventSpec, member, null);
+
+                createParticipantsForDetachedEvent(
+                        newEvent,
+                        member,
+                        oldAcceptedParticipantIds,
+                        requestedParticipantIds
+                );
+
+                // 작성자 리마인더는 항상 생성
+                reminderEventBridge.handlePlanChanged(
+                        newEvent.getId(),
+                        TargetType.EVENT,
+                        member.getId(),
+                        newEvent.getTitle(),
+                        false,
+                        newEvent.getStartTime(),
+                        ChangeType.CREATED
+                );
+
+                // 기존 ACCEPTED였고 새 요청에도 포함된 사용자만 리마인더 생성
+                List<Long> copiedAcceptedParticipantIds = requestedParticipantIds.stream()
+                        .filter(oldAcceptedParticipantIds::contains)
+                        .toList();
+
+                for (Long participantId : copiedAcceptedParticipantIds) {
+                    reminderEventBridge.handlePlanChanged(
+                            newEvent.getId(),
+                            TargetType.EVENT,
+                            participantId,
+                            newEvent.getTitle(),
+                            false,
+                            newEvent.getStartTime(),
+                            ChangeType.CREATED
+                    );
+                }
+
+            } else {
+                RecurrenceException ex = re.get();
+                updateRecurrenceException(req, ex);
+                reminderEventBridge.handleExceptionChanged(
+                        ex.getId(),
+                        event.getId(),
+                        TargetType.EVENT,
+                        member.getId(),
+                        ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
+                        ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
+                        ExceptionChangeType.UPDATE_THIS_AGAIN
+                );
+            }
+
             log.info("exception updated");
             InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
                     SuggestionInvalidateReason.EXCEPTION_UPDATED,
@@ -1079,7 +1150,7 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         List<EventParticipant> participants = members.stream()
                 .map(member -> EventParticipantConverter.toEventParticipant(
-                        event, member, event.getMember()
+                        event, member, event.getMember(), InviteStatus.PENDING
                 ))
                 .toList();
 
@@ -1104,5 +1175,115 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         log.info("sameParticipants, memberIdsInFriends: {}", memberIdsInFriends);
         return new HashSet<>(savedIds).equals(new HashSet<>(memberIdsInFriends));
+    }
+
+    /**
+     * 반복 일정의 특정 occurrence를 새 단일 일정으로 분리할 때,
+     * 수정 요청의 참여자 목록을 기준으로 새 EventParticipant를 생성한다.
+     *
+     * 처리 규칙:
+     *
+     * 1. 기존 반복 일정에서 ACCEPTED였고 수정 요청에도 포함된 사용자
+     *    → 새 일정에서도 ACCEPTED 상태로 복사한다.
+     *
+     * 2. 기존 반복 일정에서 ACCEPTED가 아니었거나,
+     *    이번 수정 요청에 새로 추가된 사용자
+     *    → 새 일정에서는 PENDING 상태로 초대한다.
+     *
+     * 3. 기존 ACCEPTED 참여자였지만 수정 요청에서 빠진 사용자
+     *    → 새 일정의 EventParticipant로 생성하지 않는다.
+     *
+     * 4. 수정 요청 참여자가 없으면
+     *    → EventParticipant를 생성하지 않는다.
+     *    → 새 일정은 isShared=false 상태를 유지한다.
+     *
+     * 5. 새 일정에 ACCEPTED 참여자가 1명 이상 있으면
+     *    → isShared=true 처리한다.
+     *
+     * 6. 새 일정에 PENDING 참여자만 있으면
+     *    → 아직 수락한 사람이 없으므로 isShared=false 상태를 유지한다.
+     */
+    private void createParticipantsForDetachedEvent(
+            Event newEvent,
+            Member owner,
+            Set<Long> oldAcceptedParticipantIds,
+            Set<Long> requestedParticipantIds
+    ) {
+        Set<Long> oldAcceptedIds = oldAcceptedParticipantIds == null
+                ? Set.of()
+                : oldAcceptedParticipantIds;
+
+        Set<Long> requestedIds = requestedParticipantIds == null
+                ? Set.of()
+                : requestedParticipantIds;
+
+        if (requestedIds.isEmpty()) {
+            return;
+        }
+
+        List<Member> inviteeMembers = memberRepository.findAllById(requestedIds);
+
+        if (inviteeMembers.size() != requestedIds.size()) {
+            throw new MemberException(MemberErrorCode.MEMBER_NOT_FOUND);
+        }
+
+        List<EventParticipant> eventParticipants = inviteeMembers.stream()
+                .map(invitee -> {
+                    InviteStatus status = oldAcceptedIds.contains(invitee.getId())
+                            ? InviteStatus.ACCEPTED
+                            : InviteStatus.PENDING;
+
+                    return EventParticipant.builder()
+                            .event(newEvent)
+                            .owner(owner)
+                            .member(invitee)
+                            .status(status)
+                            .build();
+                })
+                .toList();
+
+        eventParticipantRepository.saveAll(eventParticipants);
+
+        boolean hasAcceptedParticipant = eventParticipants.stream()
+                .anyMatch(ep -> ep.getStatus() == InviteStatus.ACCEPTED);
+
+        if (hasAcceptedParticipant) {
+            newEvent.markAsShared();
+        }
+    }
+
+    /**
+     * 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환한다.
+     *
+     * friendIds가 null이거나 비어 있으면
+     * 참여자를 모두 제거한 요청으로 보고 빈 Set을 반환한다.
+     */
+    private Set<Long> resolveRequestedParticipantIds(List<Long> friendIds, Long memberId) {
+        if (friendIds == null || friendIds.isEmpty()) {
+            return Set.of();
+        }
+
+        // 중복 friendId 제거
+        List<Long> distinctFriendIds = friendIds.stream().distinct().toList();
+
+        // 요청자의 친구 목록에서 friendId에 해당하는 상대 memberId 조회
+        Set<Long> participantIds =
+                friendRepository.findOpponentMemberIdsByFriendIds(distinctFriendIds, memberId);
+
+        // 자기 자신 초대 방지
+        if (participantIds.contains(memberId)) {
+            throw new EventException(EventErrorCode.EVENT_SELF_INVITE_NOT_ALLOWED);
+        }
+
+        /*
+         * 요청한 friendId 수와 실제 조회된 participantId 수가 다르면
+         * 존재하지 않는 friendId이거나,
+         * 요청자의 친구가 아닌 friendId가 포함된 것이다.
+         */
+        if (participantIds.size() != distinctFriendIds.size()) {
+            throw new EventException(EventErrorCode.EVENT_INVITEE_NOT_FRIEND);
+        }
+
+        return participantIds;
     }
 }

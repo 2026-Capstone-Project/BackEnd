@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +25,7 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
     @Override
     public EventParticipantResDTO.InvitationRes getInvitations(Long memberId) {
         List<EventParticipant> participantList
-                = eventParticipantRepository.findAllByMemberIdAndStatus(memberId, InviteStatus.PENDING);
+                = eventParticipantRepository.findAllByParticipantIdAndStatus(memberId, InviteStatus.PENDING);
 
         List<Long> eventIds = participantList.stream()
                 .map(participant -> participant.getEvent().getId())
@@ -56,7 +55,7 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
     @Override
     public EventParticipantResDTO.SharedEventsRes getSharedEvents(Long memberId) {
         List<EventParticipant> participantList
-                = eventParticipantRepository.findAllByMemberIdAndStatus(memberId, InviteStatus.ACCEPTED);
+                = eventParticipantRepository.findAllByParticipantOrOwnerIdAndStatus(memberId, InviteStatus.ACCEPTED);
 
         List<EventParticipantResDTO.SharedEventItem> items = participantList.stream()
                 .map(participant ->

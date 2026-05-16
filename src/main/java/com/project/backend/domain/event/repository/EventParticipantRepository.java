@@ -14,11 +14,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, Long> {
 
     @Query("select ep.member.id from EventParticipant ep where ep.event.id = :eventId")
     List<Long> findMemberIdsByEventId(@Param("eventId") Long eventId);
+
+    @Query("select ep.member.id from EventParticipant ep where ep.event.id = :eventId")
+    Set<Long> findSetMemberIdsByEventId(@Param("eventId") Long eventId, @Param("status") InviteStatus status);
 
     List<EventParticipant> findAllByEventId(Long eventId);
 
@@ -30,8 +34,20 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     where ep.member.id = :memberId
       and ep.status = :status
 """)
-    List<EventParticipant> findAllByMemberIdAndStatus(
+    List<EventParticipant> findAllByParticipantIdAndStatus(
             @Param("memberId") Long memberId, @Param("status") InviteStatus status);
+
+    @Query("""
+    select ep
+    from EventParticipant ep
+    join fetch ep.event
+    join fetch ep.owner
+    where (ep.member.id = :memberId or ep.owner.id = :memberId)
+      and ep.status = :status
+""")
+    List<EventParticipant> findAllByParticipantOrOwnerIdAndStatus(
+            @Param("memberId") Long memberId, @Param("status") InviteStatus status);
+
 
     @Query("""
         select ep.event.id as eventId, count(ep) as participantCount
@@ -78,4 +94,16 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
             "AND (rg.endDate IS NULL OR rg.endDate >= :startDate)"
     )
     List<RecurrenceGroup> findSharedActiveRecurrenceGroups(Long memberId, LocalDate startDate, InviteStatus status);
+
+    // 나 또는 상대방의 아이디로 이루어진 모든 EventParticipant 객체 반환 (친구 삭제 시 사용)
+    @Query("SELECT ep " +
+            "FROM EventParticipant ep " +
+            "WHERE ep.member.id = :memberId " +
+            "AND ep.owner.id = :opponentId " +
+            "UNION " +
+            "SELECT ep " +
+            "FROM EventParticipant ep " +
+            "WHERE ep.member.id = :opponentId " +
+            "AND ep.owner.id = :memberId")
+    List<EventParticipant> findByMemberIdAndOpponentId(Long memberId, Long opponentId);
 }
