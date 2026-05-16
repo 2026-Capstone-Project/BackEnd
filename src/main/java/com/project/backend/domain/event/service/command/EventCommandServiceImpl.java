@@ -150,10 +150,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             occurrenceDate = event.getStartTime();
         }
 
-        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
-        if (event.getRecurrenceGroup() == null) {
-            scope = null;
-        }
+        // TODO : eventValidator.validateUpdate 오류로 임시 비활성화
+//        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
+//        if (event.getRecurrenceGroup() == null) {
+//            scope = null;
+//        }
 
         eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
