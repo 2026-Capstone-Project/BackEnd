@@ -15,6 +15,7 @@ services:
         condition: service_started
 
   mysql:
+    container_name: mysql
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: ${DEV_DB_PASSWORD}
