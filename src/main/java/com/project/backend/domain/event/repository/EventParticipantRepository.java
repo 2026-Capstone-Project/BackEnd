@@ -42,7 +42,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     from EventParticipant ep
     join fetch ep.event
     join fetch ep.owner
-    where ep.member.id = :memberId or ep.owner.id = :memberId
+    where (ep.member.id = :memberId or ep.owner.id = :memberId)
       and ep.status = :status
 """)
     List<EventParticipant> findAllByParticipantOrOwnerIdAndStatus(
