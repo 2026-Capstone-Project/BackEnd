@@ -14,11 +14,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, Long> {
 
     @Query("select ep.member.id from EventParticipant ep where ep.event.id = :eventId")
     List<Long> findMemberIdsByEventId(@Param("eventId") Long eventId);
+
+    @Query("select ep.member.id from EventParticipant ep where ep.event.id = :eventId")
+    Set<Long> findSetMemberIdsByEventId(@Param("eventId") Long eventId, @Param("status") InviteStatus status);
 
     List<EventParticipant> findAllByEventId(Long eventId);
 
