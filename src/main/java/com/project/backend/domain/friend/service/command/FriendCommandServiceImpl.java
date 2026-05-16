@@ -1,5 +1,9 @@
 package com.project.backend.domain.friend.service.command;
 
+import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.EventParticipant;
+import com.project.backend.domain.event.enums.InviteStatus;
+import com.project.backend.domain.event.repository.EventParticipantRepository;
 import com.project.backend.domain.friend.converter.FriendConverter;
 import com.project.backend.domain.friend.converter.FriendRequestConverter;
 import com.project.backend.domain.friend.dto.request.FriendReqDTO;
@@ -31,6 +35,7 @@ public class FriendCommandServiceImpl implements FriendCommandService{
     private final MemberRepository memberRepository;
     private final FriendRepository friendRepository;
     private final FriendRequestRepository friendRequestRepository;
+    private final EventParticipantRepository eventParticipantRepository;
 
     @Override
     public void sendRequest(Long memberId, FriendReqDTO.SendRequestReq reqDTO) {
@@ -97,6 +102,24 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         // 쌍방향 친구 조회
         Friend opponentFriend = friendRepository.findByMemberIdAndOpponentId(opponent.getId(), memberId)
                 .orElseThrow(() -> new FriendException(FriendErrorCode.FRIEND_NOT_FOUND));
+
+        List<EventParticipant> eventParticipant =
+                eventParticipantRepository.findByMemberIdAndOpponentId(memberId, opponent.getId());
+
+        eventParticipantRepository.deleteAll(eventParticipant);
+        eventParticipantRepository.flush();
+
+        for (EventParticipant participant : eventParticipant) {
+            Event sharedEvent = participant.getEvent();
+            // 남은 수락 참여자가 없으면 공유 상태 해제
+            boolean hasAcceptedParticipant =
+                    eventParticipantRepository.existsByEventIdAndStatus(sharedEvent.getId(), InviteStatus.ACCEPTED);
+
+            if (!hasAcceptedParticipant) {
+                sharedEvent.markAsNotShared();
+            }
+        }
+
 
         // 쌍방향 친구 삭제
         friendRepository.delete(opponentFriend);
