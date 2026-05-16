@@ -16,8 +16,6 @@ import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.LifecycleStatus;
 import com.project.backend.domain.reminder.enums.ReminderRole;
 import com.project.backend.domain.reminder.enums.TargetType;
-import com.project.backend.domain.reminder.exception.ReminderErrorCode;
-import com.project.backend.domain.reminder.exception.ReminderException;
 import com.project.backend.domain.reminder.repository.ReminderRepository;
 import com.project.backend.domain.occurrence.service.OccurrenceResolver;
 import com.project.backend.domain.todo.entity.Todo;
@@ -78,11 +76,15 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
         // 수정한 날짜가 현재보다 이전이면 리마인더 생성 x
         if (!rs.occurrenceTime().isAfter(now)) return;
 
-        Reminder reminder = findBaseReminder(rs);
+        List<Reminder> reminders = findBaseReminder(rs);
 
-        switch (rs.targetType()) {
-            case EVENT -> handleEventOccurrenceInvalidated(rs, exceptionId, isSkip, reminder);
-            case TODO -> handleTodoOccurrenceInvalidated(rs, exceptionId, isSkip, reminder);
+        if (reminders.isEmpty()) return;
+
+        for (Reminder re : reminders) {
+            switch (rs.targetType()) {
+                case EVENT -> handleEventOccurrenceInvalidated(rs, exceptionId, isSkip, re);
+                case TODO -> handleTodoOccurrenceInvalidated(rs, exceptionId, isSkip, re);
+            }
         }
     }
 
@@ -152,7 +154,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     }
 
     @Override
-    public void deleteReminderOfSingle(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
+    public void deleteReminderOfSingle(
+            Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
         reminderRepository.deleteByTargetIdAndTargetTypeAndOccurrenceTime(targetId, targetType, occurrenceTime);
     }
 
@@ -175,13 +178,22 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
 
     @Override
     public void deleteReminderOfAll(Long targetId, TargetType targetType) {
-        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
-                targetId, targetType, ReminderRole.BASE);
-
-        if (reminder.isEmpty()) return;
+//        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
+//                targetId, targetType, ReminderRole.BASE);
+//
+//        if (reminder.isEmpty()) return;
 
         // base, override 리마인더 모두 삭제
-        reminderRepository.deleteByTargetIdAndTargetType(targetId, targetType);
+        reminderRepository.deleteByTargetIdAndTargetTypeAndRole(targetId, targetType, ReminderRole.BASE);
+    }
+
+    @Override
+    public void deleteReminderForMembers(Long targetId, TargetType targetType, List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) return;
+
+        List<Long> ids = memberIds.stream().distinct().toList();
+
+        reminderRepository.deleteByTargetIdAndTargetTypeAndMemberIdsIn(targetId, targetType, ids);
     }
 
     // =================================== private method ============================================
@@ -279,10 +291,8 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
     /**
      * Type Base Reminder 찾기
      * */
-    private Reminder findBaseReminder(ReminderSource rs) {
-        return reminderRepository.findByIdAndTypeAndRole(
-                        rs.targetId(), rs.targetType(), ReminderRole.BASE)
-                .orElseThrow(() -> new ReminderException(ReminderErrorCode.REMINDER_NOT_FOUND));
+    private List<Reminder> findBaseReminder(ReminderSource rs) {
+        return reminderRepository.findByTargetIdAndTargetTypeAndRole(rs.targetId(), rs.targetType(), ReminderRole.BASE);
     }
 
     /**

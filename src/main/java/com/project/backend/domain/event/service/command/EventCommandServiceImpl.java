@@ -10,6 +10,7 @@ import com.project.backend.domain.event.entity.*;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -42,6 +43,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -120,7 +123,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         log.info("event created");
         suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
-        scheduleVectorSyncService.syncOnCreate(event);
+        afterCommit(() -> scheduleVectorSyncService.syncOnCreate(event.getId()));
 
         return EventConverter.toCreateRes(event);
     }
@@ -147,10 +150,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             occurrenceDate = event.getStartTime();
         }
 
-        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
-        if (event.getRecurrenceGroup() == null) {
-            scope = null;
-        }
+        // TODO : eventValidator.validateUpdate 오류로 임시 비활성화
+//        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
+//        if (event.getRecurrenceGroup() == null) {
+//            scope = null;
+//        }
 
         eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
@@ -300,7 +304,7 @@ public class EventCommandServiceImpl implements EventCommandService {
             log.info("event deleted");
             suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
 
-            scheduleVectorSyncService.syncOnDelete(eventId);
+            afterCommit(() -> scheduleVectorSyncService.syncOnDelete(eventId));
 
             return;
         }
@@ -359,10 +363,24 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     @Override
     public void deleteEventParticipants(Long eventId, Long memberId) {
-        eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        List<Long> memberIds = eventParticipantRepository.findMemberIdsByEventId(eventId);
+
         eventParticipantRepository.deleteAllByEventId(eventId);
+
+        event.markAsNotShared();
+
+        // 주최자를 제외한 해당 일정 참여자 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberIds,
+                event.getStartTime(),
+                event.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     @Override
@@ -381,6 +399,24 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 공유 탈퇴시 바로 연관 관계 삭제
         eventParticipantRepository.delete(eventParticipant);
+
+        // 남은 수락 참여자가 없으면 공유 상태 해제
+        boolean hasAcceptedParticipant =
+                eventParticipantRepository.existsByEventIdAndStatus(eventId, InviteStatus.ACCEPTED);
+
+        if (!hasAcceptedParticipant) {
+            ownerEvent.markAsNotShared();
+        }
+
+        // 해당 일정에 대한 사용자의 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberId,
+                ownerEvent.getStartTime(),
+                ownerEvent.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     // ========================= private method ===============================
@@ -984,7 +1020,16 @@ public class EventCommandServiceImpl implements EventCommandService {
         );
 
         suggestionInvalidationDispatcher.dispatch(member.getId(), invalidationPlan);
-        scheduleVectorSyncService.syncOnUpdate(event);
+        afterCommit(() -> scheduleVectorSyncService.syncOnUpdate(event.getId()));
+    }
+
+    private void afterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 
     private void syncEventParticipants(Event event, List<Long> participantIds) {

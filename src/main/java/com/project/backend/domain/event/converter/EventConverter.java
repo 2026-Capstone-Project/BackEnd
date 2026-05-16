@@ -4,6 +4,7 @@ import com.project.backend.domain.event.dto.*;
 import com.project.backend.domain.event.dto.request.EventReqDTO;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.entity.RecurrenceGroup;
 import com.project.backend.domain.event.enums.EventColor;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -30,6 +32,7 @@ public class EventConverter {
                 (spec.startTime() != null && spec.endTime() != null)
                         ? (int) Duration.between(spec.startTime(), spec.endTime()).toMinutes()
                         : null;
+//        Boolean isShared = !spec.friendIds().isEmpty();
 
         return Event.builder()
                 .title(spec.title())
@@ -44,6 +47,7 @@ public class EventConverter {
                 .durationMinutes(durationMinutes)
                 .member(member)
                 .recurrenceGroup(recurrenceGroup)
+                .isShared(false)
                 .build();
     }
 
@@ -57,6 +61,7 @@ public class EventConverter {
                 .address(req.address())
                 .color(req.color())
                 .isAllDay(req.isAllDay())
+                .friendIds(req.friendIds())
                 .build();
     }
 
@@ -70,6 +75,7 @@ public class EventConverter {
                 .address(req.address() != null ? req.address() : event.getAddress())
                 .color(req.color() != null ? req.color() : event.getColor())
                 .isAllDay(req.isAllDay() != null ? req.isAllDay() : event.getIsAllDay())
+                .friendIds(req.friendIds())
                 .build();
     }
 
@@ -82,7 +88,11 @@ public class EventConverter {
     }
 
     // RecurrenceException이 없는 일정일경우
-    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime occurrenceDate) {
+    public static EventResDTO.DetailRes toDetailRes(
+            Event event,
+            LocalDateTime occurrenceDate,
+            List<EventParticipant> participants
+    ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
                 .occurrenceDate(occurrenceDate)
@@ -94,14 +104,18 @@ public class EventConverter {
                 .location(event.getLocation())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
                 .build();
     }
 
     public static EventResDTO.DetailRes toDetailRes(
             Event event,
             RecurrenceException ex,
-            LocalDateTime occurrenceDate) {
+            LocalDateTime occurrenceDate,
+            List<EventParticipant> participants
+    ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
                 .occurrenceDate(ex.getExceptionDate())
@@ -113,14 +127,19 @@ public class EventConverter {
                 .location(ex.getLocation() != null ? ex.getLocation() : event.getLocation())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
                 .build();
     }
 
     // TODO : 오버 로딩 임시조치
-    public static EventResDTO.DetailRes toDetailRes(Event event) {
+    public static EventResDTO.DetailRes toDetailRes(
+            Event event,
+            List<EventParticipant> participants
+    ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
                 .occurrenceDate(event.getStartTime())
@@ -133,15 +152,24 @@ public class EventConverter {
                 .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 // TODO : 임시 조치이므로 리팩토링 대상
                 .recurrenceGroup(event.getRecurrenceGroup() != null
                         ? RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup())
                         : null)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
                 .build();
     }
 
+
+
     // TODO : 오버 로딩 임시조치
-    public static EventResDTO.DetailRes toDetailRes(Event event, LocalDateTime start, LocalDateTime end) {
+    public static EventResDTO.DetailRes toDetailRes(
+            Event event,
+            LocalDateTime start,
+            LocalDateTime end,
+            List<EventParticipant> participants
+    ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
                 .occurrenceDate(start)
@@ -154,12 +182,18 @@ public class EventConverter {
                 .address(event.getAddress())
                 .isAllDay(event.getIsAllDay())
                 .color(event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
                 .build();
     }
 
     // TODO : 오버 로딩 임시조치
-    public static EventResDTO.DetailRes toDetailRes(RecurrenceException ex, Event event) {
+    public static EventResDTO.DetailRes toDetailRes(
+            RecurrenceException ex,
+            Event event,
+            List<EventParticipant> participants
+    ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
                 .occurrenceDate(ex.getExceptionDate())
@@ -172,9 +206,11 @@ public class EventConverter {
                 .address(ex.getAddress() != null ? ex.getAddress() : event.getAddress())
                 .isAllDay(ex.getIsAllDay() != null ? ex.getIsAllDay() : event.getIsAllDay())
                 .color(ex.getColor() != null ? ex.getColor() : event.getColor())
+                .isShared(event.getIsShared())
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
                 .build();
     }
 
@@ -205,5 +241,42 @@ public class EventConverter {
                     event.getEndTime().toLocalTime().getMinute() - occurrenceDate.toLocalTime().getMinute());
         }
         return end;
+    }
+
+    private static List<EventResDTO.EventParticipantInfo> getEventParticipantInfos(
+            Member owner,
+            List<EventParticipant> participants
+    ) {
+        List<EventResDTO.EventParticipantInfo> participantInfos = new ArrayList<>();
+
+        // 관리자 정보
+//        participantInfos.add(toOwnerEventParticipantInfo(owner));
+
+        // 피공유자 정보
+        participantInfos.addAll(
+                participants.stream()
+                        .map(EventConverter::toEventParticipantInfo)
+                        .toList()
+        );
+
+        return participantInfos;
+    }
+
+    private static EventResDTO.EventParticipantInfo toEventParticipantInfo(EventParticipant eventParticipant) {
+        Member member = eventParticipant.getMember();
+
+        return EventResDTO.EventParticipantInfo.builder()
+                .eventParticipantId(eventParticipant.getId())
+                .email(member.getEmail())
+                .name(member.getNickname())
+                .build();
+    }
+
+    private static EventResDTO.EventParticipantInfo toOwnerEventParticipantInfo(Member owner) {
+        return EventResDTO.EventParticipantInfo.builder()
+                .eventParticipantId(null)
+                .email(owner.getEmail())
+                .name(owner.getNickname())
+                .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.project.backend.domain.todo.entity;
 
+import com.project.backend.domain.common.enums.VectorSyncStatus;
 import com.project.backend.domain.member.entity.Member;
 import com.project.backend.domain.todo.enums.Priority;
 import com.project.backend.domain.todo.enums.TodoColor;
@@ -55,6 +56,11 @@ public class Todo extends BaseEntity {
     @Column(name = "source_suggestion_id")
     private Long sourceSuggestionId;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vector_sync_status", nullable = false)
+    private VectorSyncStatus vectorSyncStatus = VectorSyncStatus.PENDING;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
@@ -105,6 +111,10 @@ public class Todo extends BaseEntity {
      */
     public void setTodoRecurrenceGroup(TodoRecurrenceGroup todoRecurrenceGroup) {
         this.todoRecurrenceGroup = todoRecurrenceGroup;
+    }
+
+    public void updateVectorSyncStatus(VectorSyncStatus status) {
+        this.vectorSyncStatus = status;
     }
 
     // ===== 팩토리 메서드 =====

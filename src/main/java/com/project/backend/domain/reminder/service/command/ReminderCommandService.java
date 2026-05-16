@@ -5,6 +5,7 @@ import com.project.backend.domain.reminder.dto.ReminderSource;
 import com.project.backend.domain.reminder.enums.TargetType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface ReminderCommandService {
 
@@ -27,4 +28,6 @@ public interface ReminderCommandService {
     void deleteReminderOfThisAndFollowings(Long targetId, TargetType targetType, LocalDateTime occurrenceTime);
 
     void deleteReminderOfAll(Long targetId, TargetType targetType);
+
+    void deleteReminderForMembers(Long targetId, TargetType targetType, List<Long> memberId);
 }

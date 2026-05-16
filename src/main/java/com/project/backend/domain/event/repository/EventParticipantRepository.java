@@ -45,6 +45,9 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     // 상태가 PENDING이면서, participantId로 조회
     Optional<EventParticipant> findByIdAndStatus(Long eventParticipantId, InviteStatus inviteStatus);
 
+    // 해당 이벤트에 eventParticipant가 존재하는가? 존재하지 않는다면 -> isShared = false
+    Boolean existsByEventIdAndStatus(Long eventId, InviteStatus inviteStatus);
+
     @Modifying
     @Query("delete from EventParticipant ep where ep.event.id = :eventId")
     void deleteAllByEventId(Long eventId);
