@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface FriendRepository extends JpaRepository<Friend, Long> {
@@ -54,9 +55,21 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Query("""
     select f.opponent.id
     from Friend f
-    where f.opponent.id in :friendIds
+    where f.id in :friendIds
       and f.member.id = :memberId
 """)
     List<Long> findOpponentMemberIdsByFriendIdsAndMemberId(@Param("friendIds") List<Long> friendIds,
                                                            @Param("memberId") Long memberId);
+
+    // memberId와 friendId로 opponentId 찾기
+    @Query("""
+    select f.opponent.id
+    from Friend f
+    where f.id in :friendIds
+      and f.member.id = :memberId
+""")
+    Set<Long> findOpponentMemberIdsByFriendIds(
+            @Param("friendIds") List<Long> friendIds,
+            @Param("memberId") Long memberId
+    );
 }
