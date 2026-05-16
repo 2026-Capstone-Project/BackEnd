@@ -10,6 +10,7 @@ import com.project.backend.domain.event.entity.*;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.common.recurrence.enums.ExceptionType;
 import com.project.backend.domain.common.recurrence.enums.MonthlyWeekdayRule;
+import com.project.backend.domain.event.enums.InviteStatus;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -361,10 +362,24 @@ public class EventCommandServiceImpl implements EventCommandService {
 
     @Override
     public void deleteEventParticipants(Long eventId, Long memberId) {
-        eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
+        List<Long> memberIds = eventParticipantRepository.findMemberIdsByEventId(eventId);
+
         eventParticipantRepository.deleteAllByEventId(eventId);
+
+        event.markAsNotShared();
+
+        // 주최자를 제외한 해당 일정 참여자 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberIds,
+                event.getStartTime(),
+                event.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     @Override
@@ -383,6 +398,24 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         // 공유 탈퇴시 바로 연관 관계 삭제
         eventParticipantRepository.delete(eventParticipant);
+
+        // 남은 수락 참여자가 없으면 공유 상태 해제
+        boolean hasAcceptedParticipant =
+                eventParticipantRepository.existsByEventIdAndStatus(eventId, InviteStatus.ACCEPTED);
+
+        if (!hasAcceptedParticipant) {
+            ownerEvent.markAsNotShared();
+        }
+
+        // 해당 일정에 대한 사용자의 리마인더 삭제
+        reminderEventBridge.handleReminderDeleted(
+                null,
+                memberId,
+                ownerEvent.getStartTime(),
+                ownerEvent.getId(),
+                TargetType.EVENT,
+                DeletedType.DELETED_PARTICIPANTS
+        );
     }
 
     // ========================= private method ===============================

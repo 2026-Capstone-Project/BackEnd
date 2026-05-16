@@ -41,6 +41,9 @@ public class Event extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "is_shared", nullable = false)
+    private Boolean isShared;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", nullable = false, length = 10)
     private RecurrenceFrequency recurrenceFrequency;
@@ -176,6 +179,14 @@ public class Event extends BaseEntity {
     public void updateTime(LocalDateTime startTime, LocalDateTime endTime) {
         this.startTime = startTime;
         this.endTime = endTime;
+    }
+
+    public void markAsShared() {
+        this.isShared = true;
+    }
+
+    public void markAsNotShared() {
+        this.isShared = false;
     }
 
     public void updateVectorSyncStatus(VectorSyncStatus status) {

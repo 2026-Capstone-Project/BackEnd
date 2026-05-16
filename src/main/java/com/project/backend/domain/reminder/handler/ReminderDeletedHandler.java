@@ -20,6 +20,8 @@ public class ReminderDeletedHandler {
                             rd.targetId(), rd.targetType(), rd.occurrenceTime());
             case DELETED_ALL ->
                     reminderCommandService.deleteReminderOfAll(rd.targetId(), rd.targetType());
+            case DELETED_PARTICIPANTS ->
+                    reminderCommandService.deleteReminderForMembers(rd.targetId(), rd.targetType(), rd.memberId());
         }
     }
 }

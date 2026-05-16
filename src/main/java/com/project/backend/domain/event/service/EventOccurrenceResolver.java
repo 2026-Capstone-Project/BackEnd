@@ -4,6 +4,7 @@ import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.dto.ResolvedOccurrence;
 import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
+import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.entity.RecurrenceException;
 import com.project.backend.domain.event.exception.EventErrorCode;
 import com.project.backend.domain.event.exception.EventException;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
@@ -33,14 +35,18 @@ public class EventOccurrenceResolver {
     private final GeneratorFactory generatorFactory;
     private final EndConditionFactory endConditionFactory;
 
-    public EventResDTO.DetailRes resolveForRead(Event event, LocalDateTime occurrenceDate) {
+    public EventResDTO.DetailRes resolveForRead(
+            Event event,
+            LocalDateTime occurrenceDate,
+            List<EventParticipant> participants
+    ) {
         ResolvedOccurrence ro = resolveInternal(event, occurrenceDate);
 
         if (ro.exception() != null) {
-            return EventConverter.toDetailRes(ro.event(), ro.exception(), ro.occurrenceDate());
+            return EventConverter.toDetailRes(ro.event(), ro.exception(), ro.occurrenceDate(), participants);
         }
 
-        return EventConverter.toDetailRes(ro.event(), ro.occurrenceDate());
+        return EventConverter.toDetailRes(ro.event(), ro.occurrenceDate(), participants);
     }
 
     public void assertOccurrenceExists(Event event, LocalDateTime occurrenceDate) {

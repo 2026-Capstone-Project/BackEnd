@@ -5,11 +5,12 @@ import com.project.backend.domain.reminder.enums.TargetType;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Builder
 public record ReminderDeleted(
         Long exceptionId,
-        Long memberId,
+        List<Long> memberId,
         LocalDateTime occurrenceTime,
         Long targetId,
         TargetType targetType,
