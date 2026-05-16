@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class TodoReqDTO {
     /**
      * 할 일 생성 요청
      */
+    @Builder
     public record CreateTodo(
             @NotBlank(message = "제목은 필수입니다.")
             @Size(max = 100, message = "제목은 100자 이하여야 합니다.")

@@ -7,28 +7,10 @@ services:
     env_file:
       - ./.env
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
-
-  mysql:
-    container_name: mysql
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DEV_DB_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./mysql_data:/var/lib/mysql
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping"]
-      interval: 5s
-      retries: 5
-
+      qdrant:
+        condition: service_started
   redis:
     container_name: redis
     image: redis:7.2
@@ -38,7 +20,6 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       retries: 5
-
   qdrant:
     container_name: qdrant
     image: qdrant/qdrant:latest
@@ -46,7 +27,6 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
-      interval: 5s
-      retries: 5
+
+volumes:
+  qdrant_data:

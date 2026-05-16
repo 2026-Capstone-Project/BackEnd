@@ -1,5 +1,6 @@
 package com.project.backend.domain.event.entity;
 
+import com.project.backend.domain.common.enums.VectorSyncStatus;
 import com.project.backend.domain.event.enums.EventColor;
 import com.project.backend.domain.common.recurrence.enums.RecurrenceFrequency;
 import com.project.backend.global.entity.BaseEntity;
@@ -60,6 +61,11 @@ public class Event extends BaseEntity {
 
     @Column(name = "source_suggestion_id")
     private Long sourceSuggestionId;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vector_sync_status", nullable = false)
+    private VectorSyncStatus vectorSyncStatus = VectorSyncStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -181,5 +187,9 @@ public class Event extends BaseEntity {
 
     public void markAsNotShared() {
         this.isShared = false;
+    }
+
+    public void updateVectorSyncStatus(VectorSyncStatus status) {
+        this.vectorSyncStatus = status;
     }
 }

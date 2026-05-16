@@ -14,26 +14,36 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.llm.embedding-provider", havingValue = "openai")
-public class OpenAiEmbeddingClient implements EmbeddingClient {
+@ConditionalOnProperty(name = "spring.llm.embedding-provider", havingValue = "upstage")
+public class UpstageEmbeddingClient implements EmbeddingClient {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${spring.llm.api-key}")
+    @Value("${spring.llm.embedding-api-key}")
     private String apiKey;
 
-    private static final String EMBEDDING_MODEL = "text-embedding-3-small";
-    private static final String EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
+    private static final String PASSAGE_MODEL = "solar-embedding-1-large-passage";
+    private static final String QUERY_MODEL = "solar-embedding-1-large-query";
+    private static final String EMBEDDING_URL = "https://api.upstage.ai/v1/embeddings";
 
     @Override
     public float[] embed(String text) {
+        return callEmbeddingApi(PASSAGE_MODEL, text);
+    }
+
+    @Override
+    public float[] embedQuery(String text) {
+        return callEmbeddingApi(QUERY_MODEL, text);
+    }
+
+    private float[] callEmbeddingApi(String model, String text) {
         try {
             String response = webClient.post()
                     .uri(EMBEDDING_URL)
                     .header("Authorization", "Bearer " + apiKey)
                     .header("Content-Type", "application/json")
-                    .bodyValue(Map.of("model", EMBEDDING_MODEL, "input", text))
+                    .bodyValue(Map.of("model", model, "input", text))
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -42,12 +52,12 @@ public class OpenAiEmbeddingClient implements EmbeddingClient {
             JsonNode vectorNode = root.path("data").get(0).path("embedding");
 
             float[] vector = new float[vectorNode.size()];
-            for (int i=0; i<vectorNode.size(); i++) {
+            for (int i = 0; i < vectorNode.size(); i++) {
                 vector[i] = (float) vectorNode.get(i).asDouble();
             }
             return vector;
         } catch (Exception e) {
-            log.error("임베딩 생성 실패 : {}", e.getMessage());
+            log.error("임베딩 생성 실패 - model: {}, error: {}", model, e.getMessage());
             throw new RuntimeException("임베딩 생성 실패", e);
         }
     }

@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 
@@ -345,7 +346,7 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
                 .orElseThrow(() -> new TodoException(TodoErrorCode.TODO_RECURRENCE_EXCEPTION_NOT_FOUND));
 
         // 수정(날짜 변경)에서만: 일회성 override 리마인더 생성
-        if (!isSkip && !todo.getDueTime().equals(rs.occurrenceTime().toLocalTime())) {
+        if (!isSkip && !Objects.equals(todo.getDueTime(), rs.occurrenceTime().toLocalTime())) {
             createSingleOverrideReminder(
                     rs.targetId(),
                     rs.targetType(),

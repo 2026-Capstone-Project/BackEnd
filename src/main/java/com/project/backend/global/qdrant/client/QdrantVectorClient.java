@@ -37,12 +37,25 @@ public class QdrantVectorClient {
     @PostConstruct
     public void init() {
         this.webClient = WebClient.builder()
-                .baseUrl("http://" + host + ":" + port) // 내부 통신이어서 http
+                .baseUrl("http://" + host + ":" + port)
                 .build();
         ensureCollectionExists();
     }
 
-    // 컬렉션 없으면 자동 생성
+    public void resetCollection() {
+        try {
+            webClient.delete()
+                    .uri("/collections/" + collection)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+            log.info("Qdrant 컬렉션 삭제 완료 : {}", collection);
+        } catch (Exception e) {
+            log.warn("Qdrant 컬렉션 삭제 실패 (존재하지 않을 수 있음) : {}", e.getMessage());
+        }
+        ensureCollectionExists();
+    }
+
     private void ensureCollectionExists() {
         try {
             webClient.put()
@@ -59,18 +72,19 @@ public class QdrantVectorClient {
         }
     }
 
-    // 벡터 저장 및 업데이트
-    public void upsert(Long pointId, Long memberId, String title, String startDate, String type, float[] vector) {
+    public void upsert(Long pointId, Long memberId, String title, String startDate, String type, boolean isRecurring, float[] vector) {
         try {
+            Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("memberId", memberId);
+            payload.put("title", title);
+            payload.put("startDate", startDate);
+            payload.put("type", type);
+            payload.put("isRecurring", isRecurring);
+
             Map<String, Object> point = Map.of(
                     "id", pointId,
                     "vector", toList(vector),
-                    "payload", Map.of(
-                            "memberId", memberId,
-                            "title", title,
-                            "startDate", startDate,
-                            "type", type
-                    )
+                    "payload", payload
             );
 
             webClient.put()
@@ -85,7 +99,6 @@ public class QdrantVectorClient {
         }
     }
 
-    // 유사도 검색 (memberId 필터링으로 다른 사용자 결과 차단)
     public List<QdrantSearchResult> search(Long memberId, float[] queryVector, int limit) {
         try {
             Map<String, Object> body = Map.of(
@@ -115,7 +128,6 @@ public class QdrantVectorClient {
         }
     }
 
-    // 벡터 삭제
     public void delete(Long eventId) {
         try {
             webClient.post()
