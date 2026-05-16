@@ -30,8 +30,20 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     where ep.member.id = :memberId
       and ep.status = :status
 """)
-    List<EventParticipant> findAllByMemberIdAndStatus(
+    List<EventParticipant> findAllByParticipantIdAndStatus(
             @Param("memberId") Long memberId, @Param("status") InviteStatus status);
+
+    @Query("""
+    select ep
+    from EventParticipant ep
+    join fetch ep.event
+    join fetch ep.owner
+    where ep.member.id = :memberId or ep.owner.id = :memberId
+      and ep.status = :status
+""")
+    List<EventParticipant> findAllByParticipantOrOwnerIdAndStatus(
+            @Param("memberId") Long memberId, @Param("status") InviteStatus status);
+
 
     @Query("""
         select ep.event.id as eventId, count(ep) as participantCount
