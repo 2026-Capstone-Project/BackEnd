@@ -1,6 +1,8 @@
 package com.project.backend.domain.briefing.service.query;
 
 import com.project.backend.domain.briefing.converter.BriefingConverter;
+import com.project.backend.domain.event.enums.InviteStatus;
+import com.project.backend.domain.event.repository.EventParticipantRepository;
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.briefing.enums.BriefingReason;
 import com.project.backend.domain.event.repository.EventRepository;
@@ -33,14 +35,17 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
     private final SettingRepository settingRepository;
     private final EventRepository eventRepository;
     private final TodoRepository todoRepository;
+    private final EventParticipantRepository eventParticipantRepository;
     private final OccurrenceResolver occurrenceResolver;
 
+    @Override
     public BriefingResDTO.BriefingRes getBriefing(Long memberId) {
         Setting setting = settingRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new SettingException(SettingErrorCode.SETTING_NOT_FOUND));
 
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
+        LocalDateTime endOfToday = today.atTime(LocalTime.MAX);
 
         // 브리핑 비활성화 시
         if (!setting.getDailyBriefing()) {
@@ -52,18 +57,38 @@ public class BriefingQueryServiceImpl implements BriefingQueryService {
 //            return BriefingConverter.toBriefingRes(today, BriefingReason.TIME_NOT_REACHED);
 //        }
 
-        // 현재시간보다 startTime이 이후가 아닌 일정/투두 조회
-        List<Long> eventIds = eventRepository.findEventIdsByMemberIdAndCurrentDate(
-                        memberId, today.atTime(LocalTime.MAX));
+        // 내가 주인인 일정
+        List<Long> ownedEventIds =
+                eventRepository.findEventIdsByMemberIdAndCurrentDate(
+                        memberId,
+                        endOfToday
+                );
 
-        List<Long> todoIds = todoRepository.findTodoIdsByMemberIdAndCurrentDate(memberId, today);
+        // 내가 ACCEPTED 참여자인 공유 일정
+        List<Long> acceptedSharedEventIds =
+                eventParticipantRepository.findEventIdsByParticipantMemberIdAndStatusAndCurrentDate(
+                        memberId,
+                        InviteStatus.ACCEPTED,
+                        endOfToday
+                );
+
+        // 소유 일정 + 공유받은 확정 일정 병합
+        List<Long> eventIds = Stream.concat(
+                        ownedEventIds.stream(),
+                        acceptedSharedEventIds.stream()
+                )
+                .distinct()
+                .toList();
+
+        List<Long> todoIds =
+                todoRepository.findTodoIdsByMemberIdAndCurrentDate(memberId, today);
 
         List<BriefingResDTO.BriefInfoRes> eventBrief =
                 eventIds.isEmpty() ? List.of() : toBriefInfos(TargetType.EVENT, eventIds, today);
-        List<BriefingResDTO.BriefInfoRes> todoBrief =
-                todoIds.isEmpty() ? List.of() : toBriefInfos(TargetType.TODO,  todoIds, today);
 
-        // 일정과 할일이 없다면 빈 값 리턴
+        List<BriefingResDTO.BriefInfoRes> todoBrief =
+                todoIds.isEmpty() ? List.of() : toBriefInfos(TargetType.TODO, todoIds, today);
+
         if (eventBrief.isEmpty() && todoBrief.isEmpty()) {
             return BriefingConverter.toBriefingRes(today, BriefingReason.NOT_EVENT_TODAY);
         }
