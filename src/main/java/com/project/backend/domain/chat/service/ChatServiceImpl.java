@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.*;
 
@@ -26,9 +28,13 @@ import java.util.*;
 @Transactional
 public class ChatServiceImpl implements ChatService {
 
+    private static final int HISTORY_THRESHOLD = 20;
+    private static final int RECENT_HISTORY_COUNT = 10;
+
     private final LlmClient llmClient;
     private final ChatPromptTemplate chatPromptTemplate;
     private final ConversationHistoryService conversationHistoryService;
+    private final ConversationSummaryService conversationSummaryService;
     private final DateRangeExtractor dateRangeExtractor;
     private final ScheduleContextBuilder scheduleContextBuilder;
     private final VectorContextBuilder vectorContextBuilder;
@@ -54,20 +60,14 @@ public class ChatServiceImpl implements ChatService {
                 log.warn("Qdrant RAG 실패, MySQL RAG만으로 진행: {}", e.getMessage());
             }
 
-            // pending context 주입: clarification 후속 메시지에서 대상 일정을 명시적으로 알려줌
             Map<String, String> pendingCtx    = conversationHistoryService.getPendingContext(memberId);
             Map<String, String> lastActionCtx = conversationHistoryService.getLastActionContext(memberId);
             String scheduleContext = mergeContexts(mysqlContext, vectorContext);
             String systemPrompt    = chatPromptTemplate.getSystemPrompt(scheduleContext, pendingCtx, lastActionCtx);
             List<Map<String, Object>> tools = functionDefinitionBuilder.build();
 
-            // 3. Redis 히스토리 조회 + Map<String,String> → Map<String,Object> 변환
-            // 이유: chatWithFunctions()는 tool_calls 중첩 구조를 위해 Map<String,Object> 필요
-            //       Java 제네릭 불변성으로 Map<String,String>은 Map<String,Object>의 서브타입 아님
-            List<Map<String, Object>> messages = convertHistory(
-                    conversationHistoryService.getHistory(memberId));
-            // 상대 날짜(다음주 목요일 등)를 절대 날짜로 치환 — LLM 자체 날짜 산술 방지
-            // history 저장은 원본 message로 하고, LLM 호출만 치환된 메시지 사용
+            // 3. 요약본 + 최근 10개 구조로 히스토리 구성
+            List<Map<String, Object>> messages = buildHistoryWithSummary(memberId);
             String llmMessage = chatPromptTemplate.replaceRelativeDates(message);
             messages.add(Map.of("role", "user", "content", llmMessage));
 
@@ -82,21 +82,17 @@ public class ChatServiceImpl implements ChatService {
             ScheduleType scheduleType = null;
 
             if (llmRes.isClarification()) {
-                // C. 되묻기 — 대상 scheduleId/scheduleType을 pending context로 저장
                 reply  = parseClarificationQuestion(llmRes.functionArguments());
                 action = ActionType.CLARIFYING;
                 savePendingContextIfPresent(memberId, llmRes.functionArguments());
 
             } else {
-                // B/A. CRUD 실행 또는 일반 텍스트 — pending context 소비 완료 후 삭제
                 conversationHistoryService.clearPendingContext(memberId);
 
                 if (llmRes.isFunctionCall()) {
-                    // B. CRUD 실행
                     ScheduleActionResult result = functionCallHandler.handle(
                             llmRes.functionName(), llmRes.functionArguments(), memberId);
 
-                    // 실행 결과를 tool 메시지로 추가 후 2차 LLM 호출 → 자연어 응답 생성
                     messages.add(buildAssistantToolCallMessage(llmRes));
                     messages.add(Map.of(
                             "role", "tool",
@@ -116,33 +112,31 @@ public class ChatServiceImpl implements ChatService {
 
                     if (result.scheduleId() != null && result.scheduleType() != null) {
                         if (result.action() == ActionType.CLARIFYING) {
-                            // 백엔드 guard가 CLARIFYING 반환 → pendingCtx 저장 (LLM askForClarification과 동일하게 처리)
                             conversationHistoryService.savePendingContext(
                                     memberId, result.scheduleId(), result.scheduleType().name());
                         } else {
-                            // CRUD 완료 → 다음 턴 "그냥 삭제/수정" 모호한 요청 처리용
                             conversationHistoryService.saveLastActionContext(
                                     memberId, result.scheduleId(), result.scheduleType().name());
                         }
                     }
 
                 } else if (llmRes.isRespondToUser()) {
-                    // A. 일반 텍스트 응답 (respondToUser 함수 호출 형태)
                     reply = parseRespondToUserMessage(llmRes.functionArguments());
 
                 } else {
-                    // Fallback: tool_choice:"required" 환경에서는 거의 발생하지 않음
                     reply = llmRes.textContent();
                 }
             }
 
-            // 6. Redis 히스토리 저장 — user/assistant만, tool 메시지는 저장하지 않음
-            // clarification 응답은 history에 저장하지 않음:
-            // "이번만? 이후전체?" 패턴이 누적되면 LLM이 단일 일정에도 같은 패턴을 반복하는 loop 발생.
-            // clarification 상태는 pendingContext(Redis)가 관리하므로 history 불필요.
+            // 6. Redis 히스토리 저장
             conversationHistoryService.saveMessage(memberId, "user", message);
             if (action != ActionType.CLARIFYING) {
                 conversationHistoryService.saveMessage(memberId, "assistant", reply);
+            }
+
+            // 7. 임계값 초과 시 요약 트리거 (JPA 커밋 후 비동기 실행)
+            if (conversationHistoryService.getHistorySize(memberId) > HISTORY_THRESHOLD) {
+                afterCommit(() -> conversationSummaryService.triggerSummaryAsync(memberId));
             }
 
             return ChatConverter.toSendResDTO(reply, action, scheduleId, recurrenceGroupId, scheduleType);
@@ -153,9 +147,33 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    // OpenAI 2차 호출용 assistant tool_call 메시지 구성
-    // HashMap 사용 이유: content를 키에서 제외해야 함 (Map.of()는 null 값 비허용)
-    // OpenAI 스펙상 tool_calls 있는 assistant 메시지는 content 생략 가능
+    // 요약본 + 최근 N개 구조로 히스토리 구성
+    // 요약본이 있으면 system 메시지로 첫 번째 원소에 추가해 LLM이 높은 우선순위로 처리하도록 함
+    private List<Map<String, Object>> buildHistoryWithSummary(Long memberId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        String summary = conversationHistoryService.getSummary(memberId);
+        if (summary != null && !summary.isBlank()) {
+            Map<String, Object> summaryMsg = new HashMap<>();
+            summaryMsg.put("role", "system");
+            summaryMsg.put("content", "[이전 대화 요약]\n" + summary);
+            result.add(summaryMsg);
+        }
+
+        result.addAll(convertHistory(
+                conversationHistoryService.getRecentHistory(memberId, RECENT_HISTORY_COUNT)));
+        return result;
+    }
+
+    private void afterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
+    }
+
     private Map<String, Object> buildAssistantToolCallMessage(FunctionCallResponse llmRes) {
         Map<String, Object> msg = new HashMap<>();
         msg.put("role", "assistant");
@@ -207,7 +225,6 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    // Map<String, String> → Map<String, Object> 변환
     private List<Map<String, Object>> convertHistory(List<Map<String, String>> history) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, String> h : history) {

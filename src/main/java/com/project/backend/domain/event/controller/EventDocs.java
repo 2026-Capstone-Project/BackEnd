@@ -793,10 +793,11 @@ public interface EventDocs {
                                     name = "단일 일정 - 반복 일정으로 변경",
                                     description = """
                                             반복이 없는 단일 일정을 반복 일정으로 변경합니다.
-                                            
+
                                             상황:
                                             - 반드시 반복이 없는 단일 일정(event)을 대상으로 해야 합니다.
                                             - 기존에 반복 그룹이 있는 일정에는 사용할 수 없습니다.
+                                            - scope는 설정하지 않아도 됩니다. (recurrenceGroup 정보가 있으면 자동으로 반복 일정으로 변경됩니다.)
                                             """,
                                     value = """
                                             {
@@ -960,12 +961,12 @@ public interface EventDocs {
                                     ),
                                     @ExampleObject(
                                             name = "EVENT400_10",
-                                            summary = "반복 필드 수정 또는 단일 일정 -> 반복 일정 변경인데 THIS_AND_FOLLOWING_EVENTS가 아닌 경우",
+                                            summary = "반복 필드 수정인데 THIS_AND_FOLLOWING_EVENTS가 아닌 경우",
                                             value = """
                                                     {
                                                       "isSuccess": false,
                                                       "code": "EVENT400_10",
-                                                      "message": "반복 필드 수정, 단일 일정 -> 반복 일정으로 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다."
+                                                      "message": "반복 필드 수정 시, THIS_AND_FOLLOWING_EVENTS만 가능합니다."
                                                     }
                                                     """
                                     ),
