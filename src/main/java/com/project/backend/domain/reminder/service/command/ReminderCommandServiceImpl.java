@@ -161,15 +161,17 @@ public class ReminderCommandServiceImpl implements ReminderCommandService {
 
     @Override
     public void deleteReminderOfThisAndFollowings(Long targetId, TargetType targetType, LocalDateTime occurrenceTime) {
-        Optional<Reminder> reminder = reminderRepository.findByIdAndTypeAndRole(
+        List<Reminder> reminders = reminderRepository.findByIdAndTypeAndRole(
                 targetId, targetType, ReminderRole.BASE);
 
-        if (reminder.isEmpty()) return;
+        if (reminders.isEmpty()) return;
 
-        Reminder re = reminder.get();
+        Reminder re = reminders.getFirst();
         // 원본 일정에 대한 리마인더의 발생 시간이 수정을 통해 생성된 일정의 startTime과 동일하거나 이후라면 원본 일정에 대한 리마인더 삭제
         if (!re.getOccurrenceTime().isBefore(occurrenceTime)) {
-            reminderRepository.deleteById(re.getId());
+            for (Reminder reminder : reminders) {
+                reminderRepository.deleteById(reminder.getId());
+            }
         }
 
         // THIS_AND_FOLLOWING: 기준 occurrenceTime(포함) 이후에 발생하는 리마인더만 삭제한다.

@@ -53,7 +53,7 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
             "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type" +
             " AND r.role = :role")
-    Optional<Reminder> findByIdAndTypeAndRole(
+    List<Reminder> findByIdAndTypeAndRole(
             @Param("targetId") Long targetId,
             @Param("type") TargetType type,
             @Param("role") ReminderRole role

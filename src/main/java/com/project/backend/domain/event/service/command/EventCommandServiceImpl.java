@@ -607,16 +607,33 @@ public class EventCommandServiceImpl implements EventCommandService {
             LocalDateTime end,
             LocalDateTime occurrenceDate
     ) {
+        // 기존 반복 일정에서 실제 참여가 확정된 사용자 목록
+        Set<Long> oldAcceptedParticipantIds =
+                eventParticipantRepository.findSetMemberIdsByEventId(
+                        event.getId(),
+                        InviteStatus.ACCEPTED
+                );
+
+        // 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환
+        Set<Long> requestedParticipantIds =
+                resolveRequestedParticipantIds(req.friendIds(), member.getId());
+
         RecurrenceGroup rg = event.getRecurrenceGroup();
 
         // 새 반복그룹을 가진 새 이벤트 생성
         Event newEvent = createEventWithNewRecurrenceGroup(req, event, member, start, end);
+
+        // 새 일정에 대한 참여자와 리마인더 처리
+        applyParticipantsAndRemindersForNewEvent(
+                member, oldAcceptedParticipantIds, requestedParticipantIds, newEvent, true);
 
         // 수정하려는 날짜 포함한 이후 일정들에 대한 반복예외 객체 모두 삭제
         recurrenceExRepository.deleteByRecurrenceGroupIdAndOccurrenceDate(rg.getId(), occurrenceDate);
 
         // 원본 일정에 대한 수정이면 기존 일정 + 반복 삭제
         if (Objects.equals(event.getStartTime(), occurrenceDate)) {
+            // 기존 Event를 참조하는 EventParticipant 먼저 삭제
+            eventParticipantRepository.deleteAllByEventId(event.getId());
             eventRepository.delete(event);
             recurrenceGroupRepository.delete(event.getRecurrenceGroup());
             reminderEventBridge.handleReminderDeleted(
@@ -642,16 +659,16 @@ public class EventCommandServiceImpl implements EventCommandService {
             );
         }
 
-        // 새 일정 생성에 대한 리마인더 발생
-        reminderEventBridge.handlePlanChanged(
-                newEvent.getId(),
-                TargetType.EVENT,
-                member.getId(),
-                newEvent.getTitle(),
-                true,
-                newEvent.getStartTime(),
-                ChangeType.CREATED
-        );
+//        // 새 일정 생성에 대한 리마인더 발생
+//        reminderEventBridge.handlePlanChanged(
+//                newEvent.getId(),
+//                TargetType.EVENT,
+//                member.getId(),
+//                newEvent.getTitle(),
+//                true,
+//                newEvent.getStartTime(),
+//                ChangeType.CREATED
+//        );
         return newEvent;
     }
 
@@ -1159,6 +1176,17 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         Event newEvent = createEvent(eventSpec, member, null);
 
+        applyParticipantsAndRemindersForNewEvent(
+                member, oldAcceptedParticipantIds, requestedParticipantIds, newEvent, false);
+    }
+
+    private void applyParticipantsAndRemindersForNewEvent(
+            Member member,
+            Set<Long> oldAcceptedParticipantIds,
+            Set<Long> requestedParticipantIds,
+            Event newEvent,
+            boolean isRecurring
+    ) {
         createParticipantsForDetachedEvent(
                 newEvent,
                 member,
@@ -1172,7 +1200,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                 TargetType.EVENT,
                 member.getId(),
                 newEvent.getTitle(),
-                false,
+                isRecurring,
                 newEvent.getStartTime(),
                 ChangeType.CREATED
         );
@@ -1188,7 +1216,7 @@ public class EventCommandServiceImpl implements EventCommandService {
                     TargetType.EVENT,
                     participantId,
                     newEvent.getTitle(),
-                    false,
+                    isRecurring,
                     newEvent.getStartTime(),
                     ChangeType.CREATED
             );
