@@ -219,15 +219,9 @@ public class EventCommandServiceImpl implements EventCommandService {
         switch (scope){
             case THIS_EVENT -> {
                 updateThisEventOnly(req, event, member, occurrenceDate);
-                if (req.friendIds() != null) {
-                    throw new EventException(EventErrorCode.INVALID_PARTICIPANT_UPDATE_SCOPE);
-                }
             }
             case THIS_AND_FOLLOWING_EVENTS ->{
                 afterBase = updateThisAndFutureEvents(req, event, member, startTime, endTime, occurrenceDate);
-                if (req.friendIds() != null) {
-                    syncEventParticipants(afterBase, participantIds);
-                }
             }
             default -> throw new EventException(EventErrorCode.INVALID_UPDATE_SCOPE);
         }
@@ -475,6 +469,14 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         byte[] rgHash = SuggestionKeyUtil.rgHash(rg.getId());
 
+        // 기존 반복 일정에서 실제 참여가 확정된 사용자 목록
+        Set<Long> oldAcceptedParticipantIds =
+                eventParticipantRepository.findSetMemberIdsByEventId(event.getId(),InviteStatus.ACCEPTED);
+
+        // 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환
+        Set<Long> requestedParticipantIds = resolveRequestedParticipantIds(req.friendIds(), member.getId());
+
+
         // 만약 이미 수정된 일정을 또 수정하는 경우
         Optional<RecurrenceException> re = recurrenceExRepository
                 .findByRecurrenceGroupIdAndExceptionDateAndExceptionType(
@@ -484,87 +486,28 @@ public class EventCommandServiceImpl implements EventCommandService {
                 );
 
         if (re.isPresent()) {
-
-            // 기존 반복 일정에서 실제 참여가 확정된 사용자 목록
-            // PENDING은 아직 참여자가 아니므로 비교 대상에서 제외한다.
-            Set<Long> oldAcceptedParticipantIds =
-                    eventParticipantRepository.findSetMemberIdsByEventId(
-                            event.getId(),
-                            InviteStatus.ACCEPTED
-                    );
-
-            // 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환
-            Set<Long> requestedParticipantIds =
-                    resolveRequestedParticipantIds(req.friendIds(), member.getId());
-
             // 기존 확정 참여자 목록과 수정 요청 참여자 목록이 다르면
-            // 공유 구성 변경으로 보고 반복예외가 아닌 새 단일 Event로 분리 생성한다.
+            // 공유 참여자 구성 변경으로 보고 반복예외가 아닌 새 단일 Event로 분리 생성한다.
             if (!oldAcceptedParticipantIds.equals(requestedParticipantIds)) {
-                LocalDateTime newStartTime = req.startTime() != null
-                        ? req.startTime()
-                        : occurrenceDate;
+               detachOccurrenceAsSingleEventIfParticipantsChanged(req, event, member, occurrenceDate,
+                                oldAcceptedParticipantIds, requestedParticipantIds);
 
-                LocalDateTime newEndTime = req.endTime() != null
-                        ? req.endTime()
-                        : occurrenceDate.plusMinutes(event.getDurationMinutes());
+                // 기존 수정된 일정 OVERRIDE -> SKIP 상태로 변경 (더 이상 필요 없기 때문)
+                re.get().updateExceptionTypeToSKIP();
 
-                EventSpec eventSpec = EventConverter.from(
-                        req,
-                        event,
-                        newStartTime,
-                        newEndTime
-                );
-
-                Event newEvent = createEvent(eventSpec, member, null);
-
-                createParticipantsForDetachedEvent(
-                        newEvent,
-                        member,
-                        oldAcceptedParticipantIds,
-                        requestedParticipantIds
-                );
-
-                // 작성자 리마인더는 항상 생성
-                reminderEventBridge.handlePlanChanged(
-                        newEvent.getId(),
-                        TargetType.EVENT,
-                        member.getId(),
-                        newEvent.getTitle(),
-                        false,
-                        newEvent.getStartTime(),
-                        ChangeType.CREATED
-                );
-
-                // 기존 ACCEPTED였고 새 요청에도 포함된 사용자만 리마인더 생성
-                List<Long> copiedAcceptedParticipantIds = requestedParticipantIds.stream()
-                        .filter(oldAcceptedParticipantIds::contains)
-                        .toList();
-
-                for (Long participantId : copiedAcceptedParticipantIds) {
-                    reminderEventBridge.handlePlanChanged(
-                            newEvent.getId(),
-                            TargetType.EVENT,
-                            participantId,
-                            newEvent.getTitle(),
-                            false,
-                            newEvent.getStartTime(),
-                            ChangeType.CREATED
-                    );
-                }
-
-            } else {
-                RecurrenceException ex = re.get();
-                updateRecurrenceException(req, ex);
-                reminderEventBridge.handleExceptionChanged(
-                        ex.getId(),
-                        event.getId(),
-                        TargetType.EVENT,
-                        member.getId(),
-                        ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
-                        ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
-                        ExceptionChangeType.UPDATE_THIS_AGAIN
-                );
+                return;
             }
+            RecurrenceException ex = re.get();
+            updateRecurrenceException(req, ex);
+            reminderEventBridge.handleExceptionChanged(
+                    ex.getId(),
+                    event.getId(),
+                    TargetType.EVENT,
+                    member.getId(),
+                    ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
+                    ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
+                    ExceptionChangeType.UPDATE_THIS_AGAIN
+            );
 
             log.info("exception updated");
             InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
@@ -581,15 +524,27 @@ public class EventCommandServiceImpl implements EventCommandService {
         recurrenceExRepository.save(ex);
         rg.addExceptionDate(ex); // 해당 event가 속했던 반복 객체에 예외 날짜 추가
 
-        // 해당 일정만 수정했을 때 리스너 수정 로직 실행
-        reminderEventBridge.handleExceptionChanged(
-                ex.getId(),
-                event.getId(),
-                TargetType.EVENT,
-                member.getId(),
-                ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
-                ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
-                ExceptionChangeType.UPDATED_THIS);
+        // 기존 확정 참여자 목록과 수정 요청 참여자 목록이 다르면
+        // 공유 구성 변경으로 보고 반복예외가 아닌 새 단일 Event로 분리 생성한다.
+        if (!oldAcceptedParticipantIds.equals(requestedParticipantIds)) {
+            detachOccurrenceAsSingleEventIfParticipantsChanged(req, event, member, occurrenceDate,
+                            oldAcceptedParticipantIds, requestedParticipantIds);
+
+            // 기존 수정된 일정 OVERRIDE -> SKIP 상태로 변경 (더 이상 필요 없기 때문)
+            ex.updateExceptionTypeToSKIP();
+
+            return;
+        } else {
+            // 해당 일정만 수정했을 때 리스너 수정 로직 실행
+            reminderEventBridge.handleExceptionChanged(
+                    ex.getId(),
+                    event.getId(),
+                    TargetType.EVENT,
+                    member.getId(),
+                    ex.getTitle() != null ? ex.getTitle() : event.getTitle(),
+                    ex.getStartTime() != null ? ex.getStartTime() : ex.getExceptionDate(),
+                    ExceptionChangeType.UPDATED_THIS);
+        }
 
         log.info("exception updated");
         InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForSingleTarget(
@@ -1177,6 +1132,69 @@ public class EventCommandServiceImpl implements EventCommandService {
         return new HashSet<>(savedIds).equals(new HashSet<>(memberIdsInFriends));
     }
 
+
+    private void detachOccurrenceAsSingleEventIfParticipantsChanged(
+            EventReqDTO.UpdateReq req,
+            Event event,
+            Member member,
+            LocalDateTime occurrenceDate,
+            Set<Long> oldAcceptedParticipantIds,
+            Set<Long> requestedParticipantIds
+    ) {
+
+        LocalDateTime newStartTime = req.startTime() != null
+                ? req.startTime()
+                : occurrenceDate;
+
+        LocalDateTime newEndTime = req.endTime() != null
+                ? req.endTime()
+                : occurrenceDate.plusMinutes(event.getDurationMinutes());
+
+        EventSpec eventSpec = EventConverter.from(
+                req,
+                event,
+                newStartTime,
+                newEndTime
+        );
+
+        Event newEvent = createEvent(eventSpec, member, null);
+
+        createParticipantsForDetachedEvent(
+                newEvent,
+                member,
+                oldAcceptedParticipantIds,
+                requestedParticipantIds
+        );
+
+        // 작성자 리마인더는 항상 생성
+        reminderEventBridge.handlePlanChanged(
+                newEvent.getId(),
+                TargetType.EVENT,
+                member.getId(),
+                newEvent.getTitle(),
+                false,
+                newEvent.getStartTime(),
+                ChangeType.CREATED
+        );
+
+        // 기존 ACCEPTED였고 새 요청에도 포함된 사용자만 리마인더 생성
+        List<Long> copiedAcceptedParticipantIds = requestedParticipantIds.stream()
+                .filter(oldAcceptedParticipantIds::contains)
+                .toList();
+
+        for (Long participantId : copiedAcceptedParticipantIds) {
+            reminderEventBridge.handlePlanChanged(
+                    newEvent.getId(),
+                    TargetType.EVENT,
+                    participantId,
+                    newEvent.getTitle(),
+                    false,
+                    newEvent.getStartTime(),
+                    ChangeType.CREATED
+            );
+        }
+    }
+
     /**
      * 반복 일정의 특정 occurrence를 새 단일 일정으로 분리할 때,
      * 수정 요청의 참여자 목록을 기준으로 새 EventParticipant를 생성한다.
@@ -1285,5 +1303,17 @@ public class EventCommandServiceImpl implements EventCommandService {
         }
 
         return participantIds;
+    }
+
+    private boolean hasParticipantCompositionChanged(Event event, EventReqDTO.UpdateReq req, Long memberId) {
+        // 기존 반복 일정에서 실제 참여가 확정된 사용자 목록
+        Set<Long> oldAcceptedParticipantIds =
+                eventParticipantRepository.findSetMemberIdsByEventId(event.getId(),InviteStatus.ACCEPTED);
+
+        // 수정 요청으로 들어온 friendIds를 실제 초대 대상 memberId Set으로 변환
+        Set<Long> requestedParticipantIds = resolveRequestedParticipantIds(req.friendIds(), memberId);
+
+
+        return oldAcceptedParticipantIds.equals(requestedParticipantIds);
     }
 }
