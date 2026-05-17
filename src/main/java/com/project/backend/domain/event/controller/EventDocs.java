@@ -709,6 +709,17 @@ public interface EventDocs {
                     - PATCH 요청이므로 값 비교가 아닌 **필드 존재 여부**로 변경 여부를 판단합니다.
                     - 변경 의도가 없는 경우에도 기존 일정 정보를 그대로 반환할 수 있습니다.
                     
+                    - friendIds 필드를 통해 일정 공유 참여자 목록을 수정할 수 있습니다.
+                    - friendIds에는 상대방 memberId가 아니라, 친구 목록 조회 API에서 내려온 Friend 엔티티 ID를 전달해야 합니다.
+                    - friendIds는 전체 교체 방식으로 동작합니다.
+                      - `"friendIds": [3, 7]` → 공유 참여자를 friendId 3, 7에 해당하는 사용자로 변경
+                      - `"friendIds": []` 또는 `"friendIds": null` → 공유 참여자 전체 제거
+                    - 기존 공유 참여자를 유지하려면 현재 공유 대상 friendIds를 그대로 다시 전달해야 합니다.
+                    
+                    ### ⚠️ friendIds PATCH 주의사항
+                    - friendIds는 다른 필드처럼 부분 병합되지 않고, 전달된 목록으로 전체 교체됩니다.
+                    - 기존 참여자를 유지하려면 기존 friendId도 반드시 함께 포함해야 합니다.
+                    - friendIds가 빈 배열이거나 null이면 공유 참여자를 모두 제거합니다.
                     ---
                     ## 📌 occurrenceDate 규칙
                     
@@ -728,15 +739,26 @@ public interface EventDocs {
                     
                     ### ✅ THIS_EVENT
                     - 선택한 occurrenceDate(태생) 회차만 수정합니다.
-                    - RecurrenceException(OVERRIDE)이 생성/갱신됩니다.
-                    - **이 범위에서는 friendIds로 공유 참여자 수정이 불가능합니다.**
+                    - 참여자 목록에 변화가 없는 경우:
+                      - RecurrenceException(OVERRIDE)이 생성/갱신됩니다.
+                    - 참여자 목록에 변화가 있는 경우:
+                      - 기존 반복 occurrence는 RecurrenceException(SKIP) 처리됩니다.
+                      - 수정 요청 내용이 반영된 새로운 단일 Event가 생성됩니다.
+                      - 기존 반복 일정에서 ACCEPTED 상태였고 새 friendIds에도 포함된 사용자는 새 일정에서도 ACCEPTED 상태로 복사됩니다.
+                      - 기존 참여자가 아니었거나 새로 추가된 사용자는 PENDING 상태로 초대됩니다.
+                      - 새 일정에 ACCEPTED 참여자가 1명 이상 있으면 공유 일정으로 처리됩니다.
+                      - 새 일정에 PENDING 참여자만 있거나 참여자가 없으면 아직 공유 확정 상태가 아니므로 isShared=false로 처리됩니다.
                     
                     ### ✅ THIS_AND_FOLLOWING_EVENTS
                     - 선택한 occurrenceDate(태생) 회차와 그 이후를 수정합니다.
                     - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
                     - occurrenceDate는 새 반복의 기준점(base)이 됩니다.
                     - 반복 일정을 대상으로 반복 관련 필드를 수정하는 경우 THIS_AND_FOLLOWING_EVENTS를 통해서만 수정 가능합니다.
-                    
+                    - friendIds가 함께 전달되면 새로 생성되는 반복 Event의 공유 참여자 목록도 함께 변경됩니다.
+                    - 기존 반복 일정에서 ACCEPTED 상태였고 새 friendIds에도 포함된 사용자는 새 반복 일정에서도 ACCEPTED 상태로 복사됩니다.
+                    - 기존 참여자가 아니었거나 새로 추가된 사용자는 PENDING 상태로 초대됩니다.
+                    - 새 반복 일정에 ACCEPTED 참여자가 1명 이상 있으면 공유 일정으로 처리됩니다.
+                    - 새 반복 일정에 PENDING 참여자만 있거나 참여자가 없으면 아직 공유 확정 상태가 아니므로 isShared=false로 처리됩니다.
                     ---
                     ## ⏱️ 시간(startTime / endTime) 처리 규칙
                     
@@ -854,6 +876,8 @@ public interface EventDocs {
                                               }
                                             }
                                             """
+
+
                             )
                     }
             )
@@ -1035,6 +1059,116 @@ public interface EventDocs {
                                                       "message": "간격 값 범위가 올바르지 않습니다."
                                                     }
                                                     """
+                                    ),
+                                    @ExampleObject(
+                                            name = "단일 일정 - 공유 참여자 수정",
+                                            description = """
+                                            단일 일정의 공유 참여자 목록을 수정합니다.
+
+                                            ⚠️ friendIds에는 상대방 memberId가 아니라 Friend 엔티티의 id를 전달해야 합니다.
+                                            friendIds는 전체 교체 방식입니다.
+                                            기존 참여자를 유지하려면 기존 friendId도 함께 다시 전달해야 합니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "friendIds": [3, 7]
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "단일 일정 - 공유 참여자 전체 제거",
+                                            description = """
+                                            단일 일정의 공유 참여자를 모두 제거합니다.
+
+                                            friendIds가 빈 배열이거나 null이면 공유 참여자를 전체 제거합니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "friendIds": []
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "반복 일정 - 이 일정만 수정 + 참여자 변경",
+                                            description = """
+                                            반복 일정 중 선택한 회차만 수정하면서 공유 참여자 목록도 변경합니다.
+
+                                            처리 방식:
+                                            - 참여자 목록에 변화가 있으면 기존 반복 occurrence는 SKIP 처리됩니다.
+                                            - 수정 내용이 반영된 새로운 단일 Event가 생성됩니다.
+                                            - 기존 ACCEPTED 참여자 중 새 friendIds에도 포함된 사용자는 새 일정에서도 ACCEPTED 상태가 됩니다.
+                                            - 새로 추가된 사용자는 PENDING 상태로 초대됩니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "title": "특별 회의",
+                                              "startTime": "2026-02-06T14:00:00",
+                                              "endTime": "2026-02-06T15:00:00",
+                                              "friendIds": [3, 7]
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "반복 일정 - 이 일정만 수정 + 참여자 전체 제거",
+                                            description = """
+                                            반복 일정 중 선택한 회차만 수정하면서 공유 참여자를 모두 제거합니다.
+
+                                            처리 방식:
+                                            - 기존 반복 occurrence는 SKIP 처리됩니다.
+                                            - 수정 내용이 반영된 새로운 단일 Event가 생성됩니다.
+                                            - 새 단일 Event에는 EventParticipant가 생성되지 않습니다.
+                                            - 새 단일 Event는 isShared=false 상태가 됩니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "title": "개인 일정으로 변경",
+                                              "friendIds": []
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "반복 일정 - 이 일정 + 이후 수정 (참여자 변경 포함)",
+                                            description = """
+                                            선택한 회차와 그 이후 반복 일정을 수정하면서 공유 참여자 목록도 함께 변경합니다.
+
+                                            처리 방식:
+                                            - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
+                                            - occurrenceDate를 기준으로 새 반복 Event가 생성됩니다.
+                                            - 기존 ACCEPTED 참여자 중 새 friendIds에도 포함된 사용자는 새 반복 일정에서도 ACCEPTED 상태가 됩니다.
+                                            - 새로 추가된 사용자는 PENDING 상태로 초대됩니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "friendIds": [3, 7],
+                                              "recurrenceGroup": {
+                                                "frequency": "WEEKLY",
+                                                "daysOfWeek": ["MONDAY", "THURSDAY"],
+                                                "endType": "NEVER"
+                                              }
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "반복 일정 - 이 일정 + 이후 수정 (참여자 전체 제거)",
+                                            description = """
+                                            선택한 회차와 그 이후 반복 일정을 수정하면서 공유 참여자를 모두 제거합니다.
+
+                                            처리 방식:
+                                            - 기존 반복 그룹은 occurrenceDate 이전까지만 유지됩니다.
+                                            - occurrenceDate를 기준으로 새 반복 Event가 생성됩니다.
+                                            - 새 반복 Event에는 EventParticipant가 생성되지 않습니다.
+                                            - 새 반복 Event는 isShared=false 상태가 됩니다.
+                                            """,
+                                            value = """
+                                            {
+                                              "friendIds": [],
+                                              "recurrenceGroup": {
+                                                "frequency": "WEEKLY",
+                                                "daysOfWeek": ["THURSDAY"],
+                                                "endType": "NEVER"
+                                              }
+                                            }
+                                            """
                                     )
                             }
                     )
@@ -1052,17 +1186,6 @@ public interface EventDocs {
                                                       "isSuccess": false,
                                                       "code": "EVENT404_1",
                                                       "message": "일정을 찾을 수 없습니다"
-                                                    }
-                                                    """
-                                    ),
-                                    @ExampleObject(
-                                            name = "EVENT404_5",
-                                            summary = "공유 대상으로 전달한 friendIds가 주최자와 친구 관계가 아닌 경우",
-                                            value = """
-                                                    {
-                                                      "isSuccess": false,
-                                                      "code": "EVENT404_5",
-                                                      "message": "주최자와 친구사이가 아닙니다."
                                                     }
                                                     """
                                     )
