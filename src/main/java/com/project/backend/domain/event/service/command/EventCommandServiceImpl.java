@@ -142,8 +142,12 @@ public class EventCommandServiceImpl implements EventCommandService {
             return;
         }
 
-        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        if (!Objects.equals(event.getMember().getId(), memberId)) {
+            throw new EventException(EventErrorCode.EVENT_ACCESS_DENIED);
+        }
 
         // occurrenceDate가 없으면 event의 startTime을 기본값으로 사용
         if (occurrenceDate == null) {
