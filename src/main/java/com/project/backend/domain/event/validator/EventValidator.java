@@ -108,7 +108,7 @@ public class EventValidator {
         }
 
         // 반복 일정에 특정 날짜를 기준으로 반복 필드를 수정할 때, THIS_AND_FOLLOWING_EVENTS가 아닌경우
-        if (req != null && scope != RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS) {
+        if (isRecurring && req != null && scope != RecurrenceUpdateScope.THIS_AND_FOLLOWING_EVENTS) {
             throw new EventException(EventErrorCode.THIS_AND_FOLLOWING_EVENTS_ONLY);
         }
     }
