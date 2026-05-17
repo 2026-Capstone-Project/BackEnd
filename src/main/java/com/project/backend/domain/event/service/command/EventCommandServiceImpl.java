@@ -136,14 +136,19 @@ public class EventCommandServiceImpl implements EventCommandService {
             RecurrenceUpdateScope scope,
             LocalDateTime occurrenceDate
     ) {
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
+
+        if (!Objects.equals(event.getMember().getId(), memberId)) {
+            throw new EventException(EventErrorCode.EVENT_ACCESS_DENIED);
+        }
+
         // 변경 사항 전혀 없음
         if (!hasAnyEventFieldProvided(req) && !hasAnyRecurrenceGroupFieldProvided(req.recurrenceGroup())) {
             log.info("1.Event update request is not changed. eventId: {}", eventId);
             return;
         }
-
-        Event event = eventRepository.findByIdAndMemberId(eventId, memberId)
-                .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
         // occurrenceDate가 없으면 event의 startTime을 기본값으로 사용
         if (occurrenceDate == null) {

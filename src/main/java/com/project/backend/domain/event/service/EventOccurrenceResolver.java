@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
@@ -38,15 +39,19 @@ public class EventOccurrenceResolver {
     public EventResDTO.DetailRes resolveForRead(
             Event event,
             LocalDateTime occurrenceDate,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         ResolvedOccurrence ro = resolveInternal(event, occurrenceDate);
 
         if (ro.exception() != null) {
-            return EventConverter.toDetailRes(ro.event(), ro.exception(), ro.occurrenceDate(), participants);
+            return EventConverter.toDetailRes(
+                    ro.event(), ro.exception(), ro.occurrenceDate(), participants, isOwner, friendIdByMemberId);
         }
 
-        return EventConverter.toDetailRes(ro.event(), ro.occurrenceDate(), participants);
+        return EventConverter.toDetailRes(ro.event(),
+                ro.occurrenceDate(), participants, isOwner, friendIdByMemberId);
     }
 
     public void assertOccurrenceExists(Event event, LocalDateTime occurrenceDate) {
