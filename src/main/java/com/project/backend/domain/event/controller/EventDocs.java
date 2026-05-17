@@ -41,9 +41,21 @@ public interface EventDocs {
                 - location (String) : 장소
                 - address (String) : location 주소
                 - isAllDay (Boolean) : 종일 여부 (미전송 시 false)
-                - friendIds (List<Long>) : 공유할 member와의 친구 id
+                - friendIds (List<Long>) : 공유할 친구의 Friend 엔티티 ID 목록
+                  - ⚠️ 상대방 memberId가 아니라, 친구 목록 조회 API에서 내려온 friendId(Friend.id)를 전달해야 합니다.
+                  - 서버는 전달받은 friendId를 현재 로그인 사용자 기준으로 검증한 뒤, 해당 친구의 memberId로 변환하여 초대합니다.
                 - color (EventColor) : 색상 (미전송 시 기본값 적용) [BLUE(기본값), GREEN, PINK, PURPLE, GRAY, YELLOW]
                 - recurrenceGroup (RecurrenceGroup) : 반복 설정 (없으면 단일 일정)
+                                
+                ---
+                ## 👥 일정 공유(friendIds) 입력 규칙
+
+                - friendIds는 **상대방 memberId 목록이 아닙니다.**
+                - friendIds에는 반드시 **Friend 엔티티의 id**, 즉 친구 목록 조회 API에서 내려온 **친구 id**를 전달해야 합니다.
+                - 예를 들어 친구 목록 조회 결과에서 친구 id가 3, 7인 사용자를 초대하려면 `"friendIds": [3, 7]` 로 전달합니다.
+                - 서버는 전달된 friendId가 현재 로그인 사용자와 실제 친구 관계인지 검증한 뒤, 내부적으로 상대방 memberId로 변환하여 EventParticipant를 생성합니다.
+                - 존재하지 않는 friendId이거나 현재 로그인 사용자의 친구가 아닌 friendId를 전달하면 오류가 발생합니다.
+                - 공유할 친구가 없으면 `"friendIds": []` 또는 필드를 생략할 수 있습니다.
                                 
                 ---
                 ## 🔄 반복 설정(recurrenceGroup) 입력 규칙
@@ -168,6 +180,28 @@ public interface EventDocs {
                                               "color": "BLUE",
                                               "isAllDay": false,
                                               "friendIds": []
+                                            }
+                                            """
+                            ),
+                            @ExampleObject(
+                                    name = "단일 일정 - 친구 공유",
+                                    description = """
+                                            친구와 공유하는 단일 일정입니다.
+
+                                            ⚠️ friendIds에는 상대방 memberId가 아니라 Friend 엔티티의 id를 전달해야 합니다.
+                                            즉, 친구 목록 조회 API에서 내려온 친구 id를 넣어야 합니다.
+                                            """,
+                                    value = """
+                                            {
+                                              "title": "팀 미팅",
+                                              "content": "공유 일정 테스트",
+                                              "startTime": "2026-01-27T10:00:00",
+                                              "endTime": "2026-01-27T11:00:00",
+                                              "location": "회의실 A",
+                                              "address": "서울특별시 종로구 홍지문2길 20",
+                                              "color": "BLUE",
+                                              "isAllDay": false,
+                                              "friendIds": [3, 7]
                                             }
                                             """
                             ),
