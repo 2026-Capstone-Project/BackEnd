@@ -127,20 +127,24 @@ public class TodoCommandServiceImpl implements TodoCommandService {
 
         // 단일 할 일인 경우
         if (!todo.isRecurring()) {
-            updateSingleTodo(todo, reqDTO);
+            if (reqDTO.recurrenceGroup() != null) {
+                // 단일 → 반복 변환
+                handleSingleToRecurringTodo(todo, reqDTO, memberId);
+            } else {
+                updateSingleTodo(todo, reqDTO);
+                reminderEventBridge.handlePlanChanged(
+                        todo.getId(),
+                        TargetType.TODO,
+                        memberId,
+                        todo.getTitle(),
+                        false,
+                        todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
+                        ChangeType.UPDATE_SINGLE
+                );
+            }
             // 수정이 완료되면 한 번 upsert
             upsertTodoTitleHistory(memberId, todo.getTitle());
             afterCommit(() -> todoVectorSyncService.syncOnUpdate(todo.getId()));
-            // 할 일 생성에 따른 리스너 생성 로직 실행
-            reminderEventBridge.handlePlanChanged(
-                    todo.getId(),
-                    TargetType.TODO,
-                    memberId,
-                    todo.getTitle(),
-                    false,
-                    todo.getDueTime() != null ? todo.getStartDate().atTime(todo.getDueTime()) : todo.getStartDate().atStartOfDay(),
-                    ChangeType.UPDATE_SINGLE
-            );
 
             TodoSuggestionSnapshot afterSnapshot = todoSuggestionSnapshotFactory.from(todo);
 
@@ -420,6 +424,30 @@ public class TodoCommandServiceImpl implements TodoCommandService {
     /**
      * 단일 할 일 수정
      */
+    private void handleSingleToRecurringTodo(Todo todo, TodoReqDTO.UpdateTodo reqDTO, Long memberId) {
+        updateSingleTodo(todo, reqDTO);
+
+        Member member = todo.getMember();
+        TodoRecurrenceGroup rg = TodoConverter.toTodoRecurrenceGroup(reqDTO.recurrenceGroup(), member);
+        rg = todoRecurrenceGroupRepository.save(rg);
+        todo.setTodoRecurrenceGroup(rg);
+        rg.setTodo(todo);
+
+        LocalDateTime startTime = todo.getDueTime() != null
+                ? todo.getStartDate().atTime(todo.getDueTime())
+                : todo.getStartDate().atStartOfDay();
+
+        reminderEventBridge.handlePlanChanged(
+                todo.getId(),
+                TargetType.TODO,
+                memberId,
+                todo.getTitle(),
+                true,
+                startTime,
+                ChangeType.UPDATE_ADD_RECURRENCE
+        );
+    }
+
     private void updateSingleTodo(Todo todo, TodoReqDTO.UpdateTodo reqDTO) {
         todo.update(
                 reqDTO.title(),

@@ -7,9 +7,19 @@ public interface ConversationHistoryService {
 
     List<Map<String, String>> getHistory(Long memberId);
 
+    List<Map<String, String>> getRecentHistory(Long memberId, int count);
+
     void saveMessage(Long memberId, String role, String content);
 
     void clearHistory(Long memberId);
+
+    long getHistorySize(Long memberId);
+
+    void trimOldMessages(Long memberId, int keepCount);
+
+    String getSummary(Long memberId);
+
+    void saveSummary(Long memberId, String summary);
 
     void savePendingContext(Long memberId, Long scheduleId, String scheduleType);
 
