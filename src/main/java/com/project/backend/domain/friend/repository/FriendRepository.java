@@ -1,5 +1,6 @@
 package com.project.backend.domain.friend.repository;
 
+import com.project.backend.domain.friend.dto.FriendIdMapping;
 import com.project.backend.domain.friend.entity.Friend;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -71,5 +72,21 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     Set<Long> findOpponentMemberIdsByFriendIds(
             @Param("friendIds") List<Long> friendIds,
             @Param("memberId") Long memberId
+    );
+
+    // 현재 로그인 사용자 memberId 기준으로
+    // 참여자들의 memberId에 해당하는 Friend row id를 한 번에 가져온다.
+    @Query("""
+    select new com.project.backend.domain.friend.dto.FriendIdMapping(
+        f.id,
+        f.opponent.id
+    )
+    from Friend f
+    where f.member.id = :memberId
+      and f.opponent.id in :opponentMemberIds
+""")
+    List<FriendIdMapping> findFriendIdsByMemberIdAndOpponentMemberIds(
+            @Param("memberId") Long memberId,
+            @Param("opponentMemberIds") List<Long> opponentMemberIds
     );
 }

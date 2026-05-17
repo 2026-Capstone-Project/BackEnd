@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 @Slf4j
@@ -91,7 +92,9 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(
             Event event,
             LocalDateTime occurrenceDate,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -106,7 +109,8 @@ public class EventConverter {
                 .color(event.getColor())
                 .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
-                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
+                .isOwner(isOwner)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), isOwner, participants, friendIdByMemberId))
                 .build();
     }
 
@@ -114,7 +118,9 @@ public class EventConverter {
             Event event,
             RecurrenceException ex,
             LocalDateTime occurrenceDate,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -131,14 +137,17 @@ public class EventConverter {
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
-                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
+                .isOwner(isOwner)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), isOwner, participants, friendIdByMemberId))
                 .build();
     }
 
     // TODO : 오버 로딩 임시조치
     public static EventResDTO.DetailRes toDetailRes(
             Event event,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -157,7 +166,8 @@ public class EventConverter {
                 .recurrenceGroup(event.getRecurrenceGroup() != null
                         ? RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup())
                         : null)
-                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
+                .isOwner(isOwner)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), isOwner, participants, friendIdByMemberId))
                 .build();
     }
 
@@ -168,7 +178,9 @@ public class EventConverter {
             Event event,
             LocalDateTime start,
             LocalDateTime end,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -184,7 +196,8 @@ public class EventConverter {
                 .color(event.getColor())
                 .isShared(event.getIsShared())
                 .recurrenceGroup(RecurrenceGroupConverter.toDetailRes(event.getRecurrenceGroup()))
-                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
+                .isOwner(isOwner)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), isOwner, participants, friendIdByMemberId))
                 .build();
     }
 
@@ -192,7 +205,9 @@ public class EventConverter {
     public static EventResDTO.DetailRes toDetailRes(
             RecurrenceException ex,
             Event event,
-            List<EventParticipant> participants
+            List<EventParticipant> participants,
+            Boolean isOwner,
+            Map<Long, Long> friendIdByMemberId
     ) {
         return EventResDTO.DetailRes.builder()
                 .id(event.getId())
@@ -210,7 +225,8 @@ public class EventConverter {
                 .recurrenceGroup(
                         RecurrenceGroupConverter.toDetailRes(ex.getRecurrenceGroup())
                 )
-                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), participants))
+                .isOwner(isOwner)
+                .eventParticipantInfo(getEventParticipantInfos(event.getMember(), isOwner, participants, friendIdByMemberId))
                 .build();
     }
 
@@ -243,30 +259,57 @@ public class EventConverter {
         return end;
     }
 
+//    private static List<EventResDTO.EventParticipantInfo> getEventParticipantInfos(
+//            Member owner,
+//            List<EventParticipant> participants
+//    ) {
+//        List<EventResDTO.EventParticipantInfo> participantInfos = new ArrayList<>();
+//
+//        // 관리자 정보
+////        participantInfos.add(toOwnerEventParticipantInfo(owner));
+//
+//        // 피공유자 정보
+//        participantInfos.addAll(
+//                participants.stream()
+//                        .map(EventConverter::toEventParticipantInfo)
+//                        .toList()
+//        );
+//
+//        return participantInfos;
+//    }
+
     private static List<EventResDTO.EventParticipantInfo> getEventParticipantInfos(
             Member owner,
-            List<EventParticipant> participants
+            Boolean isOwner,
+            List<EventParticipant> participants,
+            Map<Long, Long> friendIdByMemberId
     ) {
         List<EventResDTO.EventParticipantInfo> participantInfos = new ArrayList<>();
 
-        // 관리자 정보
-//        participantInfos.add(toOwnerEventParticipantInfo(owner));
+        // 관리자가 아니면 관리자 정보를 포함
+//        if (!isOwner) {
+//            participantInfos.add(toOwnerEventParticipantInfo(owner));
+//        }
 
-        // 피공유자 정보
         participantInfos.addAll(
                 participants.stream()
-                        .map(EventConverter::toEventParticipantInfo)
+                        .map(participant -> toEventParticipantInfo(participant, friendIdByMemberId))
                         .toList()
         );
 
         return participantInfos;
     }
 
-    private static EventResDTO.EventParticipantInfo toEventParticipantInfo(EventParticipant eventParticipant) {
+    private static EventResDTO.EventParticipantInfo toEventParticipantInfo(
+            EventParticipant eventParticipant,
+            Map<Long, Long> friendIdByMemberId
+    ) {
         Member member = eventParticipant.getMember();
 
         return EventResDTO.EventParticipantInfo.builder()
                 .eventParticipantId(eventParticipant.getId())
+                .status(eventParticipant.getStatus())
+                .friendId(friendIdByMemberId.get(member.getId()))
                 .email(member.getEmail())
                 .name(member.getNickname())
                 .build();

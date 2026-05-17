@@ -1,7 +1,10 @@
 package com.project.backend.domain.event.service.query;
 
+import com.project.backend.domain.event.dto.EventParticipantViewContext;
 import com.project.backend.domain.event.entity.EventParticipant;
 import com.project.backend.domain.event.enums.InviteStatus;
+import com.project.backend.domain.friend.dto.FriendIdMapping;
+import com.project.backend.domain.friend.repository.FriendRepository;
 import com.project.backend.domain.occurrence.dto.TodayOccurrenceResult;
 import com.project.backend.domain.event.converter.EventConverter;
 import com.project.backend.domain.event.converter.EventHistoryConverter;
@@ -31,6 +34,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.OVERRIDE;
 import static com.project.backend.domain.common.recurrence.enums.ExceptionType.SKIP;
@@ -44,6 +48,7 @@ public class EventQueryServiceImpl implements EventQueryService {
     private static final int MAX_OCCURRENCE_ITERATION = 20_000;
 
     private final EventRepository eventRepository;
+    private final FriendRepository friendRepository;
     private final RecurrenceGroupRepository recurrenceGroupRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
 
@@ -59,29 +64,27 @@ public class EventQueryServiceImpl implements EventQueryService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND));
 
-        // 조회에 사용할 참여자들 목록
-        List<EventParticipant> participants =
-                eventParticipantRepository.findAllByEventId(eventId);
+        EventParticipantViewContext participantContext = getParticipantViewContext(event, memberId);
 
-        boolean isOwner = Objects.equals(event.getMember().getId(), memberId);
-
-        boolean isAcceptedParticipant = participants.stream()
-                .anyMatch(p ->
-                        Objects.equals(p.getMember().getId(), memberId)
-                                && p.getStatus() == InviteStatus.ACCEPTED
-                );
-
-        if (!isOwner && !isAcceptedParticipant) {
-            throw new EventException(EventErrorCode.EVENT_NOT_FOUND);
-        }
         eventValidator.validateRead(event, occurrenceDate);
 
         // 찾고자 하는 것이 부모 이벤트인 경우
         if (!event.isRecurring()) {
-            return EventConverter.toDetailRes(event, participants);
+            return EventConverter.toDetailRes(
+                    event,
+                    participantContext.participants(),
+                    participantContext.isOwner(),
+                    participantContext.friendIdByMemberId()
+            );
         }
 
-        return eventOccurrenceResolver.resolveForRead(event, occurrenceDate, participants);
+        return eventOccurrenceResolver.resolveForRead(
+                event,
+                occurrenceDate,
+                participantContext.participants(),
+                participantContext.isOwner(),
+                participantContext.friendIdByMemberId()
+        );
     }
 
     @Override
@@ -94,13 +97,15 @@ public class EventQueryServiceImpl implements EventQueryService {
 
         // 범위에 맞는 내가 소유자인 이벤트 목록 조회
         List<Event> OwnedEvents = getOwnedEvents(memberId, startRange, endRange);
+        log.info("Owned Events size: {}", OwnedEvents.toArray());
         // 범위에 맞는 내가 참여한 이벤트 목록 조회
         List<Event> SharedEvents = getSharedEvents(memberId, startRange, endRange);
+        log.info("Shared Events size: {}", SharedEvents.toArray());
         // 두 목록 병합
         List<Event> result = concatEventList(OwnedEvents, SharedEvents);
 
         // 최상위 이벤트 확장
-        List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange);
+        List<EventResDTO.DetailRes> eventsListRes = expandEvents(result, startRange, endRange, memberId);
 
         // 시작 날짜 기준으로 정렬
         eventsListRes.sort(
@@ -366,7 +371,8 @@ public class EventQueryServiceImpl implements EventQueryService {
     private List<EventResDTO.DetailRes> expandEvents(
             List<Event> baseEvents,
             LocalDateTime startRange,
-            LocalDateTime endRange
+            LocalDateTime endRange,
+            Long memberId
     ) {
 
         List<EventResDTO.DetailRes> expandedEvents = new ArrayList<>();
@@ -377,9 +383,12 @@ public class EventQueryServiceImpl implements EventQueryService {
             // 반복 패턴에 맞는 정지 조건 전략 주입
             EndCondition endCondition = endConditionFactory.getEndCondition(event.getRecurrenceGroup());
 
-            // 각 이벤트 객체별 참여자들 목록
-            List<EventParticipant> participants =
-                    eventParticipantRepository.findAllByEventId(event.getId());
+            EventParticipantViewContext participantContext =
+                    getParticipantViewContext(event, memberId);
+
+            List<EventParticipant> participants = participantContext.participants();
+            boolean isOwner = participantContext.isOwner();
+            Map<Long, Long> friendIdByMemberId = participantContext.friendIdByMemberId();
 
             // 익셉션 테이블 찾기
             List<RecurrenceException> recurrenceExceptions = new ArrayList<>();
@@ -411,12 +420,12 @@ public class EventQueryServiceImpl implements EventQueryService {
                 // 부모가 검색 범위에 포함되어 있지 않다면 시간만 추출하고 폐기
                 if (!isSkip && !tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
                     log.debug("예외 부모가 범위에 포함되었습니다");
-                    expandedEvents.add(EventConverter.toDetailRes(tempEx, event, participants));
+                    expandedEvents.add(EventConverter.toDetailRes(tempEx, event, participants, isOwner, friendIdByMemberId));
                 }
             } else {
                 if (!tempStartTime.isBefore(startRange) && !tempEndTime.isAfter(endRange)) {
                     log.debug("원본 부모가 범위에 포함되었습니다");
-                    expandedEvents.add(EventConverter.toDetailRes(event, participants));
+                    expandedEvents.add(EventConverter.toDetailRes(event, participants, isOwner, friendIdByMemberId));
                 }
             }
 
@@ -446,7 +455,7 @@ public class EventQueryServiceImpl implements EventQueryService {
                         current = generator.next(current, event.getRecurrenceGroup());
                     } else if (ex.getExceptionType() == OVERRIDE && current.isEqual(ex.getExceptionDate())) {
                         // 잘 찾았으니 리턴값에 추가
-                        expandedEvents.add(EventConverter.toDetailRes(ex, event, participants));
+                        expandedEvents.add(EventConverter.toDetailRes(ex, event, participants, isOwner, friendIdByMemberId));
                         current = generator.next(current, event.getRecurrenceGroup());
                     }
                 }
@@ -466,7 +475,7 @@ public class EventQueryServiceImpl implements EventQueryService {
                     break;
                 }
                 // 모든 탈출 조건을 통과한 객체는 DTO로 변환
-                expandedEvents.add(EventConverter.toDetailRes(event, current, current.plus(duration), participants));
+                expandedEvents.add(EventConverter.toDetailRes(event, current, current.plus(duration), participants, isOwner, friendIdByMemberId));
                 // 카운트 증가
                 count++;
             }
@@ -563,5 +572,56 @@ public class EventQueryServiceImpl implements EventQueryService {
         }
 
         return lastValid;
+    }
+
+    private EventParticipantViewContext getParticipantViewContext(Event event, Long memberId) {
+        List<EventParticipant> participants =
+                eventParticipantRepository.findAllByEventId(event.getId());
+
+        boolean isOwner = Objects.equals(event.getMember().getId(), memberId);
+
+        boolean isAcceptedParticipant = participants.stream()
+                .anyMatch(participant ->
+                        Objects.equals(participant.getMember().getId(), memberId)
+                                && participant.getStatus() == InviteStatus.ACCEPTED
+                );
+
+        Map<Long, Long> friendIdByMemberId = isOwner
+                ? getFriendIdByMemberId(memberId, participants)
+                : Map.of();
+
+        return new EventParticipantViewContext(
+                participants,
+                isOwner,
+                isAcceptedParticipant,
+                friendIdByMemberId
+        );
+    }
+
+    private Map<Long, Long> getFriendIdByMemberId(
+            Long memberId,
+            List<EventParticipant> participants
+    ) {
+        if (participants == null || participants.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> participantMemberIds = participants.stream()
+                .map(participant -> participant.getMember().getId())
+                .distinct()
+                .toList();
+
+        if (participantMemberIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return friendRepository
+                .findFriendIdsByMemberIdAndOpponentMemberIds(memberId, participantMemberIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        FriendIdMapping::opponentMemberId,
+                        FriendIdMapping::friendId,
+                        (existing, replacement) -> existing
+                ));
     }
 }

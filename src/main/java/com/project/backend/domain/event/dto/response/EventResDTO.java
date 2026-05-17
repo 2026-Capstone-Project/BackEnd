@@ -1,6 +1,7 @@
 package com.project.backend.domain.event.dto.response;
 
 import com.project.backend.domain.event.enums.EventColor;
+import com.project.backend.domain.event.enums.InviteStatus;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class EventResDTO {
             EventColor color,
             Boolean isShared,
             RecurrenceGroupResDTO.DetailRes recurrenceGroup,
+            Boolean isOwner,
             List<EventParticipantInfo> eventParticipantInfo
     ) {
     }
@@ -44,6 +46,8 @@ public class EventResDTO {
     @Builder
     public record EventParticipantInfo(
             Long eventParticipantId,
+            InviteStatus status,
+            Long friendId,
             String email,
             String name
     ) {
