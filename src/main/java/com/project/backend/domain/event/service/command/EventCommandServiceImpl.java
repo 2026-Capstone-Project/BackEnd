@@ -193,6 +193,19 @@ public class EventCommandServiceImpl implements EventCommandService {
             // 일정 참여자 초대 전송
             if (req.friendIds() != null) {
                 syncEventParticipants(event, participantIds);
+
+                EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
+
+                InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
+                        beforeSnapshot,
+                        afterSnapshot,
+                        SuggestionInvalidateReason.EVENT_UPDATED,
+                        SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED,
+                        SuggestionInvalidateReason.RECURRENCE_GROUP_UPDATED
+                );
+
+                suggestionInvalidationDispatcher.dispatch(memberId, invalidationPlan);
+
             }
             return;
         }
