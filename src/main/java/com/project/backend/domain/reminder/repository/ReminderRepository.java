@@ -4,7 +4,7 @@ import com.project.backend.domain.reminder.entity.Reminder;
 import com.project.backend.domain.reminder.enums.LifecycleStatus;
 import com.project.backend.domain.reminder.enums.ReminderRole;
 import com.project.backend.domain.reminder.enums.TargetType;
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -73,8 +73,7 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     @Query("DELETE FROM Reminder r " +
             "WHERE r.targetId = :targetId " +
             "AND r.targetType = :type " +
-            "AND r.occurrenceTime >= :occurrenceTime " +
-            "AND r.member.id = :memberId")
+            "AND r.occurrenceTime >= :occurrenceTime")
     void deleteByTargetIdAndTargetTypeAndOccurrenceTime(
             @Param("targetId") Long targetId,
             @Param("type") TargetType type,
