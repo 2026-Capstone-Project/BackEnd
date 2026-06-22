@@ -33,7 +33,7 @@ public class EventConverter {
                 (spec.startTime() != null && spec.endTime() != null)
                         ? (int) Duration.between(spec.startTime(), spec.endTime()).toMinutes()
                         : null;
-        Boolean isShared = !spec.friendIds().isEmpty();
+        Boolean isShared = spec.friendIds() != null && !spec.friendIds().isEmpty();
 
         return Event.builder()
                 .title(spec.title())
