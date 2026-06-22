@@ -109,17 +109,17 @@ public class FriendCommandServiceImpl implements FriendCommandService{
         eventParticipantRepository.deleteAll(eventParticipant);
         eventParticipantRepository.flush();
 
-        for (EventParticipant participant : eventParticipant) {
-            Event sharedEvent = participant.getEvent();
-            // 남은 수락 참여자가 없으면 공유 상태 해제
-            boolean hasAcceptedParticipant =
-                    eventParticipantRepository.existsByEventIdAndStatus(sharedEvent.getId(), InviteStatus.ACCEPTED);
-
-            if (!hasAcceptedParticipant) {
-                sharedEvent.markAsNotShared();
-            }
-        }
-
+        // 정책 변경으로 비활성화
+//        for (EventParticipant participant : eventParticipant) {
+//            Event sharedEvent = participant.getEvent();
+//            // 남은 수락 참여자가 없으면 공유 상태 해제
+//            boolean hasAcceptedParticipant =
+//                    eventParticipantRepository.existsByEventIdAndStatus(sharedEvent.getId(), InviteStatus.ACCEPTED);
+//
+//            if (!hasAcceptedParticipant) {
+//                sharedEvent.markAsNotShared();
+//            }
+//        }
 
         // 쌍방향 친구 삭제
         friendRepository.delete(opponentFriend);
