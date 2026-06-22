@@ -194,6 +194,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             if (req.friendIds() != null) {
                 syncEventParticipants(event, participantIds);
 
+                // 개인 일정에 친구가 한 명 이상 추가되면 공유 일정으로 영구 승격
+                if (!participantIds.isEmpty()) {
+                    event.markAsShared();
+                }
+
                 EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
 
                 InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
