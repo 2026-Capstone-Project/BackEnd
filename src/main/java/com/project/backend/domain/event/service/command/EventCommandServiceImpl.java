@@ -194,6 +194,11 @@ public class EventCommandServiceImpl implements EventCommandService {
             if (req.friendIds() != null) {
                 syncEventParticipants(event, participantIds);
 
+                // 개인 일정에 친구가 한 명 이상 추가되면 공유 일정으로 영구 승격
+                if (!participantIds.isEmpty()) {
+                    event.markAsShared();
+                }
+
                 EventSuggestionSnapshot afterSnapshot = eventSuggestionSnapshotFactory.from(event);
 
                 InvalidationPlan invalidationPlan = suggestionInvalidationPlanner.planForUpdate(
@@ -382,7 +387,8 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventParticipantRepository.deleteAllByEventId(eventId);
 
-        event.markAsNotShared();
+        // 정책 변경으로 비활성화
+//        event.markAsNotShared();
 
         // 주최자를 제외한 해당 일정 참여자 리마인더 삭제
         reminderEventBridge.handleReminderDeleted(
@@ -412,13 +418,14 @@ public class EventCommandServiceImpl implements EventCommandService {
         // 공유 탈퇴시 바로 연관 관계 삭제
         eventParticipantRepository.delete(eventParticipant);
 
-        // 남은 수락 참여자가 없으면 공유 상태 해제
-        boolean hasAcceptedParticipant =
-                eventParticipantRepository.existsByEventIdAndStatus(eventId, InviteStatus.ACCEPTED);
-
-        if (!hasAcceptedParticipant) {
-            ownerEvent.markAsNotShared();
-        }
+        // 정책 변경으로 비활성화
+//        // 남은 수락 참여자가 없으면 공유 상태 해제
+//        boolean hasAcceptedParticipant =
+//                eventParticipantRepository.existsByEventIdAndStatus(eventId, InviteStatus.ACCEPTED);
+//
+//        if (!hasAcceptedParticipant) {
+//            ownerEvent.markAsNotShared();
+//        }
 
         // 해당 일정에 대한 사용자의 리마인더 삭제
         reminderEventBridge.handleReminderDeleted(
@@ -1308,12 +1315,13 @@ public class EventCommandServiceImpl implements EventCommandService {
 
         eventParticipantRepository.saveAll(eventParticipants);
 
-        boolean hasAcceptedParticipant = eventParticipants.stream()
-                .anyMatch(ep -> ep.getStatus() == InviteStatus.ACCEPTED);
-
-        if (hasAcceptedParticipant) {
-            newEvent.markAsShared();
-        }
+        // 정책 변경으로 비활성화
+//        boolean hasAcceptedParticipant = eventParticipants.stream()
+//                .anyMatch(ep -> ep.getStatus() == InviteStatus.ACCEPTED);
+//
+//        if (hasAcceptedParticipant) {
+//            newEvent.markAsShared();
+//        }
     }
 
     /**

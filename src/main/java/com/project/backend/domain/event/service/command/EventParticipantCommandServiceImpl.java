@@ -31,10 +31,10 @@ public class EventParticipantCommandServiceImpl implements EventParticipantComma
         eventParticipant.accept();
 
         Event event = eventParticipant.getEvent();
-
-        if (event.getIsShared() == false) {
-            event.markAsShared();
-        }
+        // 정책 변경으로 비활성화
+//        if (event.getIsShared() == false) {
+//            event.markAsShared();
+//        }
 
         reminderEventBridge.handlePlanChanged(
                 event.getId(),
