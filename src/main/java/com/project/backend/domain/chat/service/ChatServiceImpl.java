@@ -147,8 +147,14 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    // 요약본 + 최근 N개 구조로 히스토리 구성
-    // 요약본이 있으면 system 메시지로 첫 번째 원소에 추가해 LLM이 높은 우선순위로 처리하도록 함
+    @Override
+    @Transactional(readOnly = true)
+    public ChatResDTO.HistoryRes getHistory(Long memberId) {
+        List<Map<String, String>> messages = conversationHistoryService.getHistory(memberId);
+        String summary = conversationHistoryService.getSummary(memberId);
+        return ChatConverter.toHistoryResDTO(messages, summary);
+    }
+
     private List<Map<String, Object>> buildHistoryWithSummary(Long memberId) {
         List<Map<String, Object>> result = new ArrayList<>();
 

@@ -8,10 +8,7 @@ import com.project.backend.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,5 +21,10 @@ public class ChatController implements ChatDocs {
     public CustomResponse<ChatResDTO.SendRes> sendMessage(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                           @Valid @RequestBody ChatReqDTO.SendReq reqDTO) {
         return CustomResponse.onSuccess("챗봇 응답 성공", chatService.sendMessage(customUserDetails.getId(), reqDTO));
+    }
+
+    @GetMapping("/history")
+    public CustomResponse<ChatResDTO.HistoryRes> getHistory(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        return CustomResponse.onSuccess("대화 기록 조회 성공", chatService.getHistory(customUserDetails.getId()));
     }
 }
