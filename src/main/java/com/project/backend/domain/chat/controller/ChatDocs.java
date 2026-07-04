@@ -178,4 +178,69 @@ public interface ChatDocs {
             @org.springframework.web.bind.annotation.RequestBody
             @Valid ChatReqDTO.SendReq reqDTO
     );
+
+    @Operation(
+            summary = "채팅 대화 기록 조회",
+            description = """
+                    세션 복귀 시 Redis에 저장된 대화 기록을 반환합니다.
+
+                    **messages**
+                    - `role` : `user` 또는 `assistant`
+                    - `content` : 메시지 내용
+                    - 대화 없으면 빈 배열 반환
+
+                    **summary**
+                    - 대화 메시지가 임계값(20개)을 초과한 적이 있으면 LLM이 생성한 rolling summary
+                    - 요약이 없으면 `null`
+                    - TTL: 24시간 (마지막 메시지 저장 기준)
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "대화 기록 조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CustomResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "대화 기록 있음",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "COMMON200",
+                                                      "message": "대화 기록 조회 성공",
+                                                      "result": {
+                                                        "messages": [
+                                                          { "role": "user", "content": "다음 주 월요일 팀 미팅 잡아줘" },
+                                                          { "role": "assistant", "content": "다음 주 월요일 오전 10시에 팀 미팅을 등록했어요." }
+                                                        ],
+                                                        "summary": "사용자가 팀 미팅 일정을 생성 요청했고 완료함."
+                                                      }
+                                                    }
+                                                    """
+                                    ),
+                                    @ExampleObject(
+                                            name = "대화 기록 없음",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "COMMON200",
+                                                      "message": "대화 기록 조회 성공",
+                                                      "result": {
+                                                        "messages": [],
+                                                        "summary": null
+                                                      }
+                                                    }
+                                                    """
+                                    )
+                            }
+                    )
+            )
+    })
+    CustomResponse<ChatResDTO.HistoryRes> getHistory(
+            @AuthenticationPrincipal
+            @Parameter(hidden = true)
+            CustomUserDetails customUserDetails
+    );
 }
