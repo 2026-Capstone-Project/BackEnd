@@ -155,11 +155,15 @@ public class EventCommandServiceImpl implements EventCommandService {
             occurrenceDate = event.getStartTime();
         }
 
-        // TODO : eventValidator.validateUpdate 오류로 임시 비활성화
-//        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
-//        if (event.getRecurrenceGroup() == null) {
-//            scope = null;
-//        }
+        // 단일 일정에는 scope 불필요 — LLM이 잘못 전달해도 무시
+        // [주석 해제 이유] 이전에 비활성화된 이유: occurrenceDate 기본값 처리(위 코드)가 없던 시점에
+        // 이 코드를 추가하면 validateOccurrenceDate()에서 OCCURRENCE_DATE_REQUIRED가 터졌고,
+        // 원인을 scope 리셋 코드로 오판해 주석 처리했음.
+        // occurrenceDate 기본값 처리가 먼저 추가된 지금은 해제해도 안전하며,
+        // LLM이 단일 이벤트에 scope를 잘못 전달할 경우 UPDATE_SCOPE_NOT_REQUIRED 예외를 막으려면 반드시 필요.
+        if (event.getRecurrenceGroup() == null) {
+            scope = null;
+        }
 
         eventValidator.validateUpdate(event, req, occurrenceDate, scope);
 
