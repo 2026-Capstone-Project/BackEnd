@@ -93,30 +93,35 @@ public class ChatServiceImpl implements ChatService {
                     ScheduleActionResult result = functionCallHandler.handle(
                             llmRes.functionName(), llmRes.functionArguments(), memberId);
 
-                    messages.add(buildAssistantToolCallMessage(llmRes));
-                    messages.add(Map.of(
-                            "role", "tool",
-                            "tool_call_id", llmRes.toolCallId(),
-                            "content", result.summary()
-                    ));
+                    // 일정을 찾지 못한 경우(NOT_FOUND) — 2차 LLM 호출 없이 안내 메시지 바로 반환
+                    if (result.action() == ActionType.NONE) {
+                        reply = result.summary();
+                    } else {
+                        messages.add(buildAssistantToolCallMessage(llmRes));
+                        messages.add(Map.of(
+                                "role", "tool",
+                                "tool_call_id", llmRes.toolCallId(),
+                                "content", result.summary()
+                        ));
 
-                    FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
-                    reply = secondRes.isRespondToUser()
-                            ? parseRespondToUserMessage(secondRes.functionArguments())
-                            : result.summary();
+                        FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
+                        reply = secondRes.isRespondToUser()
+                                ? parseRespondToUserMessage(secondRes.functionArguments())
+                                : result.summary();
 
-                    action            = result.action();
-                    scheduleId        = result.scheduleId();
-                    recurrenceGroupId = result.recurrenceGroupId();
-                    scheduleType      = result.scheduleType();
+                        action            = result.action();
+                        scheduleId        = result.scheduleId();
+                        recurrenceGroupId = result.recurrenceGroupId();
+                        scheduleType      = result.scheduleType();
 
-                    if (result.scheduleId() != null && result.scheduleType() != null) {
-                        if (result.action() == ActionType.CLARIFYING) {
-                            conversationHistoryService.savePendingContext(
-                                    memberId, result.scheduleId(), result.scheduleType().name());
-                        } else {
-                            conversationHistoryService.saveLastActionContext(
-                                    memberId, result.scheduleId(), result.scheduleType().name());
+                        if (result.scheduleId() != null && result.scheduleType() != null) {
+                            if (result.action() == ActionType.CLARIFYING) {
+                                conversationHistoryService.savePendingContext(
+                                        memberId, result.scheduleId(), result.scheduleType().name());
+                            } else {
+                                conversationHistoryService.saveLastActionContext(
+                                        memberId, result.scheduleId(), result.scheduleType().name());
+                            }
                         }
                     }
 
