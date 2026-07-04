@@ -93,30 +93,35 @@ public class ChatServiceImpl implements ChatService {
                     ScheduleActionResult result = functionCallHandler.handle(
                             llmRes.functionName(), llmRes.functionArguments(), memberId);
 
-                    messages.add(buildAssistantToolCallMessage(llmRes));
-                    messages.add(Map.of(
-                            "role", "tool",
-                            "tool_call_id", llmRes.toolCallId(),
-                            "content", result.summary()
-                    ));
+                    // 일정을 찾지 못한 경우(NOT_FOUND) — 2차 LLM 호출 없이 안내 메시지 바로 반환
+                    if (result.action() == ActionType.NONE) {
+                        reply = result.summary();
+                    } else {
+                        messages.add(buildAssistantToolCallMessage(llmRes));
+                        messages.add(Map.of(
+                                "role", "tool",
+                                "tool_call_id", llmRes.toolCallId(),
+                                "content", result.summary()
+                        ));
 
-                    FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
-                    reply = secondRes.isRespondToUser()
-                            ? parseRespondToUserMessage(secondRes.functionArguments())
-                            : result.summary();
+                        FunctionCallResponse secondRes = llmClient.chatWithFunctions(systemPrompt, messages, tools);
+                        reply = secondRes.isRespondToUser()
+                                ? parseRespondToUserMessage(secondRes.functionArguments())
+                                : result.summary();
 
-                    action            = result.action();
-                    scheduleId        = result.scheduleId();
-                    recurrenceGroupId = result.recurrenceGroupId();
-                    scheduleType      = result.scheduleType();
+                        action            = result.action();
+                        scheduleId        = result.scheduleId();
+                        recurrenceGroupId = result.recurrenceGroupId();
+                        scheduleType      = result.scheduleType();
 
-                    if (result.scheduleId() != null && result.scheduleType() != null) {
-                        if (result.action() == ActionType.CLARIFYING) {
-                            conversationHistoryService.savePendingContext(
-                                    memberId, result.scheduleId(), result.scheduleType().name());
-                        } else {
-                            conversationHistoryService.saveLastActionContext(
-                                    memberId, result.scheduleId(), result.scheduleType().name());
+                        if (result.scheduleId() != null && result.scheduleType() != null) {
+                            if (result.action() == ActionType.CLARIFYING) {
+                                conversationHistoryService.savePendingContext(
+                                        memberId, result.scheduleId(), result.scheduleType().name());
+                            } else {
+                                conversationHistoryService.saveLastActionContext(
+                                        memberId, result.scheduleId(), result.scheduleType().name());
+                            }
                         }
                     }
 
@@ -147,8 +152,14 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    // 요약본 + 최근 N개 구조로 히스토리 구성
-    // 요약본이 있으면 system 메시지로 첫 번째 원소에 추가해 LLM이 높은 우선순위로 처리하도록 함
+    @Override
+    @Transactional(readOnly = true)
+    public ChatResDTO.HistoryRes getHistory(Long memberId) {
+        List<Map<String, String>> messages = conversationHistoryService.getHistory(memberId);
+        String summary = conversationHistoryService.getSummary(memberId);
+        return ChatConverter.toHistoryResDTO(messages, summary);
+    }
+
     private List<Map<String, Object>> buildHistoryWithSummary(Long memberId) {
         List<Map<String, Object>> result = new ArrayList<>();
 
