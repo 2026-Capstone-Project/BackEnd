@@ -11,11 +11,15 @@ import com.project.backend.domain.event.dto.response.EventResDTO;
 import com.project.backend.domain.event.entity.Event;
 import com.project.backend.domain.event.enums.RecurrenceUpdateScope;
 import com.project.backend.domain.event.repository.EventRepository;
+import com.project.backend.domain.event.exception.EventErrorCode;
+import com.project.backend.domain.event.exception.EventException;
 import com.project.backend.domain.event.service.command.EventCommandService;
 import com.project.backend.domain.todo.dto.request.TodoReqDTO;
 import com.project.backend.domain.todo.dto.response.TodoResDTO;
 import com.project.backend.domain.todo.entity.Todo;
 import com.project.backend.domain.todo.enums.Priority;
+import com.project.backend.domain.todo.exception.TodoErrorCode;
+import com.project.backend.domain.todo.exception.TodoException;
 import com.project.backend.domain.todo.repository.TodoRepository;
 import com.project.backend.domain.todo.service.command.TodoCommandService;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +66,6 @@ public class FunctionCallHandler {
     private ScheduleActionResult handleCreate(Map<String, Object> args, Long memberId) {
         String scheduleType = (String) args.get("scheduleType");
 
-        // startTime 없이 EVENT로 분류된 경우 → TODO로 fallback
         if ("EVENT".equals(scheduleType) && args.get("startTime") == null) {
             log.warn("EVENT 요청이지만 startTime 없음 → TODO로 fallback");
             scheduleType = "TODO";
@@ -137,9 +140,9 @@ public class FunctionCallHandler {
             startDate = LocalDate.now();
         }
 
-        LocalTime dueTime   = args.get("dueTime") != null
+        LocalTime dueTime = args.get("dueTime") != null
                 ? LocalTime.parse((String) args.get("dueTime")) : null;
-        Priority priority   = args.get("priority") != null
+        Priority priority = args.get("priority") != null
                 ? Priority.valueOf((String) args.get("priority")) : Priority.MEDIUM;
 
         TodoReqDTO.CreateTodo req = TodoReqDTO.CreateTodo.builder()
@@ -203,19 +206,27 @@ public class FunctionCallHandler {
                 ? parseDate((String) args.get("occurrenceDate")).atStartOfDay() : null;
         LocalDateTime startTime = args.get("startTime") != null
                 ? parseDateTime((String) args.get("startTime")) : null;
-        LocalDateTime endTime   = args.get("endTime") != null
+        LocalDateTime endTime = args.get("endTime") != null
                 ? parseDateTime((String) args.get("endTime")) : null;
 
-        // EventReqDTO.UpdateReq는 @Builder 있음
         EventReqDTO.UpdateReq req = EventReqDTO.UpdateReq.builder()
                 .title((String) args.get("title"))
+                .content((String) args.get("memo"))
                 .startTime(startTime)
                 .endTime(endTime)
                 .location((String) args.get("location"))
                 .isAllDay((Boolean) args.get("isAllDay"))
                 .build();
 
-        eventCommandService.updateEvent(req, eventId, memberId, scope, occurrenceDate);
+        try {
+            eventCommandService.updateEvent(req, eventId, memberId, scope, occurrenceDate);
+        } catch (EventException e) {
+            if (e.getCode() == EventErrorCode.EVENT_NOT_FOUND || e.getCode() == EventErrorCode.EVENT_ACCESS_DENIED) {
+                return new ScheduleActionResult(ActionType.NONE, null, null, null,
+                        "일정을 찾지 못했어요. 일정 이름이나 날짜를 좀 더 구체적으로 말씀해 주시겠어요?");
+            }
+            throw e;
+        }
 
         return new ScheduleActionResult(
                 ActionType.UPDATED, ScheduleType.EVENT, eventId, null, "일정이 수정되었어요."
@@ -228,14 +239,13 @@ public class FunctionCallHandler {
 
         LocalDate occurrenceDate = args.get("occurrenceDate") != null
                 ? parseDate((String) args.get("occurrenceDate")) : null;
-        LocalDate startDate      = args.get("startDate") != null
+        LocalDate startDate = args.get("startDate") != null
                 ? parseDate((String) args.get("startDate")) : null;
-        LocalTime dueTime        = args.get("dueTime") != null
+        LocalTime dueTime = args.get("dueTime") != null
                 ? LocalTime.parse((String) args.get("dueTime")) : null;
-        Priority priority        = args.get("priority") != null
+        Priority priority = args.get("priority") != null
                 ? Priority.valueOf((String) args.get("priority")) : null;
 
-        // TodoReqDTO.UpdateTodo는 @Builder 없는 record → 생성자 직접 사용
         TodoReqDTO.UpdateTodo req = new TodoReqDTO.UpdateTodo(
                 (String) args.get("title"),
                 startDate,
@@ -244,11 +254,20 @@ public class FunctionCallHandler {
                 (Boolean) args.get("isAllDay"),
                 priority,
                 null,      // color
-                null,      // memo
+                (String) args.get("memo"),
                 null       // recurrenceGroup
         );
 
-        TodoResDTO.TodoInfo res = todoCommandService.updateTodo(memberId, todoId, occurrenceDate, scope, req);
+        TodoResDTO.TodoInfo res;
+        try {
+            res = todoCommandService.updateTodo(memberId, todoId, occurrenceDate, scope, req);
+        } catch (TodoException e) {
+            if (e.getCode() == TodoErrorCode.TODO_NOT_FOUND || e.getCode() == TodoErrorCode.TODO_FORBIDDEN) {
+                return new ScheduleActionResult(ActionType.NONE, null, null, null,
+                        "할 일을 찾지 못했어요. 할 일 이름이나 날짜를 좀 더 구체적으로 말씀해 주시겠어요?");
+            }
+            throw e;
+        }
 
         return new ScheduleActionResult(
                 ActionType.UPDATED, ScheduleType.TODO, todoId, res.recurrenceGroupId(), "할 일이 수정되었어요."
@@ -295,7 +314,15 @@ public class FunctionCallHandler {
         LocalDateTime occurrenceDate = args.get("occurrenceDate") != null
                 ? parseDate((String) args.get("occurrenceDate")).atStartOfDay() : null;
 
-        eventCommandService.deleteEvent(eventId, occurrenceDate, scope, memberId);
+        try {
+            eventCommandService.deleteEvent(eventId, occurrenceDate, scope, memberId);
+        } catch (EventException e) {
+            if (e.getCode() == EventErrorCode.EVENT_NOT_FOUND || e.getCode() == EventErrorCode.EVENT_ACCESS_DENIED) {
+                return new ScheduleActionResult(ActionType.NONE, null, null, null,
+                        "일정을 찾지 못했어요. 일정 이름이나 날짜를 좀 더 구체적으로 말씀해 주시겠어요?");
+            }
+            throw e;
+        }
 
         return new ScheduleActionResult(
                 ActionType.DELETED, ScheduleType.EVENT, eventId, null, "일정이 삭제되었어요."
@@ -310,7 +337,15 @@ public class FunctionCallHandler {
         LocalDate occurrenceDate = args.get("occurrenceDate") != null
                 ? parseDate((String) args.get("occurrenceDate")) : null;
 
-        todoCommandService.deleteTodo(memberId, todoId, occurrenceDate, scope);
+        try {
+            todoCommandService.deleteTodo(memberId, todoId, occurrenceDate, scope);
+        } catch (TodoException e) {
+            if (e.getCode() == TodoErrorCode.TODO_NOT_FOUND || e.getCode() == TodoErrorCode.TODO_FORBIDDEN) {
+                return new ScheduleActionResult(ActionType.NONE, null, null, null,
+                        "할 일을 찾지 못했어요. 할 일 이름이나 날짜를 좀 더 구체적으로 말씀해 주시겠어요?");
+            }
+            throw e;
+        }
 
         return new ScheduleActionResult(
                 ActionType.DELETED, ScheduleType.TODO, todoId, null, "할 일이 삭제되었어요."
@@ -340,7 +375,6 @@ public class FunctionCallHandler {
                     .toList();
         }
 
-        // RecurrenceGroupReqDTO.CreateReq는 @Builder 있음
         return RecurrenceGroupReqDTO.CreateReq.builder()
                 .frequency(frequency)
                 .daysOfWeek(daysOfWeek)

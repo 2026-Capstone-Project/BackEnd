@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class FunctionDefinitionBuilder {
+public class FunctionDefinitionBuilder{
 
     private static final String[] DAY_LABELS = {"월", "화", "수", "목", "금", "토", "일"};
 
@@ -73,7 +73,6 @@ public class FunctionDefinitionBuilder {
         Map<String, Object> props = new LinkedHashMap<>();
         props.put("scheduleId",     intProp("수정할 ID — 컨텍스트 [ID:N] 값 사용"));
         props.put("scheduleType",   enumProp("일정 유형", "EVENT", "TODO"));
-        // [핵심] occurrenceDate: 반복 일정의 해당 회차를 특정하기 위한 날짜
         props.put("occurrenceDate", strProp("반복 일정 해당 회차 날짜 yyyy-MM-dd (반복일정만). " + dateHint));
         props.put("title",          strProp("새 제목"));
         props.put("startTime",      strProp("새 시작 시간 ISO-8601 (EVENT 전용). " + dateHint));
@@ -83,11 +82,11 @@ public class FunctionDefinitionBuilder {
         props.put("location",       strProp("새 장소 (EVENT 전용)"));
         props.put("isAllDay",       boolProp("종일 여부"));
         props.put("priority",       enumProp("우선순위 (TODO 전용)", "HIGH", "MEDIUM", "LOW"));
-        // [핵심] scope: ALL 없음 — 실제 enum에 없으므로
+        props.put("memo",           strProp("메모 내용 (EVENT·TODO 공통). 추가·수정·삭제(빈 문자열 \"\") 모두 이 필드로 처리한다."));
         props.put("scope",          enumProp("사용자가 '이번만', '이후 전체' 등 범위를 직접 언급한 경우에만 포함. 명시하지 않았으면 절대 포함하지 말 것", "THIS_ONLY", "THIS_AND_AFTER"));
 
         return wrapFunction("updateSchedule",
-                "기존 일정 또는 할 일을 수정한다. 반복 일정인데 사용자가 범위를 언급하지 않았으면 반드시 먼저 askForClarification으로 범위를 확인해야 한다. scope는 사용자가 직접 명시한 경우에만 포함한다.",
+                "기존 일정 또는 할 일을 수정한다. 제목·시간·장소·메모 추가·메모 수정·메모 삭제 모두 이 함수로 처리한다. 반복 일정인데 사용자가 범위를 언급하지 않았으면 반드시 먼저 askForClarification으로 범위를 확인해야 한다. scope는 사용자가 직접 명시한 경우에만 포함한다.",
                 props,
                 List.of("scheduleId", "scheduleType"));
     }
@@ -107,9 +106,6 @@ public class FunctionDefinitionBuilder {
     }
 
     // askForClarification
-    // [핵심] 텍스트로 되묻지 않고 명시적 함수로 정의하는 이유:
-    // → 백엔드가 "되묻는 중"인지 "일반 답변"인지 구분 가능
-    // → 프론트가 action: CLARIFYING으로 별도 UI 처리 가능
     private Map<String, Object> buildAskForClarification() {
         Map<String, Object> props = new LinkedHashMap<>();
         props.put("question",      strProp("사용자에게 보여줄 질문"));
@@ -123,7 +119,6 @@ public class FunctionDefinitionBuilder {
     }
 
     // respondToUser
-    // [핵심] tool_choice:"required" 환경에서 일반 텍스트 응답(조회 안내, 일반 대화 등)을 함수 형태로 반환
     private Map<String, Object> buildRespondToUser() {
         Map<String, Object> props = new LinkedHashMap<>();
         props.put("message", strProp("사용자에게 전달할 텍스트 응답"));
