@@ -392,7 +392,7 @@ public class EventCommandServiceImpl implements EventCommandService {
         eventParticipantRepository.deleteAllByEventId(eventId);
 
         // 정책 변경으로 비활성화
-//        event.markAsNotShared();
+        event.markAsNotShared();
 
         // 주최자를 제외한 해당 일정 참여자 리마인더 삭제
         reminderEventBridge.handleReminderDeleted(
