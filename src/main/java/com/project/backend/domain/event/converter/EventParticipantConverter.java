@@ -57,10 +57,11 @@ public class EventParticipantConverter {
                 .build();
     }
 
-    public static EventParticipantResDTO.SharedEventItem toSharedEventItem(Event event, String ownerName) {
+    public static EventParticipantResDTO.SharedEventItem toSharedEventItem(Event event, String ownerName, String ownerEmail) {
         return EventParticipantResDTO.SharedEventItem.builder()
                 .eventId(event.getId())
                 .ownerName(ownerName)
+                .ownerEmail(ownerEmail)
                 .title(event.getTitle())
                 .startDate(event.getStartTime().toLocalDate())
                 .endDate(event.getEndTime().toLocalDate())
