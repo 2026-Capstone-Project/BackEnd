@@ -64,7 +64,9 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
         List<EventParticipantResDTO.SharedEventItem> items = participantList.stream()
                 .map(participant ->
                         EventParticipantConverter.toSharedEventItem(
-                                participant.getEvent(), participant.getOwner().getNickname(), participant.getOwner().getEmail()
+                                participant.getEvent(),
+                                participant.getOwner().getNickname(),
+                                participant.getEvent().getMember().getId().equals(memberId)
                         ))
                 .toList();
 
