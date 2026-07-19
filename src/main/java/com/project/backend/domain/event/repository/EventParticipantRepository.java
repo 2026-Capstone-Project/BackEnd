@@ -44,9 +44,10 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     join fetch ep.owner
     where (ep.member.id = :memberId or ep.owner.id = :memberId)
       and ep.status = :status
+      and ep.event.endTime >= :now
 """)
     List<EventParticipant> findAllByParticipantOrOwnerIdAndStatus(
-            @Param("memberId") Long memberId, @Param("status") InviteStatus status);
+            @Param("memberId") Long memberId, @Param("status") InviteStatus status, @Param("now") LocalDateTime now);
 
 
     @Query("""
