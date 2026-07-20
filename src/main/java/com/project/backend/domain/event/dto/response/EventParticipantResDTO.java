@@ -34,6 +34,7 @@ public class EventParticipantResDTO {
     public record SharedEventItem(
             Long eventId,
             String ownerName,
+            Boolean isOwner,
             String title,
             LocalDate startDate,
             LocalDate endDate

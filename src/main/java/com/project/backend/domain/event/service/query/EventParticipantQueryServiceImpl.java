@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -54,13 +56,17 @@ public class EventParticipantQueryServiceImpl implements EventParticipantQuerySe
 
     @Override
     public EventParticipantResDTO.SharedEventsRes getSharedEvents(Long memberId) {
+        LocalDateTime now = LocalDate.now().atStartOfDay();
+
         List<EventParticipant> participantList
-                = eventParticipantRepository.findAllByParticipantOrOwnerIdAndStatus(memberId, InviteStatus.ACCEPTED);
+                = eventParticipantRepository.findAllByParticipantOrOwnerIdAndStatus(memberId, InviteStatus.ACCEPTED, now);
 
         List<EventParticipantResDTO.SharedEventItem> items = participantList.stream()
                 .map(participant ->
                         EventParticipantConverter.toSharedEventItem(
-                                participant.getEvent(), participant.getOwner().getNickname()
+                                participant.getEvent(),
+                                participant.getOwner().getNickname(),
+                                participant.getEvent().getMember().getId().equals(memberId)
                         ))
                 .toList();
 
