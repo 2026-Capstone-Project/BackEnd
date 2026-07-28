@@ -47,8 +47,8 @@ public class FunctionDefinitionBuilder{
         props.put("scheduleType",          enumProp("일정 유형 — '몇 시에', '오전/오후 N시' 등 구체적 시간이 명시된 약속·미팅·회의면 EVENT; 날짜만 있거나 시간 없이 할 일·체크리스트 성격이면 반드시 TODO", "EVENT", "TODO"));
         props.put("title",                 strProp("제목"));
         props.put("isRecurring",           boolProp("반복 여부"));
-        props.put("startTime",             strProp("시작 시간 ISO-8601 (EVENT 필수). " + dateHint));
-        props.put("endTime",               strProp("종료 시간 ISO-8601 (EVENT 필수)"));
+        props.put("startTime",             strProp("시작 시간 ISO-8601 (EVENT 필수). 날짜 범위 일정(예: '수요일부터 금요일')은 시작일 00:00:00 설정. " + dateHint));
+        props.put("endTime",               strProp("종료 시간 ISO-8601 (EVENT 필수). 날짜 범위 일정(예: '수요일부터 금요일')은 종료일 23:59:59 설정."));
         props.put("startDate",             strProp("시작 날짜 yyyy-MM-dd (TODO 필수, 반복TODO는 첫 발생일). " + dateHint));
         props.put("dueTime",               strProp("할 일 수행 시각 HH:mm (TODO 전용, '오후 7시' 등 시간이 언급된 경우 반드시 설정)"));
         props.put("location",              strProp("장소 (EVENT 선택)"));
